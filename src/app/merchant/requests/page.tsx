@@ -34,20 +34,20 @@ export default async function MerchantRequestsPage({ searchParams }: PageProps) 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12">
       {/* Header */}
-      <div className="border-b border-zinc-800/80 pb-5">
-        <h1 className="text-2xl font-bold tracking-tight text-white">
+      <div className="border-b border-[#E2E8F0] pb-5">
+        <h1 className="text-2xl font-bold tracking-tight text-[#0F172A]">
           Solicitudes y Cobertura de Pedidos
         </h1>
-        <p className="text-xs text-zinc-400 mt-1">
+        <p className="text-xs text-[#64748B] mt-1">
           Administra el motor de invitaciones y la representatividad estadística del Pasaporte de Confianza de{' '}
-          <strong className="text-zinc-200">{currentBusiness.brand_name}</strong>.
+          <strong className="text-[#0F172A]">{currentBusiness.brand_name}</strong>.
         </p>
       </div>
 
       <RequestsManager
         business={currentBusiness}
-        initialInvitations={invitations}
-        recentOrders={orders}
+        invitations={invitations}
+        orders={orders}
       />
     </div>
   );

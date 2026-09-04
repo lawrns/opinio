@@ -22,7 +22,7 @@ export default async function MerchantSettingsPage({ searchParams }: PageProps) 
 
   if (!currentBusiness) {
     return (
-      <div className="text-center py-16 text-zinc-400">
+      <div className="text-center py-16 text-[#64748B]">
         No se encontró información del comercio.
       </div>
     );
@@ -34,13 +34,13 @@ export default async function MerchantSettingsPage({ searchParams }: PageProps) 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12">
       {/* Header */}
-      <div className="border-b border-zinc-800/80 pb-5">
-        <h1 className="text-2xl font-bold tracking-tight text-white">
+      <div className="border-b border-[#E2E8F0] pb-5">
+        <h1 className="text-2xl font-bold tracking-tight text-[#0F172A]">
           Configuración e Identidad Comercial
         </h1>
-        <p className="text-xs text-zinc-400 mt-1">
+        <p className="text-xs text-[#64748B] mt-1">
           Gestiona las credenciales jurídicas, validación ante el SAT, registro INEGI DENUE y equipo autorizado de{' '}
-          <strong className="text-zinc-200">{currentBusiness.brand_name}</strong>.
+          <strong className="text-[#0F172A]">{currentBusiness.brand_name}</strong>.
         </p>
       </div>
 

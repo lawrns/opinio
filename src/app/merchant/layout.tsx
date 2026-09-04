@@ -17,7 +17,7 @@ export default async function MerchantLayout({
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-zinc-950 flex items-center justify-center text-zinc-400">
+        <div className="min-h-screen bg-[#FAFAF8] flex items-center justify-center text-[#64748B]">
           <div className="flex items-center gap-2">
             <div className="h-4 w-4 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin" />
             <span className="text-sm">Cargando Opinio Merchant OS...</span>

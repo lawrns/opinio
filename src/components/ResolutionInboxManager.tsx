@@ -9,17 +9,13 @@ import {
   Send,
   ShieldCheck,
   RotateCcw,
-  ArrowRight,
-  User,
-  MessageSquare,
-  HelpCircle,
-  FileText,
   DollarSign,
   Package,
   Zap,
   Lock,
+  FileText,
 } from 'lucide-react';
-import { ResolutionCase, CaseMessage } from '@/lib/types';
+import { ResolutionCase } from '@/lib/types';
 import { updateCaseRemedyAction, sendCaseMessageAction } from '@/lib/merchant-actions';
 import { cn } from '@/lib/utils';
 
@@ -31,8 +27,6 @@ interface ResolutionInboxManagerProps {
 
 export function ResolutionInboxManager({
   initialCases,
-  businessId,
-  businessSlug,
 }: ResolutionInboxManagerProps) {
   const [cases, setCases] = React.useState(initialCases);
   const [selectedCaseId, setSelectedCaseId] = React.useState<number | null>(
@@ -182,27 +176,27 @@ export function ResolutionInboxManager({
       case 'reopened':
         return {
           label: 'Abierto (SLA Urgente)',
-          className: 'bg-rose-950/70 text-rose-300 border-rose-800/80',
+          className: 'bg-rose-50 text-rose-700 border-rose-200',
         };
       case 'remedy_offered':
         return {
           label: 'Remedio Propuesto',
-          className: 'bg-amber-950/70 text-amber-300 border-amber-800/80',
+          className: 'bg-amber-50 text-amber-700 border-amber-200',
         };
       case 'resolved_consumer_confirmed':
         return {
           label: 'Resuelto (Confirmado por Consumidor)',
-          className: 'bg-emerald-950/70 text-emerald-300 border-emerald-800/80',
+          className: 'bg-emerald-50 text-emerald-800 border-emerald-200',
         };
       case 'resolved_merchant_asserted':
         return {
           label: 'Aseverado por Comercio',
-          className: 'bg-blue-950/70 text-blue-300 border-blue-800/80',
+          className: 'bg-blue-50 text-blue-700 border-blue-200',
         };
       default:
         return {
           label: status,
-          className: 'bg-zinc-800 text-zinc-400 border-zinc-700',
+          className: 'bg-[#F1F5F9] text-[#64748B] border-[#E2E8F0]',
         };
     }
   };
@@ -211,8 +205,8 @@ export function ResolutionInboxManager({
     <div className="space-y-6">
       {/* Action Success Alert */}
       {actionSuccess && (
-        <div className="p-4 rounded-xl bg-emerald-950/80 border border-emerald-800 text-emerald-300 text-xs font-semibold flex items-center gap-2 animate-in fade-in duration-150">
-          <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+        <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-semibold flex items-center gap-2 animate-in fade-in duration-150">
+          <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
           <span>{actionSuccess}</span>
         </div>
       )}
@@ -222,7 +216,7 @@ export function ResolutionInboxManager({
         {/* Left Column: Case List (5 cols) */}
         <div className="lg:col-span-5 space-y-3">
           {/* Filter Bar */}
-          <div className="p-3 rounded-xl bg-zinc-900/70 border border-zinc-800 flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div className="p-3 rounded-xl bg-white border border-[#E2E8F0] shadow-xs flex flex-wrap items-center justify-between gap-2 text-xs">
             <div className="flex items-center gap-1">
               <button
                 type="button"
@@ -230,8 +224,8 @@ export function ResolutionInboxManager({
                 className={cn(
                   "px-2.5 py-1 rounded-lg transition-colors font-medium text-[11px]",
                   statusFilter === 'all'
-                    ? "bg-zinc-800 text-white font-bold"
-                    : "text-zinc-400 hover:text-white"
+                    ? "bg-[#0F172A] text-white font-bold"
+                    : "text-[#64748B] hover:text-[#0F172A]"
                 )}
               >
                 Todos ({cases.length})
@@ -242,8 +236,8 @@ export function ResolutionInboxManager({
                 className={cn(
                   "px-2.5 py-1 rounded-lg transition-colors font-medium text-[11px]",
                   statusFilter === 'urgent'
-                    ? "bg-rose-500/20 text-rose-300 border border-rose-500/40 font-bold"
-                    : "text-zinc-400 hover:text-white"
+                    ? "bg-rose-50 text-rose-700 border border-rose-200 font-bold"
+                    : "text-[#64748B] hover:text-[#0F172A]"
                 )}
               >
                 Urgentes ({cases.filter((c) => c.status === 'opened' || c.status === 'reopened').length})
@@ -254,8 +248,8 @@ export function ResolutionInboxManager({
                 className={cn(
                   "px-2.5 py-1 rounded-lg transition-colors font-medium text-[11px]",
                   statusFilter === 'pending_confirmation'
-                    ? "bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold"
-                    : "text-zinc-400 hover:text-white"
+                    ? "bg-amber-50 text-amber-700 border border-amber-200 font-bold"
+                    : "text-[#64748B] hover:text-[#0F172A]"
                 )}
               >
                 En Espera ({cases.filter((c) => c.status === 'remedy_offered').length})
@@ -265,7 +259,7 @@ export function ResolutionInboxManager({
             <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
-              className="px-2 py-1 rounded-lg bg-zinc-950 border border-zinc-800 text-[11px] text-zinc-300 focus:outline-none"
+              className="px-2 py-1 rounded-lg bg-[#FAFAF8] border border-[#E2E8F0] text-[11px] text-[#0F172A] focus:outline-none"
             >
               <option value="all">Todas las causas</option>
               <option value="delay">Demora</option>
@@ -278,7 +272,7 @@ export function ResolutionInboxManager({
           {/* Cases Scrollable List */}
           <div className="space-y-2.5 max-h-[720px] overflow-y-auto pr-1">
             {filteredCases.length === 0 ? (
-              <div className="p-8 text-center rounded-2xl bg-zinc-900/40 border border-zinc-800 text-zinc-400 text-xs">
+              <div className="p-8 text-center rounded-2xl bg-white border border-[#E2E8F0] shadow-xs text-[#64748B] text-xs">
                 No hay casos que coincidan con los filtros seleccionados.
               </div>
             ) : (
@@ -294,12 +288,12 @@ export function ResolutionInboxManager({
                     className={cn(
                       "p-4 rounded-xl border text-left cursor-pointer transition-all space-y-2",
                       isSelected
-                        ? "bg-zinc-800/90 border-emerald-500/60 shadow-md ring-1 ring-emerald-500/20"
-                        : "bg-zinc-900/50 hover:bg-zinc-900/90 border-zinc-800/80"
+                        ? "bg-[#F8FAFC] border-emerald-500/60 shadow-xs ring-1 ring-emerald-500/20"
+                        : "bg-white hover:bg-[#F8FAFC] border-[#E2E8F0] shadow-xs"
                     )}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-mono text-xs font-bold text-emerald-400">
+                      <span className="font-mono text-xs font-bold text-[#0F172A]">
                         {c.case_number}
                       </span>
                       <span
@@ -312,24 +306,24 @@ export function ResolutionInboxManager({
                       </span>
                     </div>
 
-                    <div className="text-xs font-semibold text-white truncate">
+                    <div className="text-xs font-semibold text-[#0F172A] truncate">
                       {c.customer_name}
                     </div>
 
-                    <div className="text-[11px] text-zinc-400 flex items-center justify-between">
+                    <div className="text-[11px] text-[#64748B] flex items-center justify-between">
                       <span>{getCategoryLabel(c.issue_category)}</span>
-                      <span className="text-zinc-500 font-mono text-[10px]">
+                      <span className="text-[#94A3B8] font-mono text-[10px]">
                         Ped: {c.customer_requested_remedy}
                       </span>
                     </div>
 
                     {isUrgent && (
-                      <div className="pt-1.5 border-t border-zinc-800/80 flex items-center justify-between text-[10px] text-rose-300">
+                      <div className="pt-1.5 border-t border-[#E2E8F0] flex items-center justify-between text-[10px] text-rose-700">
                         <span className="flex items-center gap-1 font-semibold">
-                          <Clock className="h-3 w-3 text-rose-400" />
+                          <Clock className="h-3 w-3 text-rose-600" />
                           SLA &lt; 24h
                         </span>
-                        <span className="font-mono text-zinc-400">
+                        <span className="font-mono text-[#64748B]">
                           Resp. prom: {c.median_first_response_minutes} min
                         </span>
                       </div>
@@ -344,12 +338,12 @@ export function ResolutionInboxManager({
         {/* Right Column: Case Details, Messages & Remedy Drawer (7 cols) */}
         <div className="lg:col-span-7">
           {selectedCase ? (
-            <div className="p-6 rounded-2xl bg-zinc-900/70 border border-zinc-800 space-y-6">
+            <div className="p-6 rounded-2xl bg-white border border-[#E2E8F0] shadow-xs space-y-6">
               {/* Header */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-800/80 pb-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E2E8F0] pb-4">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-mono text-lg font-bold text-emerald-400">
+                    <span className="font-mono text-lg font-bold text-[#0F172A]">
                       {selectedCase.case_number}
                     </span>
                     <span
@@ -361,7 +355,7 @@ export function ResolutionInboxManager({
                       {getStatusBadge(selectedCase.status).label}
                     </span>
                   </div>
-                  <p className="text-xs text-zinc-400 mt-1">
+                  <p className="text-xs text-[#64748B] mt-1">
                     Abierto el{' '}
                     {new Date(selectedCase.created_at).toLocaleDateString('es-MX', {
                       year: 'numeric',
@@ -378,7 +372,7 @@ export function ResolutionInboxManager({
                   <button
                     type="button"
                     onClick={() => setShowRemedyModal(true)}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition-all active:scale-[0.98]"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-all active:scale-[0.98]"
                   >
                     <Zap className="h-4 w-4" />
                     <span>
@@ -390,28 +384,28 @@ export function ResolutionInboxManager({
 
               {/* Customer Claim & Requested Remedy Summary */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                <div className="p-3.5 rounded-xl bg-zinc-950/80 border border-zinc-800/80 space-y-1">
-                  <div className="text-[11px] text-zinc-500 font-medium">
+                <div className="p-3.5 rounded-xl bg-[#FAFAF8] border border-[#E2E8F0] space-y-1">
+                  <div className="text-[11px] text-[#64748B] font-medium">
                     Datos del Comprador
                   </div>
-                  <div className="font-semibold text-white text-sm">
+                  <div className="font-semibold text-[#0F172A] text-sm">
                     {selectedCase.customer_name}
                   </div>
-                  <div className="text-zinc-400 font-mono text-[11px]">
+                  <div className="text-[#64748B] font-mono text-[11px]">
                     {selectedCase.customer_contact}
                   </div>
                 </div>
 
-                <div className="p-3.5 rounded-xl bg-zinc-950/80 border border-zinc-800/80 space-y-1">
-                  <div className="text-[11px] text-zinc-500 font-medium">
+                <div className="p-3.5 rounded-xl bg-[#FAFAF8] border border-[#E2E8F0] space-y-1">
+                  <div className="text-[11px] text-[#64748B] font-medium">
                     Motivo e Indemnización Solicitada
                   </div>
-                  <div className="font-semibold text-emerald-300">
+                  <div className="font-semibold text-emerald-800">
                     {getCategoryLabel(selectedCase.issue_category)}
                   </div>
-                  <div className="text-zinc-400 text-[11px]">
+                  <div className="text-[#64748B] text-[11px]">
                     Remedio deseado:{' '}
-                    <strong className="text-zinc-200 uppercase">
+                    <strong className="text-[#0F172A] uppercase">
                       {selectedCase.customer_requested_remedy}
                     </strong>
                   </div>
@@ -420,14 +414,14 @@ export function ResolutionInboxManager({
 
               {/* Connected Review context if applicable */}
               {selectedCase.review && (
-                <div className="p-4 rounded-xl bg-zinc-950/90 border border-zinc-800 text-xs space-y-1.5">
-                  <div className="text-[11px] font-semibold text-zinc-400 flex items-center justify-between">
+                <div className="p-4 rounded-xl bg-[#FAFAF8] border border-[#E2E8F0] text-xs space-y-1.5">
+                  <div className="text-[11px] font-semibold text-[#64748B] flex items-center justify-between">
                     <span>Opinión Asociada al Caso</span>
-                    <span className="text-amber-400">
+                    <span className="text-amber-500">
                       {'★'.repeat(selectedCase.review.rating)} {selectedCase.review.rating}.0
                     </span>
                   </div>
-                  <p className="text-zinc-300 italic">
+                  <p className="text-[#334155] italic">
                     &ldquo;{selectedCase.review.body}&rdquo;
                   </p>
                 </div>
@@ -435,23 +429,23 @@ export function ResolutionInboxManager({
 
               {/* Official Remedy Status Card */}
               {selectedCase.remedy_offered && (
-                <div className="p-4 rounded-xl bg-emerald-950/40 border border-emerald-800/60 text-xs space-y-2">
+                <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-xs space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-emerald-300 flex items-center gap-1.5">
-                      <ShieldCheck className="h-4 w-4 text-emerald-400" />
+                    <span className="font-bold text-emerald-900 flex items-center gap-1.5">
+                      <ShieldCheck className="h-4 w-4 text-emerald-600" />
                       Propuesta de Remedio Oficial Registrada
                     </span>
-                    <span className="text-[10px] text-zinc-400 font-mono">
+                    <span className="text-[10px] text-[#64748B] font-mono">
                       {selectedCase.is_consumer_confirmed
                         ? 'Confirmado por consumidor ✓'
                         : 'En espera de confirmación del cliente'}
                     </span>
                   </div>
-                  <p className="text-zinc-200 font-medium leading-relaxed">
+                  <p className="text-emerald-950 font-medium leading-relaxed">
                     {selectedCase.remedy_offered}
                   </p>
                   {selectedCase.is_consumer_confirmed && (
-                    <div className="text-[11px] text-emerald-400 flex items-center gap-1 font-semibold pt-1">
+                    <div className="text-[11px] text-emerald-700 flex items-center gap-1 font-semibold pt-1">
                       <CheckCircle2 className="h-3.5 w-3.5" />
                       Pilar Resuelve: Este caso cuenta formalmente para el 40% de tu Puntaje de Resolución.
                     </div>
@@ -461,13 +455,13 @@ export function ResolutionInboxManager({
 
               {/* Message Timeline */}
               <div className="space-y-3">
-                <h4 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                <h4 className="text-xs font-semibold text-[#64748B] uppercase tracking-wider">
                   Historial de Comunicación y Conciliación
                 </h4>
 
                 <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
                   {(!selectedCase.messages || selectedCase.messages.length === 0) ? (
-                    <div className="p-4 rounded-xl bg-zinc-950/60 text-center text-zinc-500 text-xs">
+                    <div className="p-4 rounded-xl bg-[#FAFAF8] border border-[#E2E8F0] text-center text-[#64748B] text-xs">
                       No hay mensajes en este expediente todavía.
                     </div>
                   ) : (
@@ -481,15 +475,15 @@ export function ResolutionInboxManager({
                           className={cn(
                             "p-3.5 rounded-xl text-xs space-y-1",
                             m.is_private
-                              ? "bg-amber-950/40 border border-amber-800/50 text-amber-200"
+                              ? "bg-amber-50 border border-amber-200 text-amber-900"
                               : isMerchant
-                              ? "bg-zinc-800/80 border border-zinc-700/80 text-zinc-200 ml-4"
-                              : "bg-zinc-950 border border-zinc-800/80 text-zinc-300 mr-4"
+                              ? "bg-emerald-50 border border-emerald-200 text-emerald-950 ml-4"
+                              : "bg-[#F1F5F9] border border-[#E2E8F0] text-[#0F172A] mr-4"
                           )}
                         >
-                          <div className="flex items-center justify-between text-[10px] text-zinc-400">
-                            <span className="font-semibold flex items-center gap-1 text-zinc-300">
-                              {m.is_private && <Lock className="h-3 w-3 text-amber-400" />}
+                          <div className="flex items-center justify-between text-[10px] text-[#64748B]">
+                            <span className="font-semibold flex items-center gap-1 text-[#0F172A]">
+                              {m.is_private && <Lock className="h-3 w-3 text-amber-600" />}
                               {m.sender_name} ({isMerchant ? 'Comercio' : isConsumer ? 'Comprador' : 'Opinio Mediador'})
                             </span>
                             <span className="font-mono">
@@ -510,20 +504,20 @@ export function ResolutionInboxManager({
               </div>
 
               {/* Add Message Form */}
-              <form onSubmit={handleSendMessage} className="space-y-2 pt-2 border-t border-zinc-800/80">
+              <form onSubmit={handleSendMessage} className="space-y-2 pt-2 border-t border-[#E2E8F0]">
                 <div className="flex items-center justify-between">
-                  <label className="text-[11px] font-medium text-zinc-400">
+                  <label className="text-[11px] font-medium text-[#64748B]">
                     Enviar mensaje o nota interna al expediente:
                   </label>
-                  <label className="flex items-center gap-1.5 text-[11px] text-zinc-400 cursor-pointer">
+                  <label className="flex items-center gap-1.5 text-[11px] text-[#64748B] cursor-pointer">
                     <input
                       type="checkbox"
                       checked={isPrivateMessage}
                       onChange={(e) => setIsPrivateMessage(e.target.checked)}
-                      className="rounded bg-zinc-900 border-zinc-700 text-emerald-500 focus:ring-emerald-500"
+                      className="rounded border-[#CBD5E1] text-emerald-600 focus:ring-emerald-500"
                     />
                     <span className="flex items-center gap-1">
-                      <Lock className="h-3 w-3 text-amber-400" />
+                      <Lock className="h-3 w-3 text-amber-600" />
                       Nota interna (Privada para el equipo)
                     </span>
                   </label>
@@ -540,12 +534,12 @@ export function ResolutionInboxManager({
                     }
                     value={newMessageText}
                     onChange={(e) => setNewMessageText(e.target.value)}
-                    className="flex-1 px-3.5 py-2 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-emerald-500"
+                    className="flex-1 px-3.5 py-2 rounded-xl bg-[#FAFAF8] border border-[#E2E8F0] text-xs text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:border-emerald-500"
                   />
                   <button
                     type="submit"
                     disabled={submittingMessage}
-                    className="px-4 py-2 rounded-xl text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700 transition-colors flex items-center gap-1.5"
+                    className="px-4 py-2 rounded-xl text-xs font-semibold bg-[#0F172A] hover:bg-[#1E293B] text-white transition-colors flex items-center gap-1.5"
                   >
                     <Send className="h-3.5 w-3.5" />
                     <span>Enviar</span>
@@ -554,7 +548,7 @@ export function ResolutionInboxManager({
               </form>
             </div>
           ) : (
-            <div className="p-12 text-center rounded-2xl bg-zinc-900/40 border border-zinc-800 text-zinc-400">
+            <div className="p-12 text-center rounded-2xl bg-white border border-[#E2E8F0] shadow-xs text-[#64748B]">
               Selecciona un caso del panel izquierdo para ver los detalles.
             </div>
           )}
@@ -563,19 +557,19 @@ export function ResolutionInboxManager({
 
       {/* Remedy Proposal Modal Drawer */}
       {showRemedyModal && selectedCase && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-150">
-          <div className="w-full max-w-lg rounded-2xl bg-zinc-900 border border-zinc-700 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150 text-left">
-            <div className="p-5 border-b border-zinc-800 flex items-center justify-between bg-zinc-950/70">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="w-full max-w-lg rounded-2xl bg-white border border-[#E2E8F0] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150 text-left">
+            <div className="p-5 border-b border-[#E2E8F0] flex items-center justify-between bg-[#FAFAF8]">
               <div className="flex items-center gap-2">
-                <Zap className="h-4 w-4 text-emerald-400" />
-                <h3 className="text-sm font-bold text-white">
+                <Zap className="h-4 w-4 text-emerald-600" />
+                <h3 className="text-sm font-bold text-[#0F172A]">
                   Proponer Solución Formal — {selectedCase.case_number}
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setShowRemedyModal(false)}
-                className="text-zinc-400 hover:text-white text-xs"
+                className="text-[#64748B] hover:text-[#0F172A] text-xs"
               >
                 Cerrar
               </button>
@@ -584,7 +578,7 @@ export function ResolutionInboxManager({
             <form onSubmit={handleProposeRemedy} className="p-5 space-y-4">
               {/* Remedy Type Selector */}
               <div>
-                <label className="block text-xs font-medium text-zinc-300 mb-2">
+                <label className="block text-xs font-medium text-[#0F172A] mb-2">
                   Tipo de Solución Ofrecida
                 </label>
                 <div className="grid grid-cols-2 gap-2.5">
@@ -597,15 +591,15 @@ export function ResolutionInboxManager({
                     className={cn(
                       "p-3 rounded-xl border text-left text-xs transition-all",
                       selectedRemedyType === 'spei'
-                        ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/50"
-                        : "bg-zinc-800/60 text-zinc-400 border-zinc-700 hover:bg-zinc-800"
+                        ? "bg-emerald-50 text-emerald-900 border-emerald-300 shadow-xs font-semibold"
+                        : "bg-[#FAFAF8] text-[#475569] border-[#E2E8F0] hover:bg-[#F1F5F9]"
                     )}
                   >
                     <div className="font-semibold flex items-center gap-1.5 mb-0.5">
-                      <DollarSign className="h-3.5 w-3.5 text-emerald-400" />
+                      <DollarSign className="h-3.5 w-3.5 text-emerald-600" />
                       Reembolso SPEI
                     </div>
-                    <div className="text-[10px] text-zinc-400">Transferencia bancaria directa</div>
+                    <div className="text-[10px] text-[#64748B]">Transferencia bancaria directa</div>
                   </button>
 
                   <button
@@ -617,15 +611,15 @@ export function ResolutionInboxManager({
                     className={cn(
                       "p-3 rounded-xl border text-left text-xs transition-all",
                       selectedRemedyType === 'replacement'
-                        ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/50"
-                        : "bg-zinc-800/60 text-zinc-400 border-zinc-700 hover:bg-zinc-800"
+                        ? "bg-emerald-50 text-emerald-900 border-emerald-300 shadow-xs font-semibold"
+                        : "bg-[#FAFAF8] text-[#475569] border-[#E2E8F0] hover:bg-[#F1F5F9]"
                     )}
                   >
                     <div className="font-semibold flex items-center gap-1.5 mb-0.5">
-                      <Package className="h-3.5 w-3.5 text-blue-400" />
+                      <Package className="h-3.5 w-3.5 text-blue-600" />
                       Reemplazo Urgente
                     </div>
-                    <div className="text-[10px] text-zinc-400">Envío de producto nuevo</div>
+                    <div className="text-[10px] text-[#64748B]">Envío de producto nuevo</div>
                   </button>
 
                   <button
@@ -637,15 +631,15 @@ export function ResolutionInboxManager({
                     className={cn(
                       "p-3 rounded-xl border text-left text-xs transition-all",
                       selectedRemedyType === 'compensation'
-                        ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/50"
-                        : "bg-zinc-800/60 text-zinc-400 border-zinc-700 hover:bg-zinc-800"
+                        ? "bg-emerald-50 text-emerald-900 border-emerald-300 shadow-xs font-semibold"
+                        : "bg-[#FAFAF8] text-[#475569] border-[#E2E8F0] hover:bg-[#F1F5F9]"
                     )}
                   >
                     <div className="font-semibold flex items-center gap-1.5 mb-0.5">
-                      <RotateCcw className="h-3.5 w-3.5 text-purple-400" />
+                      <RotateCcw className="h-3.5 w-3.5 text-purple-600" />
                       Compensación
                     </div>
-                    <div className="text-[10px] text-zinc-400">Saldo o cupón compensatorio</div>
+                    <div className="text-[10px] text-[#64748B]">Saldo o cupón compensatorio</div>
                   </button>
 
                   <button
@@ -657,22 +651,22 @@ export function ResolutionInboxManager({
                     className={cn(
                       "p-3 rounded-xl border text-left text-xs transition-all",
                       selectedRemedyType === 'clarification'
-                        ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/50"
-                        : "bg-zinc-800/60 text-zinc-400 border-zinc-700 hover:bg-zinc-800"
+                        ? "bg-emerald-50 text-emerald-900 border-emerald-300 shadow-xs font-semibold"
+                        : "bg-[#FAFAF8] text-[#475569] border-[#E2E8F0] hover:bg-[#F1F5F9]"
                     )}
                   >
                     <div className="font-semibold flex items-center gap-1.5 mb-0.5">
-                      <FileText className="h-3.5 w-3.5 text-amber-400" />
+                      <FileText className="h-3.5 w-3.5 text-amber-600" />
                       Aclaración Logística
                     </div>
-                    <div className="text-[10px] text-zinc-400">Seguimiento con transportista</div>
+                    <div className="text-[10px] text-[#64748B]">Seguimiento con transportista</div>
                   </button>
                 </div>
               </div>
 
               {/* Responder title */}
               <div>
-                <label className="block text-xs font-medium text-zinc-300 mb-1">
+                <label className="block text-xs font-medium text-[#0F172A] mb-1">
                   Representante o Área
                 </label>
                 <input
@@ -680,13 +674,13 @@ export function ResolutionInboxManager({
                   required
                   value={responderName}
                   onChange={(e) => setResponderName(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-zinc-700 text-xs text-white"
+                  className="w-full px-3 py-2 rounded-xl bg-[#FAFAF8] border border-[#E2E8F0] text-xs text-[#0F172A]"
                 />
               </div>
 
               {/* Remedy description */}
               <div>
-                <label className="block text-xs font-medium text-zinc-300 mb-1">
+                <label className="block text-xs font-medium text-[#0F172A] mb-1">
                   Detalle de la Propuesta al Consumidor
                 </label>
                 <textarea
@@ -694,14 +688,14 @@ export function ResolutionInboxManager({
                   rows={4}
                   value={remedyText}
                   onChange={(e) => setRemedyText(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-950 border border-zinc-700 text-xs text-white leading-relaxed focus:outline-none focus:border-emerald-500"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAFAF8] border border-[#E2E8F0] text-xs text-[#0F172A] leading-relaxed focus:outline-none focus:border-emerald-500"
                   placeholder="Detalla los términos del reembolso o reemplazo..."
                 />
               </div>
 
-              <div className="p-3 rounded-xl bg-zinc-950 border border-zinc-800 text-[11px] text-zinc-400 space-y-1">
-                <span className="font-semibold text-zinc-300 flex items-center gap-1">
-                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
+              <div className="p-3 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] text-[11px] text-[#64748B] space-y-1">
+                <span className="font-semibold text-[#0F172A] flex items-center gap-1">
+                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
                   Regla de Integridad de Opinio
                 </span>
                 <p>
@@ -713,14 +707,14 @@ export function ResolutionInboxManager({
                 <button
                   type="button"
                   onClick={() => setShowRemedyModal(false)}
-                  className="px-4 py-2 rounded-xl text-xs text-zinc-400 hover:text-white"
+                  className="px-4 py-2 rounded-xl text-xs text-[#64748B] hover:text-[#0F172A]"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={submittingRemedy}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition-colors"
+                  className="px-4 py-2 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition-colors"
                 >
                   {submittingRemedy ? 'Enviando...' : 'Enviar Propuesta de Solución'}
                 </button>

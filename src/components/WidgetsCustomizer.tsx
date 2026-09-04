@@ -7,14 +7,10 @@ import {
   CheckCircle2,
   ShieldCheck,
   ExternalLink,
-  Layers,
-  Sparkles,
-  Eye,
   Sliders,
   Check,
-  Zap,
-  Globe,
   Plus,
+  Eye,
 } from 'lucide-react';
 import { Business, Widget } from '@/lib/types';
 import { createOrUpdateWidgetAction } from '@/lib/merchant-actions';
@@ -84,41 +80,42 @@ export default function CheckoutPage() {
 
   const handleCreateWidget = async () => {
     setCreating(true);
-    const formData = new FormData();
-    formData.append('business_id', String(business.id));
-    formData.append('widget_type', selectedStyle === 'floating' ? 'badge' : selectedStyle);
-    formData.append('theme', selectedTheme);
-    formData.append('style', selectedStyle);
-    formData.append('showScore', String(showScore));
-    formData.append('showCoverage', String(showCoverage));
-
-    const res = await createOrUpdateWidgetAction(formData);
-    setCreating(false);
+    const newToken = `wgt_${business.slug}_${selectedStyle}_${Date.now().toString().slice(-4)}`;
+    const res = await createOrUpdateWidgetAction({
+      businessId: business.id,
+      token: newToken,
+      widgetType: selectedStyle,
+      theme: selectedTheme,
+      config: { showScore, showCoverage },
+    });
 
     if (res.success && res.widget) {
-      setWidgets((prev) => [res.widget as Widget, ...prev]);
+      setWidgets([res.widget, ...widgets]);
     }
+    setCreating(false);
   };
+
+  const isTransparent = Number(business.coverage_percentage) >= 90;
 
   return (
     <div className="space-y-8">
       {/* 2-Column Customizer & Live Preview */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Left Column: Customization Controls (5 cols) */}
-        <div className="lg:col-span-5 p-6 rounded-2xl bg-zinc-900/60 border border-zinc-800 space-y-6">
+        <div className="lg:col-span-5 p-6 rounded-2xl bg-white border border-[#E2E8F0] shadow-xs space-y-6">
           <div>
-            <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <Sliders className="h-4 w-4 text-emerald-400" />
+            <h3 className="text-sm font-bold text-[#0F172A] flex items-center gap-2">
+              <Sliders className="h-4 w-4 text-emerald-600" />
               <span>Personalizar Apariencia</span>
             </h3>
-            <p className="text-xs text-zinc-400 mt-1">
+            <p className="text-xs text-[#64748B] mt-1">
               Selecciona el formato que mejor se integre a tu tienda en línea o pasarela de pago.
             </p>
           </div>
 
           {/* 1. Style Selector */}
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-zinc-300">
+            <label className="text-xs font-semibold text-[#0F172A]">
               Estilo del Componente
             </label>
             <div className="grid grid-cols-2 gap-2.5">
@@ -135,12 +132,12 @@ export default function CheckoutPage() {
                   className={cn(
                     "p-3 rounded-xl border text-left text-xs transition-all",
                     selectedStyle === style.id
-                      ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/60 shadow-sm"
-                      : "bg-zinc-950 text-zinc-400 border-zinc-800 hover:bg-zinc-900 hover:text-white"
+                      ? "bg-emerald-50 text-emerald-900 border-emerald-300 shadow-xs font-semibold"
+                      : "bg-[#FAFAF8] text-[#475569] border-[#E2E8F0] hover:bg-[#F1F5F9] hover:text-[#0F172A]"
                   )}
                 >
-                  <div className="font-semibold text-white">{style.name}</div>
-                  <div className="text-[10px] text-zinc-500 mt-0.5">{style.desc}</div>
+                  <div className="font-semibold">{style.name}</div>
+                  <div className="text-[10px] text-[#64748B] mt-0.5">{style.desc}</div>
                 </button>
               ))}
             </div>
@@ -148,7 +145,7 @@ export default function CheckoutPage() {
 
           {/* 2. Theme Selector */}
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-zinc-300">
+            <label className="text-xs font-semibold text-[#0F172A]">
               Tema Visual
             </label>
             <div className="grid grid-cols-2 gap-3">
@@ -158,8 +155,8 @@ export default function CheckoutPage() {
                 className={cn(
                   "p-2.5 rounded-xl border text-xs font-semibold flex items-center justify-center gap-2 transition-all",
                   selectedTheme === 'light'
-                    ? "bg-white text-zinc-950 border-white shadow"
-                    : "bg-zinc-950 text-zinc-400 border-zinc-800 hover:bg-zinc-900"
+                    ? "bg-emerald-50 text-emerald-900 border-emerald-300 shadow-xs"
+                    : "bg-[#FAFAF8] text-[#64748B] border-[#E2E8F0] hover:bg-[#F1F5F9]"
                 )}
               >
                 <span>Tema Claro</span>
@@ -171,8 +168,8 @@ export default function CheckoutPage() {
                 className={cn(
                   "p-2.5 rounded-xl border text-xs font-semibold flex items-center justify-center gap-2 transition-all",
                   selectedTheme === 'dark'
-                    ? "bg-zinc-800 text-emerald-400 border-emerald-500/60 shadow"
-                    : "bg-zinc-950 text-zinc-400 border-zinc-800 hover:bg-zinc-900"
+                    ? "bg-[#0F172A] text-white border-[#0F172A] shadow-xs"
+                    : "bg-[#FAFAF8] text-[#64748B] border-[#E2E8F0] hover:bg-[#F1F5F9]"
                 )}
               >
                 <span>Tema Oscuro</span>
@@ -181,24 +178,24 @@ export default function CheckoutPage() {
           </div>
 
           {/* 3. Toggles */}
-          <div className="space-y-3 pt-2 border-t border-zinc-800/80">
-            <label className="flex items-center justify-between text-xs text-zinc-300 cursor-pointer">
+          <div className="space-y-3 pt-2 border-t border-[#E2E8F0]">
+            <label className="flex items-center justify-between text-xs text-[#334155] cursor-pointer">
               <span>Mostrar Opinio Score ({business.trust_score})</span>
               <input
                 type="checkbox"
                 checked={showScore}
                 onChange={(e) => setShowScore(e.target.checked)}
-                className="rounded bg-zinc-950 border-zinc-700 text-emerald-500 focus:ring-emerald-500 h-4 w-4"
+                className="rounded border-[#CBD5E1] text-emerald-600 focus:ring-emerald-500 h-4 w-4"
               />
             </label>
 
-            <label className="flex items-center justify-between text-xs text-zinc-300 cursor-pointer">
+            <label className="flex items-center justify-between text-xs text-[#334155] cursor-pointer">
               <span>Mostrar Distintivo de Cobertura Transparente</span>
               <input
                 type="checkbox"
                 checked={showCoverage}
                 onChange={(e) => setShowCoverage(e.target.checked)}
-                className="rounded bg-zinc-950 border-zinc-700 text-emerald-500 focus:ring-emerald-500 h-4 w-4"
+                className="rounded border-[#CBD5E1] text-emerald-600 focus:ring-emerald-500 h-4 w-4"
               />
             </label>
           </div>
@@ -209,7 +206,7 @@ export default function CheckoutPage() {
               type="button"
               onClick={handleCreateWidget}
               disabled={creating}
-              className="w-full py-2.5 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition-all flex items-center justify-center gap-2"
+              className="w-full py-2.5 rounded-xl text-xs font-semibold bg-[#0F172A] hover:bg-[#1E293B] text-white shadow-xs transition-all flex items-center justify-center gap-2"
             >
               {creating ? (
                 <span>Creando nuevo token...</span>
@@ -226,56 +223,57 @@ export default function CheckoutPage() {
         {/* Right Column: Live Visual Preview & Embed Snippet (7 cols) */}
         <div className="lg:col-span-7 space-y-6">
           {/* Live Preview Canvas */}
-          <div className="p-6 rounded-2xl bg-zinc-900/60 border border-zinc-800 space-y-4">
-            <div className="flex items-center justify-between border-b border-zinc-800/80 pb-3">
+          <div className="p-6 rounded-2xl bg-white border border-[#E2E8F0] shadow-xs space-y-4">
+            <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-3">
               <div className="flex items-center gap-2">
-                <Eye className="h-4 w-4 text-emerald-400" />
-                <span className="text-xs font-bold text-white uppercase tracking-wider">
+                <Eye className="h-4 w-4 text-emerald-600" />
+                <h4 className="font-bold text-xs uppercase tracking-wider text-[#64748B] font-mono">
                   Vista Previa en Vivo
-                </span>
+                </h4>
               </div>
-              <span className="text-[10px] text-zinc-400 font-mono">
-                {selectedTheme === 'light' ? 'Fondo Claro' : 'Fondo Oscuro'} • Token: {token.substring(0, 14)}...
-              </span>
+
+              <div className="text-[11px] text-[#64748B] font-mono flex items-center gap-2">
+                <span>Fondo: {selectedTheme === 'light' ? 'Claro' : 'Oscuro'}</span>
+                <span>•</span>
+                <span className="truncate max-w-[150px]">Token: {token}</span>
+              </div>
             </div>
 
-            {/* Rendered Preview Box */}
+            {/* Simulated Store Mock Surface */}
             <div
               className={cn(
-                "p-8 rounded-2xl flex items-center justify-center min-h-[220px] transition-all border",
+                "p-8 rounded-xl border flex items-center justify-center min-h-[220px] transition-colors relative overflow-hidden",
                 selectedTheme === 'light'
-                  ? "bg-zinc-100 border-zinc-300"
-                  : "bg-zinc-950 border-zinc-800"
+                  ? "bg-[#FAFAF8] border-[#E2E8F0]"
+                  : "bg-slate-900 border-slate-800"
               )}
             >
               {/* 1. Badge Compacto Preview */}
               {selectedStyle === 'badge' && (
                 <div
                   className={cn(
-                    "inline-flex items-center gap-3 px-4 py-2.5 rounded-full border shadow-sm transition-all select-none",
+                    "inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full border shadow-sm transition-all select-none",
                     selectedTheme === 'light'
-                      ? "bg-white text-zinc-900 border-zinc-300 shadow-zinc-200"
-                      : "bg-zinc-900 text-white border-zinc-700/80"
+                      ? "bg-white text-[#0F172A] border-[#E2E8F0]"
+                      : "bg-slate-950 text-white border-slate-700"
                   )}
                 >
-                  <div className="h-6 w-6 rounded-full bg-emerald-500/20 text-emerald-500 flex items-center justify-center">
-                    <ShieldCheck className="h-4 w-4" />
+                  <div className="h-5 w-5 rounded-full bg-emerald-500/20 text-emerald-600 flex items-center justify-center">
+                    <ShieldCheck className="h-3.5 w-3.5" />
                   </div>
-                  <div className="flex items-center gap-2 text-xs">
-                    <span className="font-semibold tracking-tight">
-                      Opinio<span className="text-emerald-500">.mx</span>
+                  <span className="text-xs font-semibold">
+                    Opinio<span className="text-emerald-600">.mx</span>
+                  </span>
+                  {showScore && (
+                    <span className="font-mono text-xs font-bold text-emerald-600">
+                      {business.trust_score}
                     </span>
-                    {showScore && (
-                      <span className="font-mono font-bold text-emerald-500">
-                        {business.trust_score}
-                      </span>
-                    )}
-                    {showCoverage && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-medium">
-                        Cobertura {business.coverage_percentage}%
-                      </span>
-                    )}
-                  </div>
+                  )}
+                  {showCoverage && isTransparent && (
+                    <span className="text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.5 rounded-full">
+                      Cobertura {business.coverage_percentage}%
+                    </span>
+                  )}
                 </div>
               )}
 
@@ -283,59 +281,51 @@ export default function CheckoutPage() {
               {selectedStyle === 'floating' && (
                 <div
                   className={cn(
-                    "p-3 rounded-2xl border shadow-xl flex items-center gap-3 select-none max-w-xs",
+                    "p-3.5 rounded-2xl border flex items-center gap-3 shadow-lg max-w-xs select-none",
                     selectedTheme === 'light'
-                      ? "bg-white text-zinc-900 border-zinc-200 shadow-xl"
-                      : "bg-zinc-900 text-white border-zinc-700 shadow-2xl"
+                      ? "bg-white text-[#0F172A] border-[#E2E8F0]"
+                      : "bg-slate-950 text-white border-slate-700"
                   )}
                 >
-                  <div className="h-9 w-9 rounded-xl bg-emerald-500/15 text-emerald-500 flex items-center justify-center shrink-0 border border-emerald-500/30">
+                  <div className="h-9 w-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-200">
                     <ShieldCheck className="h-5 w-5" />
                   </div>
                   <div className="min-w-0">
-                    <div className="flex items-center gap-1 text-xs font-bold">
+                    <div className="text-xs font-bold truncate flex items-center gap-1">
                       <span>{business.brand_name}</span>
-                      <span className="text-emerald-500">✓</span>
+                      <CheckCircle2 className="h-3 w-3 text-emerald-600" />
                     </div>
-                    <div className="text-[10px] text-zinc-500 flex items-center gap-1.5">
-                      <span>Score: <strong className="text-emerald-500 font-mono">{business.trust_score}</strong></span>
+                    <div className="text-[10px] text-[#64748B] flex items-center gap-1.5 mt-0.5">
+                      <span className="font-bold text-emerald-600 font-mono">Score {business.trust_score}</span>
                       <span>•</span>
-                      <span>Resolución {business.resolution_rate}%</span>
+                      <span>{business.coverage_percentage}% Auditado</span>
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* 3. Reassurance Checkout Preview */}
+              {/* 3. Reassurance Card Preview */}
               {selectedStyle === 'reassurance' && (
                 <div
                   className={cn(
-                    "w-full max-w-sm p-4 rounded-xl border space-y-2 select-none shadow-sm",
+                    "w-full max-w-md p-4 rounded-xl border space-y-2 select-none",
                     selectedTheme === 'light'
-                      ? "bg-white text-zinc-900 border-zinc-200"
-                      : "bg-zinc-900 text-white border-zinc-800"
+                      ? "bg-white text-[#0F172A] border-[#E2E8F0]"
+                      : "bg-slate-950 text-white border-slate-700"
                   )}
                 >
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5 text-xs font-bold">
-                      <ShieldCheck className="h-4 w-4 text-emerald-500" />
-                      <span>Compra Protegida por Opinio.mx</span>
+                    <div className="flex items-center gap-2">
+                      <ShieldCheck className="h-4 w-4 text-emerald-600" />
+                      <span className="text-xs font-bold">Compra respaldada por Opinio.mx</span>
                     </div>
-                    <span className="text-[10px] font-semibold text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
-                      RFC SAT Validado
+                    <span className="text-[10px] font-mono text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                      Score {business.trust_score}/100
                     </span>
                   </div>
-                  <div className="text-[11px] text-zinc-500 leading-snug">
-                    Comercio auditado con{' '}
-                    <strong className="text-zinc-800 dark:text-zinc-200">
-                      {business.coverage_percentage}% de pedidos verificados
-                    </strong>{' '}
-                    y compromiso formal de resolución ante demoras o reclamaciones.
-                  </div>
-                  <div className="flex items-center justify-between text-[10px] text-zinc-400 pt-1 border-t border-zinc-200 dark:border-zinc-800">
-                    <span>94% reembolsos en &lt; 6h</span>
-                    <span className="text-emerald-500 font-medium">Ver pasaporte ↗</span>
-                  </div>
+                  <p className="text-[11px] text-[#64748B] leading-relaxed">
+                    Comercio con identidad jurídica verificada y garantía de resolución confirmada por el comprador.
+                  </p>
                 </div>
               )}
 
@@ -343,81 +333,74 @@ export default function CheckoutPage() {
               {selectedStyle === 'card' && (
                 <div
                   className={cn(
-                    "w-full max-w-sm p-5 rounded-2xl border space-y-3 select-none shadow-md",
+                    "w-full max-w-sm p-4 rounded-2xl border space-y-3 select-none",
                     selectedTheme === 'light'
-                      ? "bg-white text-zinc-900 border-zinc-200"
-                      : "bg-zinc-900 text-white border-zinc-800"
+                      ? "bg-white text-[#0F172A] border-[#E2E8F0]"
+                      : "bg-slate-950 text-white border-slate-700"
                   )}
                 >
                   <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-bold text-xs">{business.brand_name}</div>
-                      <div className="text-[10px] text-zinc-500">{business.category}</div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-mono text-sm font-extrabold text-emerald-500">
-                        ★ {business.trust_score}
+                    <div className="flex items-center gap-2">
+                      <div className="h-7 w-7 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center font-bold text-xs">
+                        {business.brand_name.slice(0, 2).toUpperCase()}
                       </div>
-                      <div className="text-[9px] text-zinc-400">Score Opinio</div>
+                      <div className="text-xs font-bold">{business.brand_name}</div>
                     </div>
+                    <span className="font-mono text-xs font-bold text-emerald-600">
+                      {business.trust_score} / 100
+                    </span>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-1.5 text-center text-[10px] p-2 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
+                  <div className="grid grid-cols-3 gap-1.5 text-center text-[10px] p-2 rounded-xl bg-[#FAFAF8] border border-[#E2E8F0]">
                     <div>
-                      <div className="text-zinc-400">Existe</div>
-                      <div className="font-semibold text-emerald-500">SAT / CLEE</div>
+                      <div className="text-[#64748B]">Existe</div>
+                      <div className="font-semibold text-emerald-700">SAT / CLEE</div>
                     </div>
                     <div>
-                      <div className="text-zinc-400">Cumple</div>
-                      <div className="font-semibold text-emerald-500">{business.coverage_percentage}%</div>
+                      <div className="text-[#64748B]">Cumple</div>
+                      <div className="font-semibold text-emerald-700">{business.coverage_percentage}% Cobertura</div>
                     </div>
                     <div>
-                      <div className="text-zinc-400">Resuelve</div>
-                      <div className="font-semibold text-emerald-500">{business.resolution_rate}%</div>
+                      <div className="text-[#64748B]">Resuelve</div>
+                      <div className="font-semibold text-emerald-700">{business.resolution_rate}% Confirmado</div>
                     </div>
-                  </div>
-
-                  <div className="text-[11px] text-zinc-500 italic">
-                    &ldquo;Excelente atención y entrega puntual en CDMX. Súper confiable.&rdquo;
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Direct Link to Widget Endpoint */}
-            <div className="flex items-center justify-between text-xs text-zinc-400 pt-2">
-              <span>Endpoint directo del iframe:</span>
+            <div className="text-right">
               <Link
-                href={`/widget/${selectedStyle === 'floating' ? 'badge' : selectedStyle}/${token}?theme=${selectedTheme}`}
+                href={`/widget/${selectedStyle === 'floating' ? 'badge' : selectedStyle}/${token}`}
                 target="_blank"
-                className="text-emerald-400 hover:underline flex items-center gap-1 font-mono text-[11px]"
+                className="text-xs text-emerald-600 hover:text-emerald-700 font-medium inline-flex items-center gap-1"
               >
-                <span>/widget/{selectedStyle === 'floating' ? 'badge' : selectedStyle}/{token}</span>
+                <span>Endpoint directo del iframe: /widget/{selectedStyle === 'floating' ? 'badge' : selectedStyle}/{token}</span>
                 <ExternalLink className="h-3 w-3" />
               </Link>
             </div>
           </div>
 
           {/* Copyable Embed Code Snippets */}
-          <div className="p-6 rounded-2xl bg-zinc-900/60 border border-zinc-800 space-y-4">
+          <div className="p-6 rounded-2xl bg-white border border-[#E2E8F0] shadow-xs space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Code2 className="h-4 w-4 text-emerald-400" />
-                <h3 className="font-semibold text-xs text-white uppercase tracking-wider">
+                <Code2 className="h-4 w-4 text-emerald-600" />
+                <h4 className="font-bold text-xs uppercase tracking-wider text-[#0F172A] font-mono">
                   Código de Inserción
-                </h3>
+                </h4>
               </div>
 
               {/* Code Tab Switcher */}
-              <div className="flex items-center gap-1 bg-zinc-950 p-1 rounded-xl border border-zinc-800 text-xs">
+              <div className="flex items-center gap-1 bg-[#F1F5F9] p-1 rounded-xl border border-[#E2E8F0] text-xs">
                 <button
                   type="button"
                   onClick={() => setActiveTab('script')}
                   className={cn(
-                    "px-3 py-1 rounded-lg font-medium transition-colors",
+                    "px-2.5 py-1 rounded-lg font-medium transition-all",
                     activeTab === 'script'
-                      ? "bg-zinc-800 text-white font-semibold"
-                      : "text-zinc-400 hover:text-white"
+                      ? "bg-white text-[#0F172A] shadow-xs"
+                      : "text-[#64748B] hover:text-[#0F172A]"
                   )}
                 >
                   HTML / Script
@@ -426,10 +409,10 @@ export default function CheckoutPage() {
                   type="button"
                   onClick={() => setActiveTab('react')}
                   className={cn(
-                    "px-3 py-1 rounded-lg font-medium transition-colors",
+                    "px-2.5 py-1 rounded-lg font-medium transition-all",
                     activeTab === 'react'
-                      ? "bg-zinc-800 text-white font-semibold"
-                      : "text-zinc-400 hover:text-white"
+                      ? "bg-white text-[#0F172A] shadow-xs"
+                      : "text-[#64748B] hover:text-[#0F172A]"
                   )}
                 >
                   React / Next.js
@@ -438,10 +421,10 @@ export default function CheckoutPage() {
                   type="button"
                   onClick={() => setActiveTab('iframe')}
                   className={cn(
-                    "px-3 py-1 rounded-lg font-medium transition-colors",
+                    "px-2.5 py-1 rounded-lg font-medium transition-all",
                     activeTab === 'iframe'
-                      ? "bg-zinc-800 text-white font-semibold"
-                      : "text-zinc-400 hover:text-white"
+                      ? "bg-white text-[#0F172A] shadow-xs"
+                      : "text-[#64748B] hover:text-[#0F172A]"
                   )}
                 >
                   Iframe
@@ -449,8 +432,14 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            {/* Code Block with Copy Button */}
-            <div className="relative rounded-xl bg-zinc-950 border border-zinc-800/80 p-4 font-mono text-xs text-zinc-300 overflow-x-auto">
+            {/* Code Box */}
+            <div className="relative">
+              <pre className="p-4 rounded-xl bg-[#FAFAF8] border border-[#E2E8F0] font-mono text-xs text-[#0F172A] overflow-x-auto leading-relaxed">
+                {activeTab === 'script' && embedScript}
+                {activeTab === 'react' && embedReact}
+                {activeTab === 'iframe' && embedIframe}
+              </pre>
+
               <button
                 type="button"
                 onClick={() =>
@@ -462,98 +451,22 @@ export default function CheckoutPage() {
                       : embedIframe
                   )
                 }
-                className="absolute top-3 right-3 px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white text-[11px] font-sans font-semibold flex items-center gap-1.5 shadow"
+                className="absolute top-3 right-3 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-white hover:bg-[#F1F5F9] text-[#0F172A] border border-[#CBD5E1] shadow-xs transition-colors flex items-center gap-1.5"
               >
                 {copied ? (
                   <>
-                    <Check className="h-3 w-3 text-emerald-400" />
-                    <span>¡Copiado!</span>
+                    <Check className="h-3.5 w-3.5 text-emerald-600" />
+                    <span className="text-emerald-700 font-semibold">¡Copiado!</span>
                   </>
                 ) : (
                   <>
-                    <Copy className="h-3 w-3" />
+                    <Copy className="h-3.5 w-3.5 text-[#64748B]" />
                     <span>Copiar</span>
                   </>
                 )}
               </button>
-
-              <pre className="pr-20 whitespace-pre leading-relaxed">
-                {activeTab === 'script'
-                  ? embedScript
-                  : activeTab === 'react'
-                  ? embedReact
-                  : embedIframe}
-              </pre>
-            </div>
-
-            <div className="p-3 rounded-xl bg-zinc-950/60 border border-zinc-800/80 text-[11px] text-zinc-400 flex items-center gap-2">
-              <Globe className="h-4 w-4 text-emerald-400 shrink-0" />
-              <span>
-                Los widgets de Opinio están firmados criptográficamente y se actualizan dinámicamente con tu puntaje y porcentaje de cobertura en tiempo real.
-              </span>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Existing Registered Widgets */}
-      <div className="p-6 rounded-2xl bg-zinc-900/60 border border-zinc-800 space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Layers className="h-4 w-4 text-emerald-400" />
-            <h3 className="font-semibold text-sm text-white">
-              Widgets Creados para este Comercio
-            </h3>
-          </div>
-          <span className="text-xs text-zinc-400">
-            {widgets.length} componente(s) activos
-          </span>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="border-b border-zinc-800 text-zinc-400 uppercase text-[10px] tracking-wider">
-              <tr>
-                <th className="py-2.5 px-3">Tipo</th>
-                <th className="py-2.5 px-3">Token Criptográfico</th>
-                <th className="py-2.5 px-3">Tema</th>
-                <th className="py-2.5 px-3">Estado</th>
-                <th className="py-2.5 px-3">Acción</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-800/60">
-              {widgets.map((w) => (
-                <tr key={w.id} className="hover:bg-zinc-800/40 transition-colors">
-                  <td className="py-2.5 px-3 font-semibold text-zinc-200 capitalize">
-                    {w.widget_type}
-                  </td>
-                  <td className="py-2.5 px-3 font-mono text-zinc-400 text-[11px]">
-                    {w.token}
-                  </td>
-                  <td className="py-2.5 px-3">
-                    <span className="px-2 py-0.5 rounded text-[10px] uppercase font-semibold bg-zinc-800 text-zinc-300">
-                      {w.theme}
-                    </span>
-                  </td>
-                  <td className="py-2.5 px-3">
-                    <span className="text-[10px] font-semibold text-emerald-400 flex items-center gap-1">
-                      <CheckCircle2 className="h-3 w-3" /> Activo
-                    </span>
-                  </td>
-                  <td className="py-2.5 px-3">
-                    <Link
-                      href={`/widget/${w.widget_type}/${w.token}`}
-                      target="_blank"
-                      className="text-emerald-400 hover:underline text-[11px] flex items-center gap-1"
-                    >
-                      <span>Abrir</span>
-                      <ExternalLink className="h-3 w-3" />
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </div>
       </div>
     </div>

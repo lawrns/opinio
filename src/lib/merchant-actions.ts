@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { query } from './db';
-import { Widget } from './types';
+import { Widget, ReviewResponse } from './types';
 
 export async function postReviewResponseAction(formData: FormData) {
   const reviewId = Number(formData.get('review_id'));
@@ -21,24 +21,29 @@ export async function postReviewResponseAction(formData: FormData) {
       [reviewId]
     );
 
+    let responseObj: ReviewResponse;
     if (existing.rows.length > 0) {
-      await query(
+      const res = await query<ReviewResponse>(
         `UPDATE review_responses 
          SET responder_name = $1, response_text = $2, created_at = NOW() 
-         WHERE review_id = $3`,
+         WHERE review_id = $3
+         RETURNING *`,
         [responderName, responseText, reviewId]
       );
+      responseObj = res.rows[0];
     } else {
-      await query(
+      const res = await query<ReviewResponse>(
         `INSERT INTO review_responses (review_id, business_id, responder_name, response_text)
-         VALUES ($1, $2, $3, $4)`,
+         VALUES ($1, $2, $3, $4)
+         RETURNING *`,
         [reviewId, businessId, responderName, responseText]
       );
+      responseObj = res.rows[0];
     }
 
     revalidatePath('/merchant/reviews');
     revalidatePath('/merchant');
-    return { success: true };
+    return { success: true, response: responseObj };
   } catch (err: unknown) {
     console.error('Error posting review response:', err);
     return { success: false, error: (err as Error).message };
@@ -219,26 +224,49 @@ export async function updateBusinessSettingsAction(formData: FormData) {
   }
 }
 
-export async function createOrUpdateWidgetAction(formData: FormData) {
-  const businessId = Number(formData.get('business_id'));
-  const widgetType = String(formData.get('widget_type') || 'badge');
-  const theme = String(formData.get('theme') || 'light');
-  const style = String(formData.get('style') || 'pill');
-  const showScore = formData.get('showScore') === 'true';
-  const showCoverage = formData.get('showCoverage') === 'true';
+export interface CreateWidgetParams {
+  businessId: number;
+  token?: string;
+  widgetType?: string;
+  theme?: string;
+  config?: Record<string, unknown>;
+}
+
+export async function createOrUpdateWidgetAction(data: FormData | CreateWidgetParams) {
+  let businessId: number;
+  let widgetType: string;
+  let theme: string;
+  let config: Record<string, unknown>;
+  let customToken: string | undefined;
+
+  if (data instanceof FormData) {
+    businessId = Number(data.get('business_id'));
+    widgetType = String(data.get('widget_type') || 'badge');
+    theme = String(data.get('theme') || 'light');
+    const style = String(data.get('style') || 'pill');
+    const showScore = data.get('showScore') === 'true';
+    const showCoverage = data.get('showCoverage') === 'true';
+    config = { style, showScore, showCoverage };
+  } else {
+    businessId = data.businessId;
+    widgetType = data.widgetType || 'badge';
+    theme = data.theme || 'light';
+    config = data.config || {};
+    customToken = data.token;
+  }
 
   if (!businessId) {
     return { success: false, error: 'ID de negocio inválido.' };
   }
 
-  const token = `wgt_${businessId}_${widgetType}_${Math.random().toString(36).substring(2, 7)}`;
+  const token = customToken || `wgt_${businessId}_${widgetType}_${Math.random().toString(36).substring(2, 7)}`;
 
   try {
     const res = await query<Widget>(
       `INSERT INTO widgets (business_id, token, widget_type, theme, config, is_active)
        VALUES ($1, $2, $3, $4, $5, true)
        RETURNING *`,
-      [businessId, token, widgetType, theme, JSON.stringify({ style, showScore, showCoverage })]
+      [businessId, token, widgetType, theme, JSON.stringify(config)]
     );
 
     revalidatePath('/merchant/widgets');

@@ -20,7 +20,7 @@ export default async function MerchantIntegrationsPage({ searchParams }: PagePro
 
   if (!currentBusiness) {
     return (
-      <div className="text-center py-16 text-zinc-400">
+      <div className="text-center py-16 text-[#64748B]">
         No se encontró información del comercio.
       </div>
     );
@@ -29,13 +29,13 @@ export default async function MerchantIntegrationsPage({ searchParams }: PagePro
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12">
       {/* Header */}
-      <div className="border-b border-zinc-800/80 pb-5">
-        <h1 className="text-2xl font-bold tracking-tight text-white">
+      <div className="border-b border-[#E2E8F0] pb-5">
+        <h1 className="text-2xl font-bold tracking-tight text-[#0F172A]">
           Integraciones y Feed de Pedidos
         </h1>
-        <p className="text-xs text-zinc-400 mt-1">
+        <p className="text-xs text-[#64748B] mt-1">
           Conecta plataformas de comercio electrónico, APIs de pago SPEI y webhooks para auditar el 100% de los pedidos de{' '}
-          <strong className="text-zinc-200">{currentBusiness.brand_name}</strong>.
+          <strong className="text-[#0F172A]">{currentBusiness.brand_name}</strong>.
         </p>
       </div>
 

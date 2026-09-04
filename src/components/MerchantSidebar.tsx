@@ -15,10 +15,7 @@ import {
   ShieldCheck,
   ExternalLink,
   ChevronDown,
-  Store,
   CheckCircle2,
-  AlertTriangle,
-  Zap,
 } from 'lucide-react';
 import { Business } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -32,7 +29,7 @@ interface MerchantSidebarProps {
 export function MerchantSidebar({
   currentBusiness,
   allBusinesses,
-  pendingCasesCount = 3,
+  pendingCasesCount = 0,
 }: MerchantSidebarProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -113,40 +110,40 @@ export function MerchantSidebar({
   const isTransparent = currentBusiness.verified_level === 'transparent_coverage';
 
   return (
-    <aside className="w-64 shrink-0 bg-zinc-950 text-zinc-300 border-r border-zinc-800/80 flex flex-col h-screen sticky top-0 select-none z-30">
+    <aside className="w-64 shrink-0 bg-white text-[#334155] border-r border-[#E2E8F0] flex flex-col h-screen sticky top-0 select-none z-30">
       {/* Brand Header */}
-      <div className="h-16 px-4 border-b border-zinc-800/80 flex items-center justify-between">
+      <div className="h-16 px-4 border-b border-[#E2E8F0] flex items-center justify-between">
         <Link
           href="/"
-          className="flex items-center gap-2.5 font-bold tracking-tight text-white hover:opacity-90 transition-opacity"
+          className="flex items-center gap-2.5 font-bold tracking-tight text-[#0F172A] hover:opacity-90 transition-opacity"
         >
-          <div className="h-8 w-8 rounded-lg bg-emerald-500/15 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shadow-sm shadow-emerald-500/10">
+          <div className="h-8 w-8 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 shadow-xs">
             <ShieldCheck className="h-5 w-5" />
           </div>
           <div className="flex flex-col">
-            <span className="text-base font-semibold leading-none text-zinc-100 flex items-center gap-1.5">
-              Opinio<span className="text-emerald-400">.mx</span>
+            <span className="text-base font-semibold leading-none text-[#0F172A] flex items-center gap-1">
+              Opinio<span className="text-emerald-600">.mx</span>
             </span>
-            <span className="text-[10px] text-zinc-400 font-medium tracking-wider uppercase mt-0.5">
+            <span className="text-[10px] text-[#64748B] font-medium tracking-wider uppercase mt-0.5">
               Merchant OS
             </span>
           </div>
         </Link>
 
-        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-950/60 text-emerald-400 border border-emerald-800/50">
+        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
           PRO
         </span>
       </div>
 
       {/* Store Switcher */}
-      <div className="p-3 border-b border-zinc-800/60 relative">
+      <div className="p-3 border-b border-[#E2E8F0] relative bg-[#FAFAF8]">
         <button
           type="button"
           onClick={() => setStoreDropdownOpen(!storeDropdownOpen)}
-          className="w-full flex items-center justify-between p-2 rounded-lg bg-zinc-900/90 hover:bg-zinc-800/80 border border-zinc-800 transition-all text-left group"
+          className="w-full flex items-center justify-between p-2 rounded-lg bg-white hover:bg-[#F8FAFC] border border-[#E2E8F0] transition-all text-left group shadow-xs"
         >
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="h-8 w-8 rounded-md bg-zinc-800 border border-zinc-700/60 flex items-center justify-center text-zinc-200 shrink-0 overflow-hidden font-semibold text-xs">
+            <div className="h-8 w-8 rounded-md bg-[#F1F5F9] border border-[#E2E8F0] flex items-center justify-center text-[#334155] shrink-0 overflow-hidden font-semibold text-xs">
               {currentBusiness.logo_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -159,25 +156,25 @@ export function MerchantSidebar({
               )}
             </div>
             <div className="min-w-0 flex-1">
-              <div className="text-xs font-semibold text-zinc-100 truncate group-hover:text-white transition-colors">
+              <div className="text-xs font-semibold text-[#0F172A] truncate group-hover:text-emerald-700 transition-colors">
                 {currentBusiness.brand_name}
               </div>
-              <div className="text-[10px] text-zinc-400 truncate flex items-center gap-1">
+              <div className="text-[10px] text-[#64748B] truncate flex items-center gap-1">
                 <span className={cn(
                   "inline-block h-1.5 w-1.5 rounded-full",
-                  isTransparent ? "bg-emerald-400 animate-pulse" : "bg-amber-400"
+                  isTransparent ? "bg-emerald-500 animate-pulse" : "bg-amber-500"
                 )} />
                 {isTransparent ? 'Cobertura Transparente' : 'Pedidos Conectados'}
               </div>
             </div>
           </div>
-          <ChevronDown className="h-3.5 w-3.5 text-zinc-400 group-hover:text-zinc-200 transition-transform duration-150 shrink-0" />
+          <ChevronDown className="h-3.5 w-3.5 text-[#64748B] group-hover:text-[#0F172A] transition-transform duration-150 shrink-0" />
         </button>
 
         {/* Dropdown Menu */}
         {storeDropdownOpen && (
-          <div className="absolute top-full left-3 right-3 mt-1.5 bg-zinc-900 border border-zinc-700/80 rounded-xl shadow-2xl py-1.5 z-50 animate-in fade-in zoom-in-95 duration-100">
-            <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400 border-b border-zinc-800">
+          <div className="absolute top-full left-3 right-3 mt-1.5 bg-white border border-[#E2E8F0] rounded-xl shadow-xl py-1.5 z-50 animate-in fade-in zoom-in-95 duration-100">
+            <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-[#64748B] border-b border-[#E2E8F0]">
               Mis Tiendas Verificadas
             </div>
             <div className="max-h-60 overflow-y-auto py-1">
@@ -189,21 +186,21 @@ export function MerchantSidebar({
                   className={cn(
                     "w-full flex items-center gap-2.5 px-3 py-2 text-xs text-left transition-colors",
                     b.slug === currentBusiness.slug
-                      ? "bg-emerald-500/10 text-emerald-300 font-medium"
-                      : "text-zinc-300 hover:bg-zinc-800 hover:text-white"
+                      ? "bg-emerald-50 text-emerald-800 font-semibold"
+                      : "text-[#334155] hover:bg-[#F8FAFC] hover:text-[#0F172A]"
                   )}
                 >
-                  <div className="h-6 w-6 rounded bg-zinc-800 border border-zinc-700 flex items-center justify-center text-[10px] shrink-0 font-bold">
+                  <div className="h-6 w-6 rounded bg-[#F1F5F9] border border-[#E2E8F0] flex items-center justify-center text-[10px] shrink-0 font-bold text-[#334155]">
                     {b.brand_name.slice(0, 2).toUpperCase()}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="truncate font-medium">{b.brand_name}</div>
-                    <div className="text-[10px] text-zinc-400 truncate">
+                    <div className="truncate font-medium text-[#0F172A]">{b.brand_name}</div>
+                    <div className="text-[10px] text-[#64748B] truncate">
                       Score: {b.trust_score} • {b.coverage_percentage}% Cobertura
                     </div>
                   </div>
                   {b.slug === currentBusiness.slug && (
-                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
                   )}
                 </button>
               ))}
@@ -228,15 +225,15 @@ export function MerchantSidebar({
               className={cn(
                 "group flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all",
                 isActive
-                  ? "bg-zinc-800/90 text-white shadow-sm border border-zinc-700/60 font-semibold"
-                  : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900/80"
+                  ? "bg-[#F4F2EB] text-[#0F172A] font-semibold border border-[#DDD7CD] shadow-xs"
+                  : "text-[#475569] hover:text-[#0F172A] hover:bg-[#F8FAFC]"
               )}
             >
               <div className="flex items-center gap-2.5">
                 <Icon
                   className={cn(
                     "h-4 w-4 shrink-0 transition-colors",
-                    isActive ? "text-emerald-400" : "text-zinc-400 group-hover:text-zinc-200"
+                    isActive ? "text-emerald-600" : "text-[#64748B] group-hover:text-[#0F172A]"
                   )}
                 />
                 <span>{item.label}</span>
@@ -244,7 +241,7 @@ export function MerchantSidebar({
 
               <div className="flex items-center gap-1.5">
                 {item.isNew && (
-                  <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
                     NUEVO
                   </span>
                 )}
@@ -253,12 +250,12 @@ export function MerchantSidebar({
                     className={cn(
                       "px-1.5 py-0.5 rounded-full text-[10px] font-semibold tabular-nums",
                       item.badgeVariant === 'urgent'
-                        ? "bg-rose-500/20 text-rose-300 border border-rose-500/40 animate-pulse"
+                        ? "bg-rose-50 text-rose-700 border border-rose-200 animate-pulse"
                         : item.badgeVariant === 'success'
-                        ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                         : item.badgeVariant === 'warning'
-                        ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
-                        : "bg-zinc-800 text-zinc-400"
+                        ? "bg-amber-50 text-amber-700 border border-amber-200"
+                        : "bg-[#F1F5F9] text-[#64748B] border border-[#E2E8F0]"
                     )}
                   >
                     {item.badge}
@@ -271,18 +268,18 @@ export function MerchantSidebar({
       </nav>
 
       {/* Passport Connection Health & Direct Public Link */}
-      <div className="p-3 border-t border-zinc-800/80 bg-zinc-950/60 space-y-2">
-        <div className="p-2.5 rounded-lg bg-zinc-900/80 border border-zinc-800/80 text-[11px] space-y-1.5">
+      <div className="p-3 border-t border-[#E2E8F0] bg-[#FAFAF8] space-y-2">
+        <div className="p-2.5 rounded-lg bg-white border border-[#E2E8F0] text-[11px] space-y-1.5 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-zinc-400 font-medium">Sincronización</span>
-            <span className="flex items-center gap-1 text-emerald-400 font-semibold text-[10px]">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping" />
+            <span className="text-[#64748B] font-medium">Sincronización</span>
+            <span className="flex items-center gap-1 text-emerald-600 font-semibold text-[10px]">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
               Shopify Activo
             </span>
           </div>
-          <div className="flex items-center justify-between text-zinc-400 text-[10px]">
+          <div className="flex items-center justify-between text-[#64748B] text-[10px]">
             <span>Pedidos monitoreados</span>
-            <span className="text-zinc-200 font-mono font-medium">
+            <span className="text-[#0F172A] font-mono font-semibold">
               {currentBusiness.observed_orders_count.toLocaleString('es-MX')}
             </span>
           </div>
@@ -291,7 +288,7 @@ export function MerchantSidebar({
         <Link
           href={`/b/${currentBusiness.slug}`}
           target="_blank"
-          className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-medium text-emerald-400 bg-emerald-950/40 hover:bg-emerald-900/50 border border-emerald-800/50 hover:border-emerald-700 transition-all group"
+          className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-all group"
         >
           <span>Ver Pasaporte Público</span>
           <ExternalLink className="h-3 w-3 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
