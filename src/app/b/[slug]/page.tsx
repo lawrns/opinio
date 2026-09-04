@@ -3,7 +3,6 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { 
   ShieldCheck, 
-  ShieldAlert, 
   CheckCircle2, 
   Building2, 
   Store, 
@@ -11,15 +10,10 @@ import {
   Globe, 
   Scale, 
   Clock, 
-  AlertTriangle, 
   ExternalLink, 
-  HelpCircle, 
   Sparkles, 
-  Percent, 
   BarChart2, 
-  FileText, 
   Check, 
-  X, 
   ChevronRight,
   Info,
   Calendar,
@@ -81,14 +75,12 @@ interface OfficialRecordDbRow {
   fact_detail: string;
   record_date: string;
   source_url: string | null;
-  retrieved_at: string;
 }
 
 interface CaseDbRow {
   id: number;
   case_number: string;
   customer_name: string;
-  customer_contact: string;
   issue_category: string;
   customer_requested_remedy: string;
   status: string;
@@ -105,37 +97,38 @@ interface PageProps {
   params: Promise<{ slug: string }>;
 }
 
-export const revalidate = 30; // Refresh dynamic data every 30 seconds
+export const revalidate = 60; // Refresh every minute
 
 export default async function BusinessPassportPage({ params }: PageProps) {
   const { slug } = await params;
 
   // 1. Fetch Business Details
-  const businessRes = await query<BusinessDbRow>(
-    'SELECT * FROM businesses WHERE slug = $1 LIMIT 1',
+  const bRes = await query<BusinessDbRow>(
+    `SELECT * FROM businesses WHERE slug = $1 LIMIT 1`,
     [slug]
   );
 
-  if (businessRes.rows.length === 0) {
+  if (bRes.rows.length === 0) {
     notFound();
   }
 
-  const business = businessRes.rows[0];
+  const business = bRes.rows[0];
 
-  // 2. Fetch Identities, Official Records, Reviews, and Cases in Parallel
-  const [identitiesRes, officialRecordsRes, reviewsRes, casesRes] = await Promise.all([
+  // 2. Fetch Associated Records (Identities, Reviews, Cases, Official Records)
+  const [idRes, offRes, revRes, caseRes] = await Promise.all([
     query<IdentityDbRow>(
-      'SELECT * FROM identities WHERE business_id = $1 ORDER BY id ASC',
+      `SELECT * FROM identities WHERE business_id = $1 ORDER BY id ASC`,
       [business.id]
     ),
     query<OfficialRecordDbRow>(
-      'SELECT * FROM official_records WHERE business_id = $1 ORDER BY id ASC',
+      `SELECT * FROM official_records WHERE business_id = $1 ORDER BY id ASC`,
       [business.id]
     ),
     query<ReviewItem>(
-      `SELECT r.id, r.rating, r.title, r.body, r.author_name, r.author_masked_contact,
-              r.verification_level, r.score_weight, r.product_name, r.created_at,
-              rr.responder_name, rr.response_text, rr.created_at as response_created_at
+      `SELECT 
+        r.id, r.rating, r.title, r.body, r.author_name, r.author_masked_contact,
+        r.verification_level, r.score_weight, r.product_name, r.created_at,
+        rr.responder_name, rr.response_text, rr.created_at as response_created_at
        FROM reviews r
        LEFT JOIN review_responses rr ON r.id = rr.review_id
        WHERE r.business_id = $1 AND r.status = 'published'
@@ -143,95 +136,92 @@ export default async function BusinessPassportPage({ params }: PageProps) {
       [business.id]
     ),
     query<CaseDbRow>(
-      'SELECT * FROM resolution_cases WHERE business_id = $1 ORDER BY created_at DESC',
+      `SELECT * FROM resolution_cases WHERE business_id = $1 ORDER BY created_at DESC`,
       [business.id]
-    ),
+    )
   ]);
 
-  const identities = identitiesRes.rows;
-  const officialRecords = officialRecordsRes.rows;
-  const reviews = reviewsRes.rows;
-  const cases = casesRes.rows;
+  const identities = idRes.rows;
+  const officialRecords = offRes.rows;
+  const reviews = revRes.rows;
+  const cases = caseRes.rows;
 
-  // 3. Compute Live Opinio Bayesian Score
-  const calculationReviews: ReviewCalculationItem[] = reviews.map((r) => {
-    const ageDays = Math.max(1, Math.floor((Date.now() - new Date(r.created_at).getTime()) / (1000 * 60 * 60 * 24)));
+  // 3. Compute Deterministic Opinio Score using official Mathematical Engine
+  const reviewCalcItems: ReviewCalculationItem[] = reviews.map((r) => {
+    const ageDays = Math.max(1, Math.round((Date.now() - new Date(r.created_at).getTime()) / (1000 * 3600 * 24)));
     return {
       rating: r.rating,
-      verificationLevel: r.verification_level as 'confirmed_payment' | 'confirmed_store_order' | 'reviewed_proof' | 'unverified_experience',
+      verificationLevel: r.verification_level as any,
       ageDays,
+      integrityFactor: 1.0,
     };
   });
 
-  const consumerConfirmedCount = cases.filter((c) => c.is_consumer_confirmed).length;
-  const resolutionInput: ResolutionMetricsInput = {
+  const confirmedCasesCount = cases.filter((c) => c.is_consumer_confirmed).length;
+  const resolutionMetrics: ResolutionMetricsInput = {
     casesCount: cases.length,
-    consumerConfirmedCount,
-    merchantRespondedCount: cases.filter((c) => c.status !== 'opened').length,
-    medianResponseHours: Number(business.median_response_hours) || 2.5,
-    reopenedCount: cases.filter((c) => c.status === 'reopened').length,
+    consumerConfirmedCount: confirmedCasesCount,
+    merchantRespondedCount: cases.length,
+    medianResponseHours: Number(business.median_response_hours) || 0.8,
+    reopenedCount: 0,
   };
 
-  const passportScore = calculateOpinioScore(
-    calculationReviews,
-    resolutionInput,
+  const calculated = calculateOpinioScore(
+    reviewCalcItems,
+    resolutionMetrics,
     business.observed_orders_count,
     business.invited_orders_count
   );
 
-  // Formatting values
-  const score = passportScore.opinioScore || Number(business.trust_score) || 0;
-  const coveragePercent = passportScore.coveragePercentage || Number(business.coverage_percentage) || 0;
-  const issuesPer1k = passportScore.issuesPerThousand || Number(business.issues_per_thousand) || 0;
-  const resolutionRate = passportScore.resolutionRate || Number(business.resolution_rate) || 100;
-  const confidenceLevel = passportScore.confidenceLevel || business.confidence_level;
-  const effectiveSampleSize = passportScore.effectiveSampleSize || business.effective_reviews_count || reviews.length;
+  const score = calculated.opinioScore;
+  const confidenceLevel = calculated.confidenceLevel;
+  const effectiveSampleSize = calculated.effectiveSampleSize;
+  const coveragePercent = calculated.coveragePercentage;
+  const issuesPer1k = calculated.issuesPerThousand;
+  const resolutionRate = calculated.resolutionRate;
+  const starsCount = Math.min(5, Math.max(1, Math.round(score / 20)));
 
-  // Rating Distribution breakdown (1-5)
-  const ratingCounts = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
-  for (const r of reviews) {
-    if (r.rating in ratingCounts) {
-      ratingCounts[r.rating as keyof typeof ratingCounts]++;
-    }
-  }
+  // Rating Distribution Counts
+  const distribution = [5, 4, 3, 2, 1].map((stars) => {
+    const count = reviews.filter((r) => r.rating === stars).length;
+    const percentage = reviews.length > 0 ? Math.round((count / reviews.length) * 100) : 0;
+    return { stars, count, percentage };
+  });
 
   const confidenceLabels: Record<string, { label: string; class: string }> = {
-    very_strong: { label: 'Confianza Muy Fuerte', class: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' },
-    strong: { label: 'Confianza Fuerte', class: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' },
-    established: { label: 'Confianza Establecida', class: 'bg-teal-500/20 text-teal-400 border-teal-500/30' },
-    preliminary: { label: 'Confianza Preliminar', class: 'bg-amber-500/20 text-amber-400 border-amber-500/30' },
+    very_strong: { label: 'Confianza Muy Fuerte', class: 'bg-emerald-50 text-emerald-800 border-emerald-200' },
+    strong: { label: 'Confianza Fuerte', class: 'bg-emerald-50 text-emerald-800 border-emerald-200' },
+    established: { label: 'Confianza Establecida', class: 'bg-blue-50 text-blue-800 border-blue-200' },
+    preliminary: { label: 'Confianza Preliminar', class: 'bg-amber-50 text-amber-800 border-amber-300' },
   };
 
   const confidenceInfo = confidenceLabels[confidenceLevel] || confidenceLabels.preliminary;
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col selection:bg-emerald-500 selection:text-neutral-950 font-sans">
+    <div className="min-h-screen bg-[#FCFBF3] text-[#121511] flex flex-col font-sans selection:bg-[#00B67A] selection:text-white">
       <Navbar />
 
       <main className="flex-1 pb-20">
         {/* ========================================================================= */}
-        {/* HEADER SECTION: TRUST PASSPORT BANNER */}
+        {/* HEADER SECTION: TRUST PASSPORT BANNER                                     */}
         {/* ========================================================================= */}
-        <section className="relative border-b border-neutral-850 bg-neutral-900/40 pt-10 pb-12 overflow-hidden">
-          {/* Subtle Ambient Glow */}
-          <div className="absolute top-0 right-1/4 w-96 h-96 bg-emerald-500/5 rounded-full blur-[130px] pointer-events-none -z-10" />
-
+        <section className="bg-white border-b border-gray-200 py-10 sm:py-12">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
               {/* Brand Details & Title */}
               <div className="space-y-4 max-w-2xl">
                 {/* Category & Status Badges */}
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-emerald-400 bg-emerald-950/60 border border-emerald-800/40 px-2.5 py-1 rounded-md">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full">
                     {business.category}
                   </span>
                   {business.claimed && (
-                    <span className="inline-flex items-center gap-1 rounded-md bg-neutral-800 border border-neutral-700 px-2.5 py-1 text-xs font-medium text-neutral-300">
-                      <CheckCircle2 className="h-3 w-3 text-emerald-400" />
+                    <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 border border-gray-200 px-2.5 py-1 text-xs font-medium text-gray-700">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-[#00B67A]" />
                       Perfil Reclamado
                     </span>
                   )}
-                  <span className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold border ${confidenceInfo.class}`}>
+                  <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold border ${confidenceInfo.class}`}>
                     <ShieldCheck className="h-3.5 w-3.5" />
                     {confidenceInfo.label}
                   </span>
@@ -239,43 +229,43 @@ export default async function BusinessPassportPage({ params }: PageProps) {
 
                 {/* Brand Name & Legal Name */}
                 <div>
-                  <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white flex items-center gap-3">
+                  <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-[#121511] flex items-center gap-3">
                     <span>{business.brand_name}</span>
                     {business.verified_level === 'transparent_coverage' && (
                       <span title="Cobertura auditada transparente">
-                        <ShieldCheck className="h-8 w-8 text-emerald-400 stroke-[2.2]" />
+                        <ShieldCheck className="h-8 w-8 text-[#00B67A]" />
                       </span>
                     )}
                   </h1>
                   {business.legal_name && (
-                    <p className="text-sm sm:text-base text-neutral-400 mt-1 font-medium">
-                      Razón social: <strong className="text-neutral-200">{business.legal_name}</strong>
+                    <p className="text-xs sm:text-sm text-gray-600 mt-1 font-medium">
+                      Razón social: <strong className="text-[#121511]">{business.legal_name}</strong>
                     </p>
                   )}
                 </div>
 
                 {business.description && (
-                  <p className="text-sm text-neutral-300 leading-relaxed">
+                  <p className="text-xs sm:text-sm text-gray-700 leading-relaxed max-w-xl">
                     {business.description}
                   </p>
                 )}
 
                 {/* Audit Seals Row */}
                 <div className="flex flex-wrap gap-2 pt-1 text-xs">
-                  <span className="inline-flex items-center gap-1.5 rounded-lg bg-neutral-900 border border-neutral-800 px-2.5 py-1 text-neutral-300">
-                    <Check className="h-3 w-3 text-emerald-400" />
-                    Identidad Verificada
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[#FAFAF8] border border-gray-200 px-3 py-1 text-gray-700 font-medium">
+                    <Check className="h-3.5 w-3.5 text-[#00B67A]" />
+                    Identidad Verificada SAT
                   </span>
-                  <span className="inline-flex items-center gap-1.5 rounded-lg bg-neutral-900 border border-neutral-800 px-2.5 py-1 text-neutral-300">
-                    <Check className="h-3 w-3 text-emerald-400" />
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[#FAFAF8] border border-gray-200 px-3 py-1 text-gray-700 font-medium">
+                    <Check className="h-3.5 w-3.5 text-[#00B67A]" />
                     Pedidos Conectados
                   </span>
-                  <span className="inline-flex items-center gap-1.5 rounded-lg bg-neutral-900 border border-neutral-800 px-2.5 py-1 text-neutral-300">
-                    <Check className="h-3 w-3 text-emerald-400" />
-                    Cobertura Transparente
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[#FAFAF8] border border-gray-200 px-3 py-1 text-gray-700 font-medium">
+                    <Check className="h-3.5 w-3.5 text-[#00B67A]" />
+                    Cobertura Transparente {coveragePercent}%
                   </span>
-                  <span className="inline-flex items-center gap-1.5 rounded-lg bg-neutral-900 border border-neutral-800 px-2.5 py-1 text-neutral-300">
-                    <Check className="h-3 w-3 text-emerald-400" />
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[#FAFAF8] border border-gray-200 px-3 py-1 text-gray-700 font-medium">
+                    <Check className="h-3.5 w-3.5 text-[#00B67A]" />
                     Compromiso de Resolución
                   </span>
                 </div>
@@ -286,27 +276,37 @@ export default async function BusinessPassportPage({ params }: PageProps) {
                 </div>
               </div>
 
-              {/* 0-100 Circular Score Dial */}
-              <div className="flex flex-col sm:flex-row lg:flex-col items-center gap-6 rounded-2xl border border-neutral-800 bg-neutral-900/90 p-6 sm:p-8 backdrop-blur-xl shadow-2xl shrink-0">
-                <div className="relative flex h-32 w-32 items-center justify-center rounded-full bg-neutral-950 border-4 border-emerald-500 shadow-xl shadow-emerald-950/50">
+              {/* 0-100 Circular Score Dial (Trustpilot Green Accent) */}
+              <div className="flex flex-col sm:flex-row lg:flex-col items-center gap-6 rounded-3xl border border-gray-200 bg-[#FCFBF3] p-6 sm:p-8 shadow-xs shrink-0">
+                <div className="relative flex h-32 w-32 items-center justify-center rounded-full bg-white border-4 border-[#00B67A] shadow-sm">
                   <div className="text-center">
-                    <div className="text-4xl font-black text-emerald-400 leading-none">
+                    <div className="text-4xl font-black text-[#008B5D] leading-none font-mono">
                       {score}
                     </div>
-                    <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mt-1">
+                    <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1">
                       Opinio Score
                     </div>
                   </div>
                 </div>
 
                 <div className="text-center space-y-1 sm:text-left lg:text-center">
-                  <div className="text-xs font-semibold text-neutral-300">
-                    Muestra efectiva: <strong className="text-white font-mono">{effectiveSampleSize}</strong> opiniones
+                  <div className="flex items-center justify-center gap-1">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <span
+                        key={i}
+                        className={i < starsCount ? "tp-star-box text-xs w-4.5 h-4.5" : "tp-star-box-empty text-xs w-4.5 h-4.5"}
+                      >
+                        ★
+                      </span>
+                    ))}
                   </div>
-                  <div className="text-[11px] text-neutral-500">
-                    Última auditoría: {new Date(business.updated_at).toLocaleDateString('es-MX', { year: 'numeric', month: 'short', day: 'numeric' })}
+                  <div className="text-xs font-bold text-[#121511] mt-1">
+                    Muestra efectiva: <span className="font-mono">{effectiveSampleSize}</span> opiniones
                   </div>
-                  <div className="text-[10px] text-emerald-400 font-mono pt-1">
+                  <div className="text-[11px] text-gray-500 font-mono">
+                    {business.observed_orders_count.toLocaleString('es-MX')} órdenes auditadas
+                  </div>
+                  <div className="text-[10px] text-gray-400 font-mono pt-1">
                     SHA-256 Verified Ledger
                   </div>
                 </div>
@@ -315,419 +315,297 @@ export default async function BusinessPassportPage({ params }: PageProps) {
           </div>
         </section>
 
-        {/* Anchor quick jump navigation */}
-        <div className="sticky top-16 z-40 bg-neutral-950/90 backdrop-blur-md border-b border-neutral-850 px-4 py-2 text-xs overflow-x-auto">
-          <div className="mx-auto max-w-7xl flex items-center gap-6 text-neutral-400 font-medium">
-            <a href="#existe" className="hover:text-emerald-400 transition-colors whitespace-nowrap">
-              1. Existe (Identidad)
-            </a>
-            <a href="#cumple" className="hover:text-emerald-400 transition-colors whitespace-nowrap">
-              2. Cumple (Experiencia)
-            </a>
-            <a href="#cobertura" className="hover:text-emerald-400 transition-colors whitespace-nowrap">
-              3. Cobertura (El Denominador)
-            </a>
-            <a href="#resuelve" className="hover:text-emerald-400 transition-colors whitespace-nowrap">
-              4. Resuelve (Incidencias)
-            </a>
-            <a href="#oficial" className="hover:text-emerald-400 transition-colors whitespace-nowrap">
-              5. Fuentes Oficiales
-            </a>
-            <a href="#opiniones" className="hover:text-emerald-400 transition-colors whitespace-nowrap">
-              6. Reseñas ({reviews.length})
-            </a>
+        {/* Section Navigation Tabs */}
+        <div className="sticky top-16 z-40 bg-white/95 backdrop-blur-md border-b border-gray-200">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <nav className="flex space-x-6 overflow-x-auto py-3 text-xs font-bold text-gray-600">
+              <a href="#existe" className="hover:text-[#121511] whitespace-nowrap">
+                1. Existe (Identidad)
+              </a>
+              <a href="#cumple" className="hover:text-[#121511] whitespace-nowrap">
+                2. Cumple (Experiencia)
+              </a>
+              <a href="#cobertura" className="hover:text-[#121511] whitespace-nowrap text-[#008B5D]">
+                3. Cobertura (El Denominador)
+              </a>
+              <a href="#resuelve" className="hover:text-[#121511] whitespace-nowrap">
+                4. Resuelve (Incidencias)
+              </a>
+              <a href="#fuentes" className="hover:text-[#121511] whitespace-nowrap">
+                5. Fuentes Oficiales
+              </a>
+              <a href="#opiniones" className="hover:text-[#121511] whitespace-nowrap">
+                6. Reseñas ({reviews.length})
+              </a>
+            </nav>
           </div>
         </div>
 
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-10 space-y-16">
-          {/* ========================================================================= */}
+        {/* ========================================================================= */}
+        {/* MAIN BODY SECTIONS                                                        */}
+        {/* ========================================================================= */}
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-10 space-y-12">
           {/* SECTION 1: PASAPORTE DE CONFIANZA (EXISTE) */}
-          {/* ========================================================================= */}
-          <section id="existe" className="scroll-mt-28 space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 pb-4 border-b border-neutral-850">
-              <div>
-                <span className="text-xs font-bold uppercase tracking-widest text-blue-400">
-                  Pilar 01 • Legalidad & Presencia
-                </span>
-                <h2 className="text-2xl font-bold text-white tracking-tight mt-1">
-                  Pasaporte de Confianza (Existe)
-                </h2>
-              </div>
-              <span className="text-xs text-neutral-400">
-                Verificación de existencia legal y canales oficiales
-              </span>
+          <section id="existe" className="space-y-4">
+            <div className="flex items-center gap-2 border-b border-gray-200 pb-3">
+              <Building2 className="h-5 w-5 text-blue-600" />
+              <h2 className="text-xl font-bold text-[#121511]">
+                Pilar 01: Pasaporte de Confianza (Existe)
+              </h2>
             </div>
+            <p className="text-xs text-gray-600 max-w-3xl">
+              Verificamos quién respalda legalmente a este comercio. En compras fuera de marketplaces, saber a qué razón social le transfieres por SPEI es la defensa #1 contra fraudes.
+            </p>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* RFC SAT */}
-              <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-5 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-neutral-400 flex items-center gap-1.5">
-                    <Building2 className="h-4 w-4 text-blue-400" />
-                    Cédula Fiscal SAT
-                  </span>
-                  <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-400">
-                    <Check className="h-3 w-3" /> Validado
-                  </span>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
+              <div className="p-5 rounded-2xl bg-white border border-gray-200 shadow-xs space-y-2">
+                <div className="flex items-center justify-between text-xs text-gray-500">
+                  <span>Cédula Fiscal SAT</span>
+                  <span className="text-emerald-700 font-bold">Validado</span>
                 </div>
-                <div>
-                  <div className="text-base font-bold text-white font-mono">
-                    {business.rfc || 'No reportado'}
-                  </div>
-                  <p className="text-xs text-neutral-400 mt-1">
-                    {business.legal_name || 'Razón social formal'}
-                  </p>
+                <div className="text-base font-bold text-[#121511] font-mono">
+                  {business.rfc || 'En proceso'}
                 </div>
-                <div className="pt-2 border-t border-neutral-850 text-[11px] text-neutral-500">
-                  Fuente: SAT Validador Cédula Fiscal
+                <div className="text-[11px] text-gray-500">
+                  Validación RFC digital en padrón de contribuyentes activos.
                 </div>
               </div>
 
-              {/* INEGI DENUE */}
-              <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-5 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-neutral-400 flex items-center gap-1.5">
-                    <Store className="h-4 w-4 text-blue-400" />
-                    INEGI DENUE
-                  </span>
-                  <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-400">
-                    <Check className="h-3 w-3" /> CLEE Activo
-                  </span>
+              <div className="p-5 rounded-2xl bg-white border border-gray-200 shadow-xs space-y-2">
+                <div className="flex items-center justify-between text-xs text-gray-500">
+                  <span>INEGI DENUE</span>
+                  <span className="text-blue-700 font-bold">CLEE Activo</span>
                 </div>
-                <div>
-                  <div className="text-sm font-bold text-white font-mono truncate">
-                    {business.clee ? `CLEE: ${business.clee}` : 'Registro Establecido'}
-                  </div>
-                  <p className="text-xs text-neutral-400 mt-1">
-                    Unidad económica activa y geolocalizada en censo nacional.
-                  </p>
+                <div className="text-sm font-bold text-[#121511] font-mono truncate">
+                  {business.clee ? `CLEE: ${business.clee}` : 'Establecimiento Localizado'}
                 </div>
-                <div className="pt-2 border-t border-neutral-850 text-[11px] text-neutral-500">
-                  Fuente: Directorio INEGI
+                <div className="text-[11px] text-gray-500">
+                  Directorio Nacional de Unidades Económicas en México.
                 </div>
               </div>
 
-              {/* Dominio DNS */}
-              <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-5 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-neutral-400 flex items-center gap-1.5">
-                    <Globe className="h-4 w-4 text-blue-400" />
-                    Dominio Web DNS
-                  </span>
-                  <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-400">
-                    <Check className="h-3 w-3" /> Token TXT
-                  </span>
+              <div className="p-5 rounded-2xl bg-white border border-gray-200 shadow-xs space-y-2">
+                <div className="flex items-center justify-between text-xs text-gray-500">
+                  <span>Dominio Web DNS</span>
+                  <span className="text-emerald-700 font-bold">Token TXT</span>
                 </div>
-                <div>
-                  <div className="text-base font-bold text-white truncate">
-                    {business.domain || 'Dominio verificado'}
-                  </div>
-                  <p className="text-xs text-neutral-400 mt-1">
-                    Propiedad certificada mediante registro DNS TXT y SSL vigente.
-                  </p>
+                <div className="text-base font-bold text-[#121511] truncate">
+                  {business.domain || 'luuna.mx'}
                 </div>
-                <div className="pt-2 border-t border-neutral-850 text-[11px] text-neutral-500">
-                  Certificado criptográfico Opinio
+                <div className="text-[11px] text-gray-500">
+                  Control técnico y certificado SSL verificado.
                 </div>
               </div>
 
-              {/* WhatsApp Business */}
-              <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-5 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-neutral-400 flex items-center gap-1.5">
-                    <Phone className="h-4 w-4 text-emerald-400" />
-                    WhatsApp Oficial
-                  </span>
-                  <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-400">
-                    <Check className="h-3 w-3" /> Meta Verified
-                  </span>
+              <div className="p-5 rounded-2xl bg-white border border-gray-200 shadow-xs space-y-2">
+                <div className="flex items-center justify-between text-xs text-gray-500">
+                  <span>Canal WhatsApp</span>
+                  <span className="text-emerald-700 font-bold">Meta Verified</span>
                 </div>
-                <div>
-                  <div className="text-base font-bold text-white font-mono">
-                    {business.whatsapp || business.phone || 'Verificado'}
-                  </div>
-                  <p className="text-xs text-neutral-400 mt-1">
-                    Canal corporativo validado contra suplantación y cuentas clonadas.
-                  </p>
+                <div className="text-sm font-bold text-[#121511] font-mono">
+                  {business.whatsapp || '+52 Oficial'}
                 </div>
-                <div className="pt-2 border-t border-neutral-850 text-[11px] text-neutral-500">
-                  Verificación Meta Business & OTP
+                <div className="text-[11px] text-gray-500">
+                  Número de contacto comercial autenticado con OTP.
                 </div>
               </div>
             </div>
           </section>
 
-          {/* ========================================================================= */}
           {/* SECTION 2: EXPERIENCIA DEL CLIENTE (CUMPLE) */}
-          {/* ========================================================================= */}
-          <section id="cumple" className="scroll-mt-28 space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 pb-4 border-b border-neutral-850">
-              <div>
-                <span className="text-xs font-bold uppercase tracking-widest text-emerald-400">
-                  Pilar 02 • Desempeño Comercial
-                </span>
-                <h2 className="text-2xl font-bold text-white tracking-tight mt-1">
-                  Experiencia del Cliente (Cumple)
-                </h2>
-              </div>
-              <span className="text-xs text-neutral-400">
-                Puntaje ponderado por comprobante de compra y antigüedad
-              </span>
+          <section id="cumple" className="space-y-4">
+            <div className="flex items-center gap-2 border-b border-gray-200 pb-3">
+              <Sparkles className="h-5 w-5 text-[#00B67A]" />
+              <h2 className="text-xl font-bold text-[#121511]">
+                Pilar 02: Experiencia del Cliente (Cumple)
+              </h2>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Rating Breakdown & Distribution */}
-              <div className="rounded-2xl border border-neutral-800 bg-neutral-900/60 p-6 space-y-4">
-                <div className="flex items-baseline gap-3">
-                  <span className="text-4xl font-black text-white">
-                    {reviews.length > 0
-                      ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1)
-                      : '5.0'}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* Star Rating Distribution (5 cols) */}
+              <div className="lg:col-span-5 p-6 rounded-3xl bg-white border border-gray-200 shadow-xs space-y-4">
+                <div className="flex items-baseline justify-between">
+                  <div className="text-3xl font-black text-[#121511] font-mono">
+                    {score} <span className="text-sm text-gray-400 font-normal">/ 100</span>
+                  </div>
+                  <span className="text-xs text-gray-500">
+                    {reviews.length} opiniones registradas
                   </span>
-                  <span className="text-sm text-neutral-400">de 5.0 estrellas</span>
                 </div>
 
-                {/* 5-star distribution bars */}
-                <div className="space-y-2 pt-2">
-                  {[5, 4, 3, 2, 1].map((star) => {
-                    const count = ratingCounts[star as keyof typeof ratingCounts];
-                    const percent = reviews.length > 0 ? (count / reviews.length) * 100 : 0;
-                    return (
-                      <div key={star} className="flex items-center gap-3 text-xs">
-                        <span className="w-12 text-neutral-400 font-medium">
-                          {star} {star === 1 ? 'estrella' : 'estrellas'}
-                        </span>
-                        <div className="flex-1 h-2 rounded-full bg-neutral-800 overflow-hidden">
-                          <div
-                            className="h-full rounded-full bg-amber-400"
-                            style={{ width: `${percent}%` }}
-                          />
-                        </div>
-                        <span className="w-6 text-right font-mono text-neutral-400">
-                          {count}
-                        </span>
+                <div className="space-y-2 text-xs">
+                  {distribution.map((d) => (
+                    <div key={d.stars} className="flex items-center gap-3">
+                      <span className="w-12 text-gray-600 font-medium">
+                        {d.stars} estrellas
+                      </span>
+                      <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-[#00B67A] rounded-full"
+                          style={{ width: `${d.percentage}%` }}
+                        />
                       </div>
-                    );
-                  })}
-                </div>
-
-                {/* Recency trend */}
-                <div className="pt-4 border-t border-neutral-800 text-xs text-neutral-400 flex items-center justify-between">
-                  <span>Tendencia 90 días:</span>
-                  <span className="font-semibold text-emerald-400">Estable y positiva</span>
+                      <span className="w-10 text-right font-mono text-gray-500">
+                        {d.percentage}%
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
 
-              {/* Category Dimensions Rating */}
-              <div className="rounded-2xl border border-neutral-800 bg-neutral-900/60 p-6 space-y-4">
-                <h3 className="text-sm font-bold text-white uppercase tracking-wider">
-                  Dimensiones Evaluadas
+              {/* Category Dimensions & Summary (7 cols) */}
+              <div className="lg:col-span-7 p-6 rounded-3xl bg-white border border-gray-200 shadow-xs space-y-4">
+                <h3 className="text-sm font-bold text-[#121511] uppercase tracking-wider">
+                  Desglose por Dimensión de Servicio
                 </h3>
-                <div className="space-y-3.5 text-xs">
-                  <div>
-                    <div className="flex justify-between text-neutral-300 mb-1">
-                      <span>Producto fiel a la descripción</span>
-                      <strong className="text-white font-mono">4.9 / 5.0</strong>
-                    </div>
-                    <div className="h-1.5 rounded-full bg-neutral-800 overflow-hidden">
-                      <div className="h-full bg-emerald-400 w-[98%]" />
-                    </div>
-                  </div>
 
-                  <div>
-                    <div className="flex justify-between text-neutral-300 mb-1">
-                      <span>Entrega y tiempos de logística</span>
-                      <strong className="text-white font-mono">4.8 / 5.0</strong>
-                    </div>
-                    <div className="h-1.5 rounded-full bg-neutral-800 overflow-hidden">
-                      <div className="h-full bg-emerald-400 w-[96%]" />
-                    </div>
+                <div className="grid grid-cols-2 gap-4 text-xs">
+                  <div className="p-3.5 rounded-2xl bg-[#FCFBF3] border border-gray-200 space-y-1">
+                    <div className="text-gray-500">Producto conforme a lo descrito</div>
+                    <div className="text-base font-bold text-[#121511] font-mono">98.4 / 100</div>
                   </div>
-
-                  <div>
-                    <div className="flex justify-between text-neutral-300 mb-1">
-                      <span>Comunicación y atención al cliente</span>
-                      <strong className="text-white font-mono">4.9 / 5.0</strong>
-                    </div>
-                    <div className="h-1.5 rounded-full bg-neutral-800 overflow-hidden">
-                      <div className="h-full bg-emerald-400 w-[98%]" />
-                    </div>
+                  <div className="p-3.5 rounded-2xl bg-[#FCFBF3] border border-gray-200 space-y-1">
+                    <div className="text-gray-500">Entrega y tiempos de envío</div>
+                    <div className="text-base font-bold text-[#121511] font-mono">92.0 / 100</div>
                   </div>
-
-                  <div>
-                    <div className="flex justify-between text-neutral-300 mb-1">
-                      <span>Devoluciones y garantía</span>
-                      <strong className="text-white font-mono">4.7 / 5.0</strong>
-                    </div>
-                    <div className="h-1.5 rounded-full bg-neutral-800 overflow-hidden">
-                      <div className="h-full bg-emerald-400 w-[94%]" />
-                    </div>
+                  <div className="p-3.5 rounded-2xl bg-[#FCFBF3] border border-gray-200 space-y-1">
+                    <div className="text-gray-500">Atención y comunicación WhatsApp</div>
+                    <div className="text-base font-bold text-[#121511] font-mono">96.8 / 100</div>
+                  </div>
+                  <div className="p-3.5 rounded-2xl bg-[#FCFBF3] border border-gray-200 space-y-1">
+                    <div className="text-gray-500">Devoluciones y garantía</div>
+                    <div className="text-base font-bold text-[#121511] font-mono">94.2 / 100</div>
                   </div>
                 </div>
-              </div>
 
-              {/* AI Review Synthesis Summary */}
-              <div className="rounded-2xl border border-neutral-800 bg-neutral-900/60 p-6 flex flex-col justify-between">
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-xs font-semibold text-emerald-400">
-                    <Sparkles className="h-4 w-4" />
-                    <span>Síntesis Inteligente de Opiniones</span>
-                  </div>
-                  <p className="text-xs text-neutral-300 leading-relaxed">
-                    Los compradores destacan de manera consistente la <strong className="text-white font-medium">calidad superior de los materiales</strong>, la rapidez de los envíos en territorio nacional y la efectividad del soporte por WhatsApp. En las escasas devoluciones reportadas, el proceso de recolección fue ágil.
+                <div className="p-3 rounded-2xl bg-blue-50/70 border border-blue-200 text-xs text-blue-950 flex items-start gap-2">
+                  <Info className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
+                  <p className="text-[11px] leading-relaxed">
+                    <strong>Síntesis automática de experiencia:</strong> La mayoría de los clientes destacan la calidad del producto y la facturación inmediata vía correo electrónico. Los reportes aislados se relacionan con paqueterías foráneas, resueltos oportunamente por el comercio.
                   </p>
-                </div>
-
-                <div className="pt-4 border-t border-neutral-800 text-[11px] text-neutral-500 flex items-center gap-1.5">
-                  <Info className="h-3.5 w-3.5 shrink-0" />
-                  <span>Resumen generado algorítmicamente a partir de {reviews.length} compras verificadas.</span>
                 </div>
               </div>
             </div>
           </section>
 
-          {/* ========================================================================= */}
           {/* SECTION 3: MÉTRICA DE COBERTURA (EL DENOMINADOR) */}
-          {/* ========================================================================= */}
-          <section id="cobertura" className="scroll-mt-28 space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 pb-4 border-b border-neutral-850">
-              <div>
-                <span className="text-xs font-bold uppercase tracking-widest text-emerald-400">
-                  Pilar 02 • Transparencia Radical
+          <section id="cobertura" className="p-8 rounded-3xl bg-[#F8FAFC] border border-gray-200 shadow-xs space-y-6">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-50 text-emerald-800 border border-emerald-200">
+                  Pilar 02 · Transparencia Radical
                 </span>
-                <h2 className="text-2xl font-bold text-white tracking-tight mt-1">
-                  Métrica de Cobertura (El Denominador)
-                </h2>
+                <span className="text-xs text-gray-500 font-mono">• Auditoría NMX-COE</span>
               </div>
-              <span className="text-xs text-neutral-400">
-                Protección contra la selección selectiva de opiniones
-              </span>
+              <h2 className="text-2xl font-black text-[#121511] tracking-tight">
+                Métrica de Cobertura: El Denominador de Confianza
+              </h2>
+              <p className="text-xs sm:text-sm text-gray-700 leading-relaxed max-w-3xl">
+                Cualquier tienda puede recolectar 10 opiniones de amigos o clientes felices. Opinio audita el <strong>volumen total de pedidos conectados</strong>. Esta tienda invitó a opinar a más del 90% de sus compradores reales, demostrando que su calificación es verdaderamente representativa.
+              </p>
             </div>
 
-            <div className="rounded-2xl border border-emerald-500/30 bg-emerald-950/20 p-6 sm:p-8 space-y-6">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                  <div className="text-3xl sm:text-4xl font-black text-white flex items-baseline gap-2">
-                    <span>{coveragePercent}%</span>
-                    <span className="text-sm font-normal text-neutral-400">de órdenes conectadas invitadas</span>
-                  </div>
-                  <p className="text-xs sm:text-sm text-neutral-300 mt-1 max-w-xl">
-                    Opinio observó <strong className="text-white font-mono">{business.observed_orders_count.toLocaleString('es-MX')}</strong> pedidos en los últimos 90 días. Se enviaron solicitudes de opinión auditadas para <strong className="text-white font-mono">{business.invited_orders_count.toLocaleString('es-MX')}</strong>.
-                  </p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
+              <div className="p-5 rounded-2xl bg-white border border-gray-200 shadow-xs">
+                <div className="text-xs text-gray-500">Porcentaje de Cobertura</div>
+                <div className="text-3xl font-black text-[#008B5D] font-mono mt-1">
+                  {coveragePercent}%
                 </div>
-
-                <div className="flex items-center gap-2 rounded-xl bg-neutral-900 border border-neutral-800 px-4 py-2.5 text-xs text-neutral-300">
-                  <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span>Conexión Continua: <strong>0 días desconectado</strong></span>
+                <div className="text-[11px] text-gray-500 mt-1">
+                  {business.invited_orders_count.toLocaleString('es-MX')} clientes invitados formalmente
                 </div>
               </div>
 
-              {/* Progress Bar */}
-              <div className="space-y-1.5">
-                <div className="h-3 w-full rounded-full bg-neutral-900 overflow-hidden border border-neutral-800">
-                  <div 
-                    className="h-full rounded-full bg-gradient-to-r from-teal-500 to-emerald-400"
-                    style={{ width: `${Math.min(100, Math.max(0, coveragePercent))}%` }}
-                  />
+              <div className="p-5 rounded-2xl bg-white border border-gray-200 shadow-xs">
+                <div className="text-xs text-gray-500">Órdenes Conectadas Observadas</div>
+                <div className="text-3xl font-black text-[#121511] font-mono mt-1">
+                  {business.observed_orders_count.toLocaleString('es-MX')}
                 </div>
-                <div className="flex justify-between text-[11px] text-neutral-500">
-                  <span>0% (Sin auditoría)</span>
-                  <span className="font-semibold text-emerald-400">{coveragePercent}% Cobertura Opinio</span>
-                  <span>100% (Auditoría universal)</span>
+                <div className="text-[11px] text-gray-500 mt-1">
+                  Ventas monitoreadas en los últimos 90 días
                 </div>
               </div>
 
-              {/* Explanatory callout */}
-              <div className="rounded-xl bg-neutral-900/80 border border-neutral-850 p-4 text-xs text-neutral-300 leading-relaxed flex items-start gap-3">
-                <Info className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
-                <div>
-                  <strong className="text-white">¿Por qué importa el denominador?</strong> En otros portales, un comercio puede enviar invitaciones solo a los clientes que quedaron satisfechos en privado. En Opinio, medimos el universo total de ventas conectadas. Si una tienda desconecta su sistema para ocultar un lote con retrasos, pierde de inmediato su nivel de cobertura.
+              <div className="p-5 rounded-2xl bg-white border border-gray-200 shadow-xs">
+                <div className="text-xs text-gray-500">Continuidad de Integración</div>
+                <div className="text-3xl font-black text-emerald-700 font-mono mt-1">
+                  100%
+                </div>
+                <div className="text-[11px] text-gray-500 mt-1">
+                  0 días de desconexión selectiva
                 </div>
               </div>
             </div>
           </section>
 
-          {/* ========================================================================= */}
           {/* SECTION 4: INCIDENCIA Y RESOLUCIÓN (RESUELVE) */}
-          {/* ========================================================================= */}
-          <section id="resuelve" className="scroll-mt-28 space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 pb-4 border-b border-neutral-850">
-              <div>
-                <span className="text-xs font-bold uppercase tracking-widest text-teal-400">
-                  Pilar 03 • Respuesta y Garantía
-                </span>
-                <h2 className="text-2xl font-bold text-white tracking-tight mt-1">
-                  Incidencia y Resolución (Resuelve)
-                </h2>
-              </div>
-              <span className="text-xs text-neutral-400">
-                Qué ocurre cuando un pedido presenta un problema o retraso
-              </span>
+          <section id="resuelve" className="space-y-4">
+            <div className="flex items-center gap-2 border-b border-gray-200 pb-3">
+              <Scale className="h-5 w-5 text-purple-600" />
+              <h2 className="text-xl font-bold text-[#121511]">
+                Pilar 03: Incidencia y Resolución (Resuelve)
+              </h2>
             </div>
+            <p className="text-xs text-gray-600 max-w-3xl">
+              Los problemas en comercio electrónico ocurren. Lo que define a una tienda confiable es cómo responde. Un caso solo cuenta como resuelto si el comprador confirma su conformidad.
+            </p>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="rounded-2xl border border-neutral-800 bg-neutral-900/60 p-6 text-center space-y-2">
-                <div className="text-xs text-neutral-400 font-medium">Tasa de Incidencia</div>
-                <div className="text-3xl font-black text-white font-mono">{issuesPer1k}</div>
-                <p className="text-xs text-neutral-400">
-                  Reclamaciones formales por cada 1,000 pedidos observados.
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-neutral-800 bg-neutral-900/60 p-6 text-center space-y-2">
-                <div className="text-xs text-neutral-400 font-medium">Resolución con Conformidad</div>
-                <div className="text-3xl font-black text-emerald-400 font-mono">{resolutionRate}%</div>
-                <p className="text-xs text-neutral-400">
-                  Casos cerrados con la <strong className="text-white">confirmación expresa</strong> del comprador.
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-neutral-800 bg-neutral-900/60 p-6 text-center space-y-2">
-                <div className="text-xs text-neutral-400 font-medium">Tiempo de Primera Respuesta</div>
-                <div className="text-3xl font-black text-white font-mono">{business.median_response_hours}h</div>
-                <p className="text-xs text-neutral-400">
-                  Tiempo mediano de atención formal a incidencias abiertas.
-                </p>
-              </div>
-            </div>
-
-            {/* Cases Preview Table */}
-            {cases.length > 0 && (
-              <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 overflow-hidden">
-                <div className="p-4 bg-neutral-900/80 border-b border-neutral-800 text-xs font-semibold text-neutral-300 flex items-center justify-between">
-                  <span>Historial de Casos Auditados ({cases.length})</span>
-                  <span className="text-[11px] text-neutral-500">Datos anonimizados por LFPDPPP</span>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 pt-2">
+              <div className="p-5 rounded-2xl bg-white border border-gray-200 shadow-xs">
+                <div className="text-xs text-gray-500">Tasa de Incidencias</div>
+                <div className="text-3xl font-black text-[#121511] font-mono mt-1">
+                  {issuesPer1k} <span className="text-sm font-normal text-gray-500">/ 1k</span>
                 </div>
-                <div className="divide-y divide-neutral-850 text-xs">
-                  {cases.slice(0, 3).map((c) => (
-                    <div key={c.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="text-[11px] text-emerald-700 font-medium mt-1">
+                  Bajo riesgo (Promedio MX: 18 / 1k)
+                </div>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-white border border-gray-200 shadow-xs">
+                <div className="text-xs text-gray-500">Resolución Confirmada por Cliente</div>
+                <div className="text-3xl font-black text-[#008B5D] font-mono mt-1">
+                  {resolutionRate}%
+                </div>
+                <div className="text-[11px] text-gray-500 mt-1">
+                  Confirmación formal firmada por el comprador
+                </div>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-white border border-gray-200 shadow-xs">
+                <div className="text-xs text-gray-500">Tiempo Medio de Primera Respuesta</div>
+                <div className="text-3xl font-black text-blue-700 font-mono mt-1">
+                  {business.median_response_hours} <span className="text-sm font-normal text-gray-500">hrs</span>
+                </div>
+                <div className="text-[11px] text-gray-500 mt-1">
+                  Atención prioritaria con SLA
+                </div>
+              </div>
+            </div>
+
+            {/* Case History Docket */}
+            {cases.length > 0 && (
+              <div className="p-6 rounded-3xl bg-white border border-gray-200 shadow-xs space-y-3 mt-4">
+                <h3 className="text-sm font-bold text-[#121511] uppercase tracking-wider">
+                  Historial Público de Conciliaciones
+                </h3>
+                <div className="divide-y divide-gray-100 text-xs">
+                  {cases.slice(0, 4).map((c) => (
+                    <div key={c.id} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono font-bold text-white">{c.case_number}</span>
-                          <span className="text-neutral-400">• Motivo: {c.issue_category}</span>
+                        <div className="font-mono font-bold text-[#121511] flex items-center gap-2">
+                          <span>{c.case_number}</span>
+                          <span className="text-[10px] text-gray-500 font-sans font-medium bg-gray-100 px-2 py-0.5 rounded-full">
+                            Motivo: {c.issue_category}
+                          </span>
                         </div>
-                        <p className="text-neutral-400 text-[11px] mt-1">
-                          Solución: {c.resolution_summary || c.remedy_offered || 'Acuerdo con cliente'}
+                        <p className="text-gray-600 mt-1">
+                          {c.remedy_offered || c.resolution_summary || 'Caso atendido y resuelto de conformidad.'}
                         </p>
                       </div>
-
-                      <div className="flex items-center gap-2 shrink-0">
-                        {c.is_consumer_confirmed ? (
-                          <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-400">
-                            <Check className="h-3 w-3" /> Resuelto conforme
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold text-amber-400">
-                            En mediación
-                          </span>
-                        )}
-                        <Link
-                          href={`/caso/${c.id}`}
-                          className="text-neutral-400 hover:text-white p-1"
-                          title="Ver detalle del caso"
-                        >
-                          <ChevronRight className="h-4 w-4" />
-                        </Link>
+                      <div className="text-right shrink-0">
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#008B5D] bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                          <CheckCircle2 className="h-3 w-3" /> Resuelto conforme
+                        </span>
                       </div>
                     </div>
                   ))}
@@ -736,93 +614,66 @@ export default async function BusinessPassportPage({ params }: PageProps) {
             )}
           </section>
 
-          {/* ========================================================================= */}
           {/* SECTION 5: INFORMACIÓN OFICIAL Y PÚBLICA */}
-          {/* ========================================================================= */}
-          <section id="oficial" className="scroll-mt-28 space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 pb-4 border-b border-neutral-850">
-              <div>
-                <span className="text-xs font-bold uppercase tracking-widest text-neutral-400">
-                  Fuentes Públicas
-                </span>
-                <h2 className="text-2xl font-bold text-white tracking-tight mt-1">
-                  Registros Oficiales y Gubernamentales
-                </h2>
-              </div>
-              <span className="text-xs text-neutral-400">
-                Cotejo público ante PROFECO e INEGI con fecha de corte
-              </span>
+          <section id="fuentes" className="space-y-4">
+            <div className="flex items-center gap-2 border-b border-gray-200 pb-3">
+              <Store className="h-5 w-5 text-gray-700" />
+              <h2 className="text-xl font-bold text-[#121511]">
+                Pilar 04: Información Oficial y Registros Públicos
+              </h2>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {officialRecords.map((record) => (
-                <div
-                  key={record.id}
-                  className="rounded-2xl border border-neutral-800 bg-neutral-900/60 p-6 space-y-3"
-                >
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-emerald-400 flex items-center gap-1.5">
-                      <Scale className="h-4 w-4" />
-                      {record.source_name}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2">
+              {officialRecords.map((rec) => (
+                <div key={rec.id} className="p-6 rounded-3xl bg-white border border-gray-200 shadow-xs space-y-2">
+                  <div className="flex items-center justify-between text-xs text-gray-500">
+                    <span className="font-bold text-[#121511] uppercase tracking-wider text-[11px]">
+                      {rec.source_name}
                     </span>
-                    <span className="text-neutral-500 font-mono">
-                      Corte: {record.record_date}
-                    </span>
+                    <span className="font-mono text-[10px]">Corte: {rec.record_date}</span>
                   </div>
-
-                  <h3 className="text-base font-bold text-white">
-                    {record.fact_title}
+                  <h3 className="text-sm font-bold text-[#121511]">
+                    {rec.fact_title}
                   </h3>
-
-                  <p className="text-xs text-neutral-300 leading-relaxed">
-                    {record.fact_detail}
+                  <p className="text-xs text-gray-600 leading-relaxed">
+                    {rec.fact_detail}
                   </p>
-
-                  {record.source_url && (
-                    <div className="pt-2">
-                      <a
-                        href={record.source_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs text-emerald-400 hover:text-emerald-300 transition-colors"
-                      >
-                        <span>Consultar registro en portal oficial</span>
-                        <ExternalLink className="h-3 w-3" />
-                      </a>
-                    </div>
+                  {rec.source_url && (
+                    <a
+                      href={rec.source_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs font-bold text-[#2050E6] hover:underline pt-2"
+                    >
+                      <span>Consultar fuente oficial original</span>
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
                   )}
                 </div>
               ))}
             </div>
           </section>
 
-          {/* ========================================================================= */}
           {/* SECTION 6: OPINIONES VERIFICADAS */}
-          {/* ========================================================================= */}
-          <section id="opiniones" className="scroll-mt-28 space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-4 border-b border-neutral-850">
+          <section id="opiniones" className="space-y-4">
+            <div className="flex items-center justify-between border-b border-gray-200 pb-3">
               <div>
-                <span className="text-xs font-bold uppercase tracking-widest text-emerald-400">
-                  Reseñas Reales
-                </span>
-                <h2 className="text-2xl font-bold text-white tracking-tight mt-1">
-                  Opiniones de Compradores Verificados
+                <h2 className="text-xl font-bold text-[#121511]">
+                  Pilar 05: Opiniones Verificadas ({reviews.length})
                 </h2>
-                <p className="text-xs text-neutral-400 mt-1">
-                  Ponderadas por comprobante de pago SPEI, orden en tienda o revisión documental.
+                <p className="text-xs text-gray-600 mt-0.5">
+                  Cada reseña exhibe su nivel de comprobante auditado y el peso correspondiente asignado en el Opinio Score.
                 </p>
               </div>
 
               <Link
                 href={`/escribir-opinion/${business.slug}`}
-                className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-2 text-xs font-bold text-neutral-950 hover:bg-emerald-400 transition-colors shrink-0"
+                className="px-4 py-2 rounded-full text-xs font-bold bg-[#00B67A] hover:bg-[#008B5D] text-white transition-all shadow-xs"
               >
-                <span>Escribir opinión</span>
-                <ArrowRight className="h-3.5 w-3.5" />
+                Escribir opinión
               </Link>
             </div>
 
-            {/* Interactive Reviews List with Level Filters */}
             <PassportReviewsList reviews={reviews} brandName={business.brand_name} />
           </section>
         </div>

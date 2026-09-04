@@ -2,15 +2,11 @@
 
 import React, { useState } from 'react';
 import { 
-  Star, 
-  ShieldCheck, 
   CheckCircle2, 
   ThumbsUp, 
   CornerDownRight, 
   Calendar, 
-  Package, 
-  Filter,
-  Check
+  Filter
 } from 'lucide-react';
 
 export interface ReviewItem {
@@ -36,23 +32,23 @@ interface Props {
 
 const VERIFICATION_LABELS: Record<string, { label: string; badgeClass: string; weight: string }> = {
   confirmed_payment: {
-    label: 'Pago Confirmado',
-    badgeClass: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+    label: 'Pago SPEI Confirmado',
+    badgeClass: 'bg-emerald-50 text-emerald-800 border-emerald-200',
     weight: 'Peso: 1.00',
   },
   confirmed_store_order: {
-    label: 'Pedido en Tienda Confirmado',
-    badgeClass: 'bg-teal-500/15 text-teal-400 border-teal-500/30',
+    label: 'Pedido en Tienda Conectado',
+    badgeClass: 'bg-blue-50 text-blue-800 border-blue-200',
     weight: 'Peso: 0.90',
   },
   reviewed_proof: {
-    label: 'Comprobante Revisado',
-    badgeClass: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
+    label: 'Comprobante Subido',
+    badgeClass: 'bg-purple-50 text-purple-800 border-purple-200',
     weight: 'Peso: 0.75',
   },
   unverified_experience: {
     label: 'Sin Comprobante de Compra',
-    badgeClass: 'bg-neutral-800 text-neutral-400 border-neutral-700',
+    badgeClass: 'bg-gray-100 text-gray-700 border-gray-200',
     weight: 'Peso: 0.35',
   },
 };
@@ -86,17 +82,17 @@ export function PassportReviewsList({ reviews, brandName }: Props) {
   return (
     <div className="space-y-6">
       {/* Verification Filter Tabs */}
-      <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-xl bg-neutral-900 border border-neutral-800 text-xs">
-        <span className="text-neutral-500 font-medium px-2 flex items-center gap-1">
-          <Filter className="h-3 w-3" /> Nivel de prueba:
+      <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-2xl bg-white border border-gray-200 text-xs shadow-2xs">
+        <span className="text-gray-500 font-semibold px-2 flex items-center gap-1 text-[11px]">
+          <Filter className="h-3.5 w-3.5" /> Filtrar por comprobante:
         </span>
         <button
           type="button"
           onClick={() => setSelectedFilter('all')}
-          className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
+          className={`px-3 py-1.5 rounded-full font-semibold transition-all ${
             selectedFilter === 'all'
-              ? 'bg-neutral-800 text-white ring-1 ring-neutral-700'
-              : 'text-neutral-400 hover:text-white'
+              ? 'bg-[#121511] text-white shadow-xs'
+              : 'text-gray-600 hover:text-[#121511] hover:bg-gray-100'
           }`}
         >
           Todas ({reviews.length})
@@ -104,21 +100,21 @@ export function PassportReviewsList({ reviews, brandName }: Props) {
         <button
           type="button"
           onClick={() => setSelectedFilter('confirmed_payment')}
-          className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
+          className={`px-3 py-1.5 rounded-full font-semibold transition-all ${
             selectedFilter === 'confirmed_payment'
-              ? 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/40'
-              : 'text-neutral-400 hover:text-white'
+              ? 'bg-emerald-50 text-emerald-900 border border-emerald-300 shadow-xs'
+              : 'text-gray-600 hover:text-[#121511] hover:bg-gray-100'
           }`}
         >
-          Pago Confirmado (1.00)
+          Pago SPEI Confirmado (1.00)
         </button>
         <button
           type="button"
           onClick={() => setSelectedFilter('confirmed_store_order')}
-          className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
+          className={`px-3 py-1.5 rounded-full font-semibold transition-all ${
             selectedFilter === 'confirmed_store_order'
-              ? 'bg-teal-500/20 text-teal-300 ring-1 ring-teal-500/40'
-              : 'text-neutral-400 hover:text-white'
+              ? 'bg-blue-50 text-blue-900 border border-blue-300 shadow-xs'
+              : 'text-gray-600 hover:text-[#121511] hover:bg-gray-100'
           }`}
         >
           Pedido en Tienda (0.90)
@@ -126,13 +122,13 @@ export function PassportReviewsList({ reviews, brandName }: Props) {
         <button
           type="button"
           onClick={() => setSelectedFilter('reviewed_proof')}
-          className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
+          className={`px-3 py-1.5 rounded-full font-semibold transition-all ${
             selectedFilter === 'reviewed_proof'
-              ? 'bg-blue-500/20 text-blue-300 ring-1 ring-blue-500/40'
-              : 'text-neutral-400 hover:text-white'
+              ? 'bg-purple-50 text-purple-900 border border-purple-300 shadow-xs'
+              : 'text-gray-600 hover:text-[#121511] hover:bg-gray-100'
           }`}
         >
-          Comprobante Revisado (0.75)
+          Comprobante Subido (0.75)
         </button>
       </div>
 
@@ -142,7 +138,7 @@ export function PassportReviewsList({ reviews, brandName }: Props) {
           {filteredReviews.map((review) => {
             const vInfo = VERIFICATION_LABELS[review.verification_level] || {
               label: review.verification_level,
-              badgeClass: 'bg-neutral-800 text-neutral-400 border-neutral-700',
+              badgeClass: 'bg-gray-100 text-gray-700 border-gray-200',
               weight: '0.50',
             };
             const isHelpful = helpfulMap[review.id];
@@ -150,29 +146,27 @@ export function PassportReviewsList({ reviews, brandName }: Props) {
             return (
               <div
                 key={review.id}
-                className="rounded-2xl border border-neutral-800 bg-neutral-900/60 p-6 backdrop-blur-sm space-y-4 hover:border-neutral-750 transition-colors"
+                className="tp-card p-6 space-y-4"
               >
                 {/* Review Header: Stars, Author, Verification Badge */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-neutral-850">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-gray-100">
                   <div className="flex items-center gap-3">
                     {/* Stars */}
                     <div className="flex items-center gap-0.5">
                       {[1, 2, 3, 4, 5].map((star) => (
-                        <Star
+                        <span
                           key={star}
-                          className={`h-4 w-4 ${
-                            star <= review.rating
-                              ? 'fill-amber-400 text-amber-400'
-                              : 'text-neutral-700'
-                          }`}
-                        />
+                          className={star <= review.rating ? "tp-star-box text-xs w-4.5 h-4.5" : "tp-star-box-empty text-xs w-4.5 h-4.5"}
+                        >
+                          ★
+                        </span>
                       ))}
                     </div>
 
-                    <div className="flex items-center gap-1.5 text-xs text-neutral-300 font-medium">
+                    <div className="flex items-center gap-1.5 text-xs text-[#121511] font-bold">
                       <span>{review.author_name}</span>
                       {review.author_masked_contact && (
-                        <span className="text-neutral-500 text-[11px]">
+                        <span className="text-gray-400 font-mono text-[11px] font-normal">
                           ({review.author_masked_contact})
                         </span>
                       )}
@@ -185,7 +179,7 @@ export function PassportReviewsList({ reviews, brandName }: Props) {
                       <CheckCircle2 className="h-3 w-3" />
                       {vInfo.label}
                     </span>
-                    <span className="text-[10px] text-neutral-500 font-mono">
+                    <span className="text-[10px] text-gray-400 font-mono">
                       {vInfo.weight}
                     </span>
                   </div>
@@ -194,37 +188,36 @@ export function PassportReviewsList({ reviews, brandName }: Props) {
                 {/* Review Content */}
                 <div>
                   {review.title && (
-                    <h4 className="text-sm font-bold text-white mb-1.5">
+                    <h4 className="text-sm font-bold text-[#121511] mb-1.5">
                       {review.title}
                     </h4>
                   )}
-                  <p className="text-sm text-neutral-300 leading-relaxed">
+                  <p className="text-sm text-gray-700 leading-relaxed">
                     {review.body}
                   </p>
                 </div>
 
-                {/* Product & Date Metadata */}
-                <div className="flex flex-wrap items-center justify-between gap-2 pt-2 text-xs text-neutral-500">
+                {/* Metadata & Actions */}
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-2 text-xs text-gray-500">
                   <div className="flex items-center gap-4">
+                    <span className="flex items-center gap-1">
+                      <Calendar className="h-3.5 w-3.5 text-gray-400" />
+                      Fecha de experiencia: {formatDate(review.created_at)}
+                    </span>
                     {review.product_name && (
-                      <span className="inline-flex items-center gap-1 text-neutral-400">
-                        <Package className="h-3.5 w-3.5 text-neutral-500" />
-                        {review.product_name}
+                      <span className="text-gray-600">
+                        Producto: <strong className="text-[#121511]">{review.product_name}</strong>
                       </span>
                     )}
-                    <span className="inline-flex items-center gap-1 text-neutral-500">
-                      <Calendar className="h-3.5 w-3.5" />
-                      {formatDate(review.created_at)}
-                    </span>
                   </div>
 
                   <button
                     type="button"
                     onClick={() => toggleHelpful(review.id)}
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs transition-colors ${
+                    className={`inline-flex items-center gap-1.5 text-xs font-semibold transition-colors px-2.5 py-1 rounded-full border ${
                       isHelpful
-                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                        : 'bg-neutral-800 text-neutral-400 hover:text-white'
+                        ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                        : 'bg-gray-50 text-gray-600 hover:text-[#121511] border-gray-200 hover:bg-gray-100'
                     }`}
                   >
                     <ThumbsUp className="h-3 w-3" />
@@ -232,20 +225,22 @@ export function PassportReviewsList({ reviews, brandName }: Props) {
                   </button>
                 </div>
 
-                {/* Merchant Response (if exists) */}
+                {/* Official Response */}
                 {review.response_text && (
-                  <div className="mt-3 rounded-xl bg-neutral-950/80 border border-neutral-850 p-4 space-y-2">
-                    <div className="flex items-center gap-2 text-xs font-semibold text-emerald-400">
-                      <CornerDownRight className="h-3.5 w-3.5" />
-                      <span>Respuesta oficial de {review.responder_name || brandName}</span>
+                  <div className="mt-3 p-4 rounded-xl bg-emerald-50/70 border-l-2 border-emerald-600 border-y border-r border-emerald-200 text-xs space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-emerald-900 flex items-center gap-1.5">
+                        <CornerDownRight className="h-3.5 w-3.5 text-emerald-600" />
+                        Respuesta Oficial de {review.responder_name || brandName}
+                      </span>
                       {review.response_created_at && (
-                        <span className="text-[11px] font-normal text-neutral-500 ml-auto">
+                        <span className="text-[10px] text-gray-400 font-mono">
                           {formatDate(review.response_created_at)}
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-neutral-300 leading-relaxed pl-5">
-                      {review.response_text}
+                    <p className="text-emerald-950 italic leading-relaxed">
+                      &ldquo;{review.response_text}&rdquo;
                     </p>
                   </div>
                 )}
@@ -254,8 +249,8 @@ export function PassportReviewsList({ reviews, brandName }: Props) {
           })}
         </div>
       ) : (
-        <div className="rounded-xl border border-neutral-800 bg-neutral-900/40 p-8 text-center text-sm text-neutral-400">
-          No hay opiniones con el nivel de verificación seleccionado ({selectedFilter}).
+        <div className="p-8 text-center rounded-2xl bg-white border border-gray-200 text-gray-500 text-xs">
+          No hay opiniones con el nivel de comprobante seleccionado.
         </div>
       )}
     </div>

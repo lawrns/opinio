@@ -6,19 +6,15 @@ import Link from 'next/link';
 import { 
   Search, 
   ShieldCheck, 
-  ShieldAlert, 
   AlertCircle, 
-  Building2, 
-  Store, 
   Phone, 
   ArrowRight, 
   CheckCircle2, 
-  Filter, 
   RefreshCw,
-  HelpCircle,
-  ExternalLink,
   ChevronRight,
-  Info
+  Info,
+  Store,
+  Check
 } from 'lucide-react';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
@@ -79,35 +75,35 @@ function getMatchStateInfo(biz: BusinessItem): {
   if (biz.claimed && (biz.verified_level === 'transparent_coverage' || coverage >= 80) && orders > 0) {
     return {
       state: 'strong_evidence',
-      label: 'Evidencia Fuerte',
-      description: 'Identidad verificada y experiencia respaldada por pedidos conectados.',
-      badgeClass: 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30',
+      label: 'Evidencia Sólida',
+      description: 'Identidad verificada ante SAT/DENUE y experiencia respaldada por pedidos conectados.',
+      badgeClass: 'bg-emerald-50 text-emerald-800 border-emerald-200',
     };
   }
 
-  if (biz.claimed && (biz.verified_level === 'connected_orders' || orders > 0)) {
+  if (biz.claimed && orders > 0) {
     return {
       state: 'moderate_evidence',
       label: 'Evidencia Moderada',
-      description: 'Encontramos el negocio, pero la evidencia de transacciones aún es limitada.',
-      badgeClass: 'bg-teal-500/15 text-teal-400 border border-teal-500/30',
+      description: 'Negocio localizado, pero la muestra de órdenes conectadas aún está en proceso de maduración.',
+      badgeClass: 'bg-blue-50 text-blue-800 border-blue-200',
     };
   }
 
-  if (biz.claimed && (biz.verified_level === 'identity_verified' || biz.verified_level === 'claimed')) {
+  if (biz.claimed) {
     return {
       state: 'claimed_unconnected',
-      label: 'Reclamado sin Conexión',
-      description: 'El negocio confirmó su identidad, pero Opinio no puede verificar su volumen de pedidos.',
-      badgeClass: 'bg-amber-500/15 text-amber-400 border border-amber-500/30',
+      label: 'Registrado sin conexión de pedidos',
+      description: 'El negocio confirmó su identidad legal, pero Opinio aún no audita su volumen de órdenes.',
+      badgeClass: 'bg-amber-50 text-amber-800 border-amber-300',
     };
   }
 
   return {
     state: 'public_info',
     label: 'Solo Información Pública',
-    description: 'Perfil elaborado con fuentes públicas oficiales; el negocio no participa todavía.',
-    badgeClass: 'bg-neutral-800 text-neutral-300 border border-neutral-700',
+    description: 'Perfil elaborado a partir de fuentes del DENUE / SAT; el comercio aún no participa activamente.',
+    badgeClass: 'bg-gray-100 text-gray-700 border-gray-200',
   };
 }
 
@@ -163,35 +159,35 @@ function VerificarContent() {
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       {/* Page Header */}
       <div className="mb-8 space-y-2">
-        <div className="flex items-center gap-2 text-xs font-semibold text-emerald-400 uppercase tracking-wider">
-          <ShieldCheck className="h-4 w-4" />
-          <span>Directorio de Confianza Comercial</span>
+        <div className="flex items-center gap-2 text-xs font-bold text-[#008B5D] uppercase tracking-wider">
+          <ShieldCheck className="h-4 w-4 text-[#00B67A]" />
+          <span>Directorio de Confianza Comercial México</span>
         </div>
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white">
+        <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-[#121511]">
           Verificar Negocio antes de Pagar
         </h1>
-        <p className="text-sm sm:text-base text-neutral-400 max-w-2xl">
-          Busca por nombre comercial, razón social, número de WhatsApp (+52), dominio web o cuenta CLABE para consultar su pasaporte y evidencia de cumplimiento.
+        <p className="text-sm sm:text-base text-gray-700 max-w-2xl font-medium">
+          Busca por nombre comercial, razón social, WhatsApp (+52), dominio web o RFC para consultar el pasaporte y evidencia de cumplimiento.
         </p>
       </div>
 
       {/* Main Search Bar & Filters Section */}
-      <div className="rounded-2xl border border-neutral-800 bg-neutral-900/70 p-4 sm:p-6 backdrop-blur-xl shadow-xl mb-8 space-y-4">
+      <div className="rounded-3xl border border-gray-200 bg-white p-5 sm:p-6 shadow-sm mb-8 space-y-4">
         {/* Search input */}
         <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-neutral-400" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Escribe el nombre, WhatsApp (+52 55...), dominio (ej. luuna.mx) o RFC..."
-            className="w-full rounded-xl bg-neutral-950 border border-neutral-800 pl-12 pr-10 py-3.5 text-sm sm:text-base text-white placeholder-neutral-500 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+            className="w-full rounded-2xl bg-[#FAFAF8] border border-gray-200 pl-12 pr-10 py-3.5 text-sm sm:text-base text-[#121511] placeholder-gray-400 focus:outline-none focus:border-[#00B67A] focus:ring-2 focus:ring-[#00B67A]/20 transition-all font-medium"
           />
           {searchTerm && (
             <button
               type="button"
               onClick={() => setSearchTerm('')}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-300 text-xs px-2 py-1 bg-neutral-900 rounded"
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-[#121511] text-xs px-2 py-1 bg-gray-100 rounded-lg"
             >
               Borrar
             </button>
@@ -200,8 +196,8 @@ function VerificarContent() {
 
         {/* Category Pills */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
-          <span className="text-neutral-400 font-medium shrink-0 flex items-center gap-1 mr-1">
-            <Filter className="h-3 w-3" /> Categoría:
+          <span className="text-gray-500 font-semibold shrink-0 mr-1 text-[11px]">
+            Categoría:
           </span>
           {CATEGORIES.map((cat) => {
             const isSelected = selectedCategory === cat;
@@ -210,10 +206,10 @@ function VerificarContent() {
                 key={cat}
                 type="button"
                 onClick={() => setSelectedCategory(cat)}
-                className={`rounded-lg px-3 py-1.5 font-medium transition-all whitespace-nowrap shrink-0 ${
+                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
                   isSelected
-                    ? 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/40'
-                    : 'bg-neutral-800/80 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-200'
+                    ? 'bg-[#121511] text-white shadow-xs'
+                    : 'bg-[#FAFAF8] text-gray-600 hover:text-[#121511] border border-gray-200 hover:bg-gray-100'
                 }`}
               >
                 {cat}
@@ -224,15 +220,15 @@ function VerificarContent() {
       </div>
 
       {/* Results Count & State Filter Summary */}
-      <div className="flex items-center justify-between gap-4 mb-6 text-xs text-neutral-400">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between gap-4 mb-6 text-xs text-gray-600">
+        <div className="flex items-center gap-1.5">
           <span>Mostrando</span>
-          <span className="font-bold text-white">{businesses.length}</span>
+          <span className="font-bold text-[#121511]">{businesses.length}</span>
           <span>de</span>
-          <span className="font-bold text-white">{totalCount}</span>
+          <span className="font-bold text-[#121511]">{totalCount}</span>
           <span>negocios verificados</span>
           {loading && (
-            <RefreshCw className="h-3 w-3 animate-spin text-emerald-400 ml-1" />
+            <RefreshCw className="h-3 w-3 animate-spin text-[#00B67A] ml-1" />
           )}
         </div>
 
@@ -240,7 +236,7 @@ function VerificarContent() {
           <button
             type="button"
             onClick={handleClearFilters}
-            className="text-xs text-emerald-400 hover:text-emerald-300 underline underline-offset-2"
+            className="text-xs text-[#2050E6] hover:underline font-semibold"
           >
             Limpiar filtros
           </button>
@@ -256,11 +252,12 @@ function VerificarContent() {
             const coverage = Number(biz.coverage_percentage) || 0;
             const issues = Number(biz.issues_per_thousand) || 0;
             const resolution = Number(biz.resolution_rate) || 0;
+            const starsCount = Math.min(5, Math.max(1, Math.round(score / 20)));
 
             return (
               <div
                 key={biz.slug}
-                className="rounded-2xl border border-neutral-800 bg-neutral-900/60 p-6 backdrop-blur-md flex flex-col justify-between hover:border-neutral-700 transition-all shadow-md group"
+                className="tp-card p-6 flex flex-col justify-between group"
               >
                 <div>
                   {/* Top Header: Brand Name + Score + State Badge */}
@@ -269,38 +266,55 @@ function VerificarContent() {
                       <div className="flex items-center gap-2">
                         <Link 
                           href={`/b/${biz.slug}`}
-                          className="text-lg font-bold text-white hover:text-emerald-400 transition-colors truncate"
+                          className="text-lg font-bold text-[#121511] group-hover:text-[#00B67A] transition-colors truncate"
                         >
                           {biz.brand_name}
                         </Link>
                         {biz.verified_level === 'transparent_coverage' && (
                           <span title="Cobertura auditada transparente">
-                            <ShieldCheck className="h-4 w-4 text-emerald-400 shrink-0" />
+                            <ShieldCheck className="h-4 w-4 text-[#00B67A] shrink-0" />
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-neutral-400 truncate mt-0.5">
+                      <p className="text-xs text-gray-500 truncate mt-0.5 font-medium">
                         {biz.legal_name || 'Razón social no declarada'}
                       </p>
                     </div>
 
                     {/* Circular Score Badge */}
-                    <div className="flex flex-col items-center justify-center h-13 w-13 rounded-full bg-neutral-950 border border-emerald-500/60 shadow-inner shrink-0">
-                      <span className="text-base font-black text-emerald-400 leading-none">
+                    <div className="flex flex-col items-center justify-center h-13 w-13 rounded-full bg-[#FCFBF3] border border-gray-200 shrink-0">
+                      <span className="text-base font-black text-[#008B5D] leading-none font-mono">
                         {score}
                       </span>
-                      <span className="text-[8px] font-semibold text-neutral-500 uppercase">
+                      <span className="text-[8px] font-bold text-gray-500 uppercase">
                         Opinio
                       </span>
                     </div>
                   </div>
 
+                  {/* Green Stars Row */}
+                  <div className="flex items-center gap-1.5 mb-3">
+                    <div className="flex items-center gap-0.5">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <span
+                          key={i}
+                          className={i < starsCount ? "tp-star-box text-xs w-4.5 h-4.5" : "tp-star-box-empty text-xs w-4.5 h-4.5"}
+                        >
+                          ★
+                        </span>
+                      ))}
+                    </div>
+                    <span className="font-mono text-xs font-bold text-[#121511]">
+                      {score} / 100
+                    </span>
+                  </div>
+
                   {/* Evidence State Badge & Description */}
                   <div className="mb-4">
-                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold ${stateInfo.badgeClass}`}>
+                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${stateInfo.badgeClass}`}>
                       <span>{stateInfo.label}</span>
                     </span>
-                    <p className="text-xs text-neutral-400 mt-1.5 leading-relaxed">
+                    <p className="text-xs text-gray-600 mt-1.5 leading-relaxed">
                       {stateInfo.description}
                     </p>
                   </div>
@@ -308,66 +322,66 @@ function VerificarContent() {
                   {/* Public and Verified Identifiers */}
                   <div className="flex flex-wrap gap-1.5 mb-4 text-[11px]">
                     {biz.rfc && (
-                      <span className="inline-flex items-center gap-1 rounded bg-neutral-800 px-2 py-0.5 text-neutral-300 font-mono">
+                      <span className="inline-flex items-center gap-1 rounded-md bg-[#FAFAF8] border border-gray-200 px-2 py-0.5 text-gray-700 font-mono font-medium">
                         RFC: {biz.rfc}
                       </span>
                     )}
                     {biz.clee && (
-                      <span className="inline-flex items-center gap-1 rounded bg-neutral-800 px-2 py-0.5 text-neutral-300 font-mono">
-                        DENUE: Activo
+                      <span className="inline-flex items-center gap-1 rounded-md bg-[#FAFAF8] border border-gray-200 px-2 py-0.5 text-gray-700 font-mono">
+                        DENUE INEGI
                       </span>
                     )}
                     {biz.domain && (
-                      <span className="inline-flex items-center gap-1 rounded bg-neutral-800 px-2 py-0.5 text-neutral-300">
-                        <Store className="h-3 w-3 text-neutral-400" />
+                      <span className="inline-flex items-center gap-1 rounded-md bg-[#FAFAF8] border border-gray-200 px-2 py-0.5 text-gray-700">
+                        <Store className="h-3 w-3 text-gray-400" />
                         {biz.domain}
                       </span>
                     )}
                     {biz.whatsapp && (
-                      <span className="inline-flex items-center gap-1 rounded bg-emerald-950/40 border border-emerald-800/40 px-2 py-0.5 text-emerald-300">
-                        <Phone className="h-3 w-3 text-emerald-400" />
-                        {biz.whatsapp}
+                      <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-emerald-800 font-medium">
+                        <Phone className="h-3 w-3 text-emerald-600" />
+                        WhatsApp Oficial
                       </span>
                     )}
                   </div>
 
                   {/* 3 Metrics Row */}
-                  <div className="grid grid-cols-3 gap-2 py-2.5 px-3 rounded-xl bg-neutral-950/70 border border-neutral-850 text-center mb-4">
+                  <div className="grid grid-cols-3 gap-2 py-2.5 px-3 rounded-xl bg-[#FCFBF3] border border-gray-200 text-center mb-4 font-mono">
                     <div>
-                      <div className="text-xs font-bold text-white">
+                      <div className="text-xs font-bold text-[#121511]">
                         {coverage > 0 ? `${coverage}%` : 'N/D'}
                       </div>
-                      <div className="text-[10px] text-neutral-500">
-                        Órdenes auditadas
+                      <div className="text-[10px] text-gray-500 font-sans">
+                        Cobertura
                       </div>
                     </div>
                     <div>
-                      <div className="text-xs font-bold text-white">
+                      <div className="text-xs font-bold text-[#121511]">
                         {issues}
                       </div>
-                      <div className="text-[10px] text-neutral-500">
-                        Incidencias /1k
+                      <div className="text-[10px] text-gray-500 font-sans">
+                        Quejas /1k
                       </div>
                     </div>
                     <div>
-                      <div className="text-xs font-bold text-emerald-400">
+                      <div className="text-xs font-bold text-[#008B5D]">
                         {resolution > 0 ? `${resolution}%` : '100%'}
                       </div>
-                      <div className="text-[10px] text-neutral-500">
-                        Resolución conf.
+                      <div className="text-[10px] text-gray-500 font-sans">
+                        Resolución
                       </div>
                     </div>
                   </div>
                 </div>
 
                 {/* Card Action footer */}
-                <div className="pt-3 border-t border-neutral-850 flex items-center justify-between">
-                  <span className="text-[11px] text-neutral-500">
+                <div className="pt-3 border-t border-gray-100 flex items-center justify-between">
+                  <span className="text-[11px] text-gray-500 font-medium">
                     {biz.category}
                   </span>
                   <Link
                     href={`/b/${biz.slug}`}
-                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-400 hover:text-emerald-300 group-hover:translate-x-0.5 transition-transform"
+                    className="inline-flex items-center gap-1 text-xs font-bold text-[#2050E6] group-hover:translate-x-0.5 transition-transform"
                   >
                     <span>Ver Pasaporte de Confianza</span>
                     <ChevronRight className="h-3.5 w-3.5" />
@@ -379,20 +393,20 @@ function VerificarContent() {
         </div>
       ) : (
         /* Empty State */
-        <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 p-12 text-center space-y-4 max-w-2xl mx-auto">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-neutral-800 text-neutral-400 mx-auto">
+        <div className="rounded-3xl border border-gray-200 bg-white p-12 text-center space-y-4 max-w-2xl mx-auto shadow-xs">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gray-100 text-gray-500 mx-auto">
             <AlertCircle className="h-6 w-6" />
           </div>
-          <h3 className="text-lg font-bold text-white">
+          <h3 className="text-lg font-bold text-[#121511]">
             No encontramos coincidencias para &quot;{searchTerm}&quot;
           </h3>
-          <p className="text-sm text-neutral-400 leading-relaxed max-w-md mx-auto">
+          <p className="text-sm text-gray-600 leading-relaxed max-w-md mx-auto">
             Opinio solo publica negocios con información pública contrastada o tiendas que han iniciado su proceso de verificación comercial.
           </p>
 
-          <div className="p-4 rounded-xl bg-neutral-900 border border-neutral-800 text-xs text-neutral-300 text-left space-y-2 mt-4">
-            <div className="font-semibold text-emerald-400 flex items-center gap-1.5">
-              <Info className="h-4 w-4" />
+          <div className="p-4 rounded-2xl bg-[#FCFBF3] border border-gray-200 text-xs text-gray-700 text-left space-y-2 mt-4">
+            <div className="font-bold text-[#008B5D] flex items-center gap-1.5">
+              <Info className="h-4 w-4 text-[#00B67A]" />
               ¿Qué hacer si un vendedor te pide pagar por SPEI o depósito?
             </div>
             <p>
@@ -410,7 +424,7 @@ function VerificarContent() {
             <button
               type="button"
               onClick={handleClearFilters}
-              className="inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-4 py-2 text-xs font-semibold text-neutral-950 hover:bg-emerald-400 transition-colors"
+              className="inline-flex items-center gap-2 rounded-full bg-[#121511] px-5 py-2.5 text-xs font-bold text-white hover:bg-black transition-colors shadow-xs"
             >
               <span>Ver todos los comercios auditados</span>
               <ArrowRight className="h-3.5 w-3.5" />
@@ -424,12 +438,12 @@ function VerificarContent() {
 
 export default function VerificarPage() {
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col font-sans">
+    <div className="min-h-screen bg-[#FCFBF3] text-[#121511] flex flex-col font-sans selection:bg-[#00B67A] selection:text-white">
       <Navbar />
       <main className="flex-1">
         <Suspense fallback={
           <div className="flex min-h-[50vh] items-center justify-center">
-            <RefreshCw className="h-6 w-6 animate-spin text-emerald-400" />
+            <RefreshCw className="h-6 w-6 animate-spin text-[#00B67A]" />
           </div>
         }>
           <VerificarContent />

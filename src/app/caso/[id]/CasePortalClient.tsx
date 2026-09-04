@@ -11,15 +11,10 @@ import {
   Scale, 
   MessageSquare, 
   CheckCircle2, 
-  CornerDownRight, 
   ArrowLeft, 
   Lock, 
-  User, 
-  Building2, 
   Sparkles,
-  Loader2,
-  Calendar,
-  AlertTriangle
+  Loader2
 } from 'lucide-react';
 
 export interface CaseData {
@@ -60,37 +55,37 @@ interface Props {
 const STATUS_DETAILS: Record<string, { label: string; badgeClass: string; description: string }> = {
   opened: {
     label: 'Caso Abierto',
-    badgeClass: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
+    badgeClass: 'bg-amber-50 text-amber-800 border-amber-300',
     description: 'El caso ha sido registrado y notificado al comercio para su primera respuesta formal.',
   },
   acknowledged: {
     label: 'En Revisión por Comercio',
-    badgeClass: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
+    badgeClass: 'bg-blue-50 text-blue-800 border-blue-200',
     description: 'El comercio ha tomado el caso y se encuentra investigando la guía o transacción.',
   },
   remedy_offered: {
     label: 'Solución Propuesta',
-    badgeClass: 'bg-teal-500/15 text-teal-400 border-teal-500/30',
+    badgeClass: 'bg-emerald-50 text-emerald-800 border-emerald-300',
     description: 'El comercio ha emitido una propuesta formal de solución para tu revisión y aceptación.',
   },
   resolved_consumer_confirmed: {
     label: 'Resuelto de Conformidad',
-    badgeClass: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+    badgeClass: 'bg-emerald-100 text-emerald-900 border-emerald-400 font-bold',
     description: 'El comprador ha confirmado formalmente que la solución fue recibida y el caso queda cerrado satisfactoriamente.',
   },
   resolved_merchant_asserted: {
     label: 'Cerrado por Comercio (Pendiente)',
-    badgeClass: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
+    badgeClass: 'bg-amber-50 text-amber-800 border-amber-300',
     description: 'El comercio indicó haber cumplido; a la espera de la confirmación expresa del comprador.',
   },
   unresolved: {
     label: 'Sin Acuerdo',
-    badgeClass: 'bg-red-500/15 text-red-400 border-red-500/30',
+    badgeClass: 'bg-rose-50 text-rose-800 border-rose-200',
     description: 'No se logró un acuerdo voluntario entre las partes. Disponible canal de arbitraje PROFECO.',
   },
   reopened: {
     label: 'Reabierto por Comprador',
-    badgeClass: 'bg-purple-500/15 text-purple-400 border-purple-500/30',
+    badgeClass: 'bg-purple-50 text-purple-800 border-purple-200',
     description: 'El caso fue reabierto tras detectarse incumplimiento en la solución acordada.',
   },
 };
@@ -114,7 +109,7 @@ export function CasePortalClient({ initialCase, initialMessages }: Props) {
   const [caseData, setCaseData] = useState<CaseData>(initialCase);
   const [messages, setMessages] = useState<MessageData[]>(initialMessages);
   const [newMessage, setNewMessage] = useState('');
-  const [senderName, setSenderName] = useState(initialCase.customer_name);
+  const [senderName] = useState(initialCase.customer_name);
   const [sending, setSending] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
@@ -176,7 +171,6 @@ export function CasePortalClient({ initialCase, initialMessages }: Props) {
         throw new Error('Error al confirmar la resolución.');
       }
 
-      const data = await res.json();
       setCaseData((prev) => ({
         ...prev,
         is_consumer_confirmed: true,
@@ -228,97 +222,97 @@ export function CasePortalClient({ initialCase, initialMessages }: Props) {
       <div>
         <Link
           href={`/b/${caseData.business_slug}`}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-400 hover:text-emerald-300 transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs font-bold text-[#008B5D] hover:underline transition-colors"
         >
-          <ArrowLeft className="h-3.5 w-3.5" />
+          <ArrowLeft className="h-4 w-4" />
           <span>Volver al Pasaporte de {caseData.brand_name}</span>
         </Link>
       </div>
 
       {/* Main Header & Status Banner */}
-      <div className="rounded-2xl border border-neutral-800 bg-neutral-900/80 p-6 sm:p-8 backdrop-blur-xl shadow-2xl space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-neutral-800">
+      <div className="rounded-3xl border border-gray-200 bg-white p-6 sm:p-8 shadow-xs space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-gray-200">
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <span className="font-mono text-xs font-bold text-neutral-400 bg-neutral-950 px-2.5 py-1 rounded border border-neutral-800">
+              <span className="font-mono text-xs font-bold text-[#121511] bg-[#FAFAF8] px-2.5 py-1 rounded-md border border-gray-200">
                 {caseData.case_number}
               </span>
-              <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-bold border ${statusInfo.badgeClass}`}>
+              <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border ${statusInfo.badgeClass}`}>
                 {statusInfo.label}
               </span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black text-white">
+            <h1 className="text-2xl sm:text-3xl font-black text-[#121511]">
               Portal de Mediación y Resolución
             </h1>
-            <p className="text-xs sm:text-sm text-neutral-400 mt-1">
-              Incidencia registrada entre <strong className="text-white">{caseData.customer_name}</strong> y <strong className="text-white">{caseData.brand_name}</strong>.
+            <p className="text-xs sm:text-sm text-gray-600 mt-1">
+              Incidencia registrada entre <strong className="text-[#121511]">{caseData.customer_name}</strong> y <strong className="text-[#121511]">{caseData.brand_name}</strong>.
             </p>
           </div>
 
           <div className="text-left sm:text-right shrink-0">
-            <div className="text-xs text-neutral-500">Fecha de apertura</div>
-            <div className="text-xs font-mono text-neutral-300 font-medium mt-0.5">
+            <div className="text-xs text-gray-500">Fecha de apertura</div>
+            <div className="text-xs font-mono text-[#121511] font-bold mt-0.5">
               {formatDate(caseData.created_at)}
             </div>
-            <div className="text-[11px] text-emerald-400 font-mono mt-1">
+            <div className="text-[11px] text-[#008B5D] font-mono mt-1 font-semibold">
               SLA medido por Opinio
             </div>
           </div>
         </div>
 
         {/* Status Description Banner */}
-        <div className="p-4 rounded-xl bg-neutral-950/70 border border-neutral-850 flex items-start gap-3 text-xs text-neutral-300">
-          <Scale className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
+        <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200 flex items-start gap-3 text-xs text-emerald-950">
+          <Scale className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
           <p className="leading-relaxed">
-            {statusInfo.description} En Opinio, una reclamación solo cuenta como resuelta para el score del comercio cuando <strong className="text-white">tú como comprador confirmas de conformidad</strong>.
+            {statusInfo.description} En Opinio, una reclamación solo cuenta como resuelta para el score del comercio cuando <strong className="text-emerald-950">tú como comprador confirmas de conformidad</strong>.
           </p>
         </div>
 
         {/* SLA Timeline */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-          <div className="p-3.5 rounded-xl bg-neutral-950 border border-neutral-850">
-            <div className="flex items-center justify-between text-xs text-neutral-400 mb-1">
+          <div className="p-4 rounded-2xl bg-[#FCFBF3] border border-gray-200">
+            <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
               <span>1. Apertura de Caso</span>
-              <Check className="h-3.5 w-3.5 text-emerald-400" />
+              <Check className="h-3.5 w-3.5 text-[#00B67A]" />
             </div>
-            <div className="text-xs font-bold text-white">
+            <div className="text-xs font-bold text-[#121511]">
               Registrado
             </div>
-            <p className="text-[11px] text-neutral-500 mt-0.5">
+            <p className="text-[11px] text-gray-500 mt-0.5">
               {formatDate(caseData.created_at)}
             </p>
           </div>
 
-          <div className="p-3.5 rounded-xl bg-neutral-950 border border-neutral-850">
-            <div className="flex items-center justify-between text-xs text-neutral-400 mb-1">
+          <div className="p-4 rounded-2xl bg-[#FCFBF3] border border-gray-200">
+            <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
               <span>2. Respuesta Comercio</span>
               {caseData.status !== 'opened' ? (
-                <Check className="h-3.5 w-3.5 text-emerald-400" />
+                <Check className="h-3.5 w-3.5 text-[#00B67A]" />
               ) : (
-                <Clock className="h-3.5 w-3.5 text-amber-400" />
+                <Clock className="h-3.5 w-3.5 text-amber-600" />
               )}
             </div>
-            <div className="text-xs font-bold text-white">
+            <div className="text-xs font-bold text-[#121511]">
               {caseData.median_first_response_minutes > 0 ? `${caseData.median_first_response_minutes} min` : 'En espera'}
             </div>
-            <p className="text-[11px] text-neutral-500 mt-0.5">
+            <p className="text-[11px] text-gray-500 mt-0.5">
               SLA oficial de atención: 24 horas
             </p>
           </div>
 
-          <div className="p-3.5 rounded-xl bg-neutral-950 border border-neutral-850">
-            <div className="flex items-center justify-between text-xs text-neutral-400 mb-1">
+          <div className="p-4 rounded-2xl bg-[#FCFBF3] border border-gray-200">
+            <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
               <span>3. Cierre Conforme</span>
               {caseData.is_consumer_confirmed ? (
-                <Check className="h-3.5 w-3.5 text-emerald-400" />
+                <Check className="h-3.5 w-3.5 text-[#00B67A]" />
               ) : (
-                <span className="text-[10px] text-amber-400 font-semibold">Pendiente</span>
+                <span className="text-[10px] text-amber-700 font-bold">Pendiente</span>
               )}
             </div>
-            <div className="text-xs font-bold text-white">
+            <div className="text-xs font-bold text-[#121511]">
               {caseData.is_consumer_confirmed ? 'Conformidad confirmada' : 'A la espera de confirmación'}
             </div>
-            <p className="text-[11px] text-neutral-500 mt-0.5">
+            <p className="text-[11px] text-gray-500 mt-0.5">
               {caseData.resolved_at ? formatDate(caseData.resolved_at) : 'Requiere acción del comprador'}
             </p>
           </div>
@@ -327,15 +321,15 @@ export function CasePortalClient({ initialCase, initialMessages }: Props) {
 
       {/* Action Notification Alert */}
       {actionSuccess && (
-        <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/30 p-4 text-xs text-emerald-400 flex items-start gap-2.5">
-          <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5" />
+        <div className="rounded-2xl bg-emerald-50 border border-emerald-200 p-4 text-xs text-emerald-900 font-semibold flex items-start gap-2.5">
+          <CheckCircle2 className="h-4 w-4 text-[#00B67A] shrink-0 mt-0.5" />
           <span>{actionSuccess}</span>
         </div>
       )}
 
       {errorMsg && (
-        <div className="rounded-xl bg-red-500/10 border border-red-500/30 p-4 text-xs text-red-400 flex items-start gap-2.5">
-          <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+        <div className="rounded-2xl bg-rose-50 border border-rose-200 p-4 text-xs text-rose-800 font-semibold flex items-start gap-2.5">
+          <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-rose-600" />
           <span>{errorMsg}</span>
         </div>
       )}
@@ -345,31 +339,31 @@ export function CasePortalClient({ initialCase, initialMessages }: Props) {
         {/* Left Column: Remedy & Confirmation Action */}
         <div className="space-y-6">
           {/* Remedy Summary Card */}
-          <div className="rounded-2xl border border-neutral-800 bg-neutral-900/70 p-6 space-y-4">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-neutral-300 flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-emerald-400" />
+          <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-xs space-y-4">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#121511] flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-[#00B67A]" />
               <span>Remedio y Solución</span>
             </h3>
 
             <div className="space-y-3 text-xs">
-              <div className="p-3 rounded-lg bg-neutral-950 border border-neutral-850">
-                <span className="text-[11px] font-semibold text-neutral-400">Motivo del reporte:</span>
-                <p className="text-white font-medium mt-0.5">
+              <div className="p-3.5 rounded-2xl bg-[#FCFBF3] border border-gray-200 space-y-0.5">
+                <span className="text-[11px] font-semibold text-gray-500">Motivo del reporte:</span>
+                <p className="text-[#121511] font-bold">
                   {ISSUE_LABELS[caseData.issue_category] || caseData.issue_category}
                 </p>
               </div>
 
-              <div className="p-3 rounded-lg bg-neutral-950 border border-neutral-850">
-                <span className="text-[11px] font-semibold text-neutral-400">Solución solicitada por ti:</span>
-                <p className="text-white font-medium mt-0.5">
+              <div className="p-3.5 rounded-2xl bg-[#FCFBF3] border border-gray-200 space-y-0.5">
+                <span className="text-[11px] font-semibold text-gray-500">Solución solicitada por ti:</span>
+                <p className="text-[#121511] font-bold">
                   {REMEDY_LABELS[caseData.customer_requested_remedy] || caseData.customer_requested_remedy}
                 </p>
               </div>
 
               {caseData.remedy_offered && (
-                <div className="p-3 rounded-lg bg-emerald-950/30 border border-emerald-800/40">
-                  <span className="text-[11px] font-semibold text-emerald-400">Oferta formal del comercio:</span>
-                  <p className="text-neutral-200 mt-0.5 leading-relaxed">
+                <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 space-y-0.5">
+                  <span className="text-[11px] font-semibold text-emerald-800">Oferta formal del comercio:</span>
+                  <p className="text-emerald-950 font-medium leading-relaxed">
                     {caseData.remedy_offered}
                   </p>
                 </div>
@@ -379,12 +373,12 @@ export function CasePortalClient({ initialCase, initialMessages }: Props) {
             {/* Confirmation Action Button */}
             <div className="pt-2">
               {caseData.is_consumer_confirmed ? (
-                <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-center space-y-2">
-                  <ShieldCheck className="h-8 w-8 text-emerald-400 mx-auto" />
-                  <div className="text-xs font-bold text-white">
+                <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-center space-y-2">
+                  <ShieldCheck className="h-8 w-8 text-[#00B67A] mx-auto" />
+                  <div className="text-xs font-bold text-emerald-900">
                     Resolución Confirmada de Conformidad
                   </div>
-                  <p className="text-[11px] text-neutral-400">
+                  <p className="text-[11px] text-emerald-800">
                     Has validado satisfactoriamente el remedio ofrecido por {caseData.brand_name}.
                   </p>
                 </div>
@@ -394,7 +388,7 @@ export function CasePortalClient({ initialCase, initialMessages }: Props) {
                     type="button"
                     onClick={handleConfirmResolution}
                     disabled={confirming}
-                    className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-5 py-3 text-xs font-bold text-neutral-950 hover:bg-emerald-400 transition-all shadow-md shadow-emerald-950/40 disabled:opacity-50"
+                    className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-[#00B67A] px-5 py-3.5 text-xs font-bold text-white hover:bg-[#008B5D] transition-all shadow-xs disabled:opacity-50 active:scale-95"
                   >
                     {confirming ? (
                       <>
@@ -408,7 +402,7 @@ export function CasePortalClient({ initialCase, initialMessages }: Props) {
                       </>
                     )}
                   </button>
-                  <p className="text-[11px] text-neutral-500 text-center leading-relaxed">
+                  <p className="text-[11px] text-gray-500 text-center leading-relaxed">
                     Al hacer clic, declaras que el comercio entregó la compensación, reemplazo o reembolso acordado.
                   </p>
                 </div>
@@ -416,10 +410,10 @@ export function CasePortalClient({ initialCase, initialMessages }: Props) {
             </div>
           </div>
 
-          {/* Guarantee & PROFECO Mediation Notice */}
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/40 p-4 text-xs text-neutral-400 space-y-2">
-            <div className="flex items-center gap-1.5 text-neutral-300 font-semibold">
-              <Scale className="h-3.5 w-3.5 text-emerald-400" />
+          {/* Guarantee & PROFECO Notice */}
+          <div className="rounded-2xl border border-gray-200 bg-white p-5 text-xs text-gray-600 space-y-2 shadow-xs">
+            <div className="flex items-center gap-1.5 text-[#121511] font-bold">
+              <Scale className="h-4 w-4 text-[#00B67A]" />
               <span>Garantía de Arbitraje</span>
             </div>
             <p className="text-[11px] leading-relaxed">
@@ -430,13 +424,13 @@ export function CasePortalClient({ initialCase, initialMessages }: Props) {
 
         {/* Right Column: Private Chat Thread */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="rounded-2xl border border-neutral-800 bg-neutral-900/80 p-6 backdrop-blur-xl shadow-2xl flex flex-col h-[650px]">
-            <div className="flex items-center justify-between pb-4 border-b border-neutral-850">
-              <div className="flex items-center gap-2 text-xs font-bold text-white">
-                <MessageSquare className="h-4 w-4 text-emerald-400" />
+          <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-xs flex flex-col h-[650px]">
+            <div className="flex items-center justify-between pb-4 border-b border-gray-200">
+              <div className="flex items-center gap-2 text-xs font-bold text-[#121511]">
+                <MessageSquare className="h-4 w-4 text-[#00B67A]" />
                 <span>Hilo Privado de Conciliación ({messages.length} mensajes)</span>
               </div>
-              <span className="text-[11px] text-neutral-500 flex items-center gap-1">
+              <span className="text-[11px] text-gray-500 flex items-center gap-1">
                 <Lock className="h-3 w-3" /> Cifrado punto a punto
               </span>
             </div>
@@ -453,26 +447,26 @@ export function CasePortalClient({ initialCase, initialMessages }: Props) {
                     className={`flex flex-col ${isConsumer ? 'items-end' : 'items-start'}`}
                   >
                     <div className="flex items-center gap-2 mb-1 text-[11px]">
-                      <span className={`font-semibold ${
-                        isConsumer ? 'text-emerald-400' : isMerchant ? 'text-teal-300' : 'text-purple-400'
+                      <span className={`font-bold ${
+                        isConsumer ? 'text-[#008B5D]' : isMerchant ? 'text-blue-700' : 'text-purple-700'
                       }`}>
                         {msg.sender_name}
                       </span>
-                      <span className="text-[10px] text-neutral-500">
+                      <span className="text-[10px] text-gray-400">
                         {isConsumer ? '(Comprador)' : isMerchant ? `(${caseData.brand_name} Oficial)` : '(Mediador Opinio)'}
                       </span>
-                      <span className="text-[10px] text-neutral-600">
+                      <span className="text-[10px] text-gray-400">
                         • {formatDate(msg.created_at)}
                       </span>
                     </div>
 
                     <div
-                      className={`max-w-md p-3.5 rounded-2xl text-xs leading-relaxed ${
+                      className={`max-w-md p-4 rounded-2xl text-xs leading-relaxed shadow-2xs ${
                         isConsumer
-                          ? 'bg-emerald-950/60 border border-emerald-800/40 text-neutral-200 rounded-tr-none'
+                          ? 'bg-emerald-50 border border-emerald-200 text-emerald-950 rounded-tr-none'
                           : isMerchant
-                          ? 'bg-neutral-800/90 border border-neutral-700 text-white rounded-tl-none'
-                          : 'bg-purple-950/40 border border-purple-800/40 text-neutral-200'
+                          ? 'bg-[#F4F2EB] border border-gray-200 text-[#121511] rounded-tl-none'
+                          : 'bg-purple-50 border border-purple-200 text-purple-950'
                       }`}
                     >
                       {msg.message}
@@ -483,19 +477,19 @@ export function CasePortalClient({ initialCase, initialMessages }: Props) {
             </div>
 
             {/* Message Input Form */}
-            <form onSubmit={handleSendMessage} className="pt-3 border-t border-neutral-850 space-y-2">
+            <form onSubmit={handleSendMessage} className="pt-3 border-t border-gray-200 space-y-2">
               <div className="flex gap-2">
                 <input
                   type="text"
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
                   placeholder="Escribe un mensaje para el comercio o mediador..."
-                  className="flex-1 rounded-xl bg-neutral-950 border border-neutral-800 px-4 py-2.5 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-emerald-500"
+                  className="flex-1 rounded-2xl bg-[#FAFAF8] border border-gray-200 px-4 py-2.5 text-xs text-[#121511] placeholder-gray-400 focus:outline-none focus:border-[#00B67A]"
                 />
                 <button
                   type="submit"
                   disabled={sending || !newMessage.trim()}
-                  className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-emerald-500 px-4 py-2.5 text-xs font-bold text-neutral-950 hover:bg-emerald-400 transition-colors disabled:opacity-40 shrink-0"
+                  className="inline-flex items-center justify-center gap-1.5 rounded-full bg-[#121511] hover:bg-black px-5 py-2.5 text-xs font-bold text-white transition-colors disabled:opacity-40 shrink-0 shadow-xs"
                 >
                   {sending ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -505,7 +499,7 @@ export function CasePortalClient({ initialCase, initialMessages }: Props) {
                   <span>Enviar</span>
                 </button>
               </div>
-              <div className="flex items-center justify-between text-[11px] text-neutral-500 px-1">
+              <div className="flex items-center justify-between text-[11px] text-gray-400 px-1">
                 <span>Tu comunicación queda registrada para fines de auditoría del caso.</span>
               </div>
             </form>

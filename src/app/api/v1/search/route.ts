@@ -55,17 +55,34 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const q = searchParams.get('q')?.trim();
+    const category = searchParams.get('category')?.trim();
 
     if (!q) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Query parameter "q" is required',
-          match_state: 'no_match' as MatchState,
-          results: [],
-        },
-        { status: 400 }
+      const catSql = category && category !== 'Todos'
+        ? `SELECT b.* FROM businesses b WHERE b.category ILIKE $1 ORDER BY b.trust_score DESC LIMIT 50`
+        : `SELECT b.* FROM businesses b ORDER BY b.trust_score DESC LIMIT 50`;
+      
+      const res = await query<BusinessSearchRow>(
+        catSql,
+        category && category !== 'Todos' ? [`%${category}%`] : []
       );
+      const results = res.rows.map((row) => ({
+        ...row,
+        trust_score: Number(row.trust_score) || 0,
+        coverage_percentage: Number(row.coverage_percentage) || 0,
+        issues_per_thousand: Number(row.issues_per_thousand) || 0,
+        resolution_rate: Number(row.resolution_rate) || 0,
+        median_response_hours: Number(row.median_response_hours) || 0,
+        match_state: determineMatchState(row),
+      }));
+
+      return NextResponse.json({
+        success: true,
+        query: '',
+        match_state: 'strong_evidence' as MatchState,
+        total_results: results.length,
+        results,
+      });
     }
 
     // Clean search token (strip URL protocols, clean phones, rfc)

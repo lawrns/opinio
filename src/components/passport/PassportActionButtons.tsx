@@ -7,9 +7,6 @@ import {
   AlertTriangle, 
   Share2, 
   Check, 
-  ShieldAlert, 
-  QrCode,
-  ExternalLink,
   ShieldCheck
 } from 'lucide-react';
 
@@ -18,9 +15,8 @@ interface Props {
   brandName: string;
 }
 
-export function PassportActionButtons({ slug, brandName }: Props) {
+export function PassportActionButtons({ slug }: Props) {
   const [copied, setCopied] = useState(false);
-  const [showShareModal, setShowShareModal] = useState(false);
 
   const handleCopyLink = async () => {
     try {
@@ -29,29 +25,28 @@ export function PassportActionButtons({ slug, brandName }: Props) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // Fallback
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-2.5">
-      {/* Primary CTA: Escribir Opinión */}
+    <div className="flex flex-wrap items-center gap-3">
+      {/* Primary CTA: Escribir Opinión (Trustpilot Style) */}
       <Link
         href={`/escribir-opinion/${slug}`}
-        className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-2.5 text-xs font-bold text-neutral-950 hover:bg-emerald-400 transition-all shadow-md shadow-emerald-950/40"
+        className="inline-flex items-center gap-2 rounded-full bg-[#00B67A] hover:bg-[#008B5D] px-5 py-2.5 text-xs font-bold text-white transition-all shadow-xs active:scale-95"
       >
-        <PenLine className="h-3.5 w-3.5" />
+        <PenLine className="h-4 w-4" />
         <span>Escribir opinión</span>
       </Link>
 
       {/* Secondary CTA: Abrir un Caso */}
       <Link
         href={`/caso/nuevo?b=${slug}`}
-        className="inline-flex items-center gap-2 rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-xs font-semibold text-neutral-200 hover:bg-neutral-850 hover:text-white transition-colors"
+        className="inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white px-4 py-2.5 text-xs font-semibold text-[#121511] hover:bg-gray-50 transition-colors shadow-2xs"
       >
-        <AlertTriangle className="h-3.5 w-3.5 text-amber-400" />
+        <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
         <span>Abrir un caso</span>
       </Link>
 
@@ -59,17 +54,17 @@ export function PassportActionButtons({ slug, brandName }: Props) {
       <button
         type="button"
         onClick={handleCopyLink}
-        className="inline-flex items-center gap-2 rounded-xl border border-neutral-800 bg-neutral-900 px-3.5 py-2.5 text-xs font-semibold text-neutral-300 hover:bg-neutral-850 hover:text-white transition-colors"
+        className="inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white px-4 py-2.5 text-xs font-semibold text-gray-700 hover:text-[#121511] hover:bg-gray-50 transition-colors shadow-2xs"
         title="Copiar enlace de verificación"
       >
         {copied ? (
           <>
-            <Check className="h-3.5 w-3.5 text-emerald-400" />
-            <span className="text-emerald-400">¡Enlace copiado!</span>
+            <Check className="h-3.5 w-3.5 text-[#00B67A]" />
+            <span className="text-[#00B67A] font-bold">¡Enlace copiado!</span>
           </>
         ) : (
           <>
-            <Share2 className="h-3.5 w-3.5 text-neutral-400" />
+            <Share2 className="h-3.5 w-3.5 text-gray-500" />
             <span>Compartir</span>
           </>
         )}
@@ -78,9 +73,9 @@ export function PassportActionButtons({ slug, brandName }: Props) {
       {/* Audit Certificate Jump */}
       <a
         href="#existe"
-        className="inline-flex items-center gap-1.5 text-xs font-medium text-neutral-400 hover:text-neutral-200 px-2.5 py-2 transition-colors"
+        className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-600 hover:text-[#121511] px-2 py-2 transition-colors"
       >
-        <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
+        <ShieldCheck className="h-4 w-4 text-[#00B67A]" />
         <span>Ver credenciales SAT/DENUE</span>
       </a>
     </div>

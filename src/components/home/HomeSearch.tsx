@@ -4,18 +4,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   Search, 
-  Phone, 
-  Globe, 
-  CreditCard, 
-  Building2, 
   ArrowRight, 
   ShieldCheck, 
-  AlertTriangle,
   Loader2,
   CheckCircle2
 } from 'lucide-react';
-
-type SearchTab = 'name' | 'whatsapp' | 'domain' | 'clabe';
 
 interface SearchResultItem {
   id: number;
@@ -32,45 +25,11 @@ interface SearchResultItem {
 
 export function HomeSearch() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<SearchTab>('name');
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<SearchResultItem[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-
-  const tabs: { id: SearchTab; label: string; icon: React.ElementType; placeholder: string; example: string }[] = [
-    {
-      id: 'name',
-      label: 'Nombre de tienda',
-      icon: Building2,
-      placeholder: 'Ej. Luuna, Doto, Ahal BioCosmética...',
-      example: 'Luuna',
-    },
-    {
-      id: 'whatsapp',
-      label: 'WhatsApp +52',
-      icon: Phone,
-      placeholder: 'Ej. +52 55 4164 0533 o 5541640533...',
-      example: '55 4164 0533',
-    },
-    {
-      id: 'domain',
-      label: 'URL / Sitio web',
-      icon: Globe,
-      placeholder: 'Ej. luuna.mx, ahal.mx, tiendaejemplo.com...',
-      example: 'luuna.mx',
-    },
-    {
-      id: 'clabe',
-      label: 'CLABE / Enlace de pago',
-      icon: CreditCard,
-      placeholder: 'Ej. 646180... o link de Mercado Pago / Stripe...',
-      example: '646180123456789012',
-    },
-  ];
-
-  const currentTabConfig = tabs.find((t) => t.id === activeTab)!;
 
   // Live search debounced
   useEffect(() => {
@@ -84,17 +43,17 @@ export function HomeSearch() {
       setLoading(true);
       try {
         const res = await fetch(`/api/v1/search?q=${encodeURIComponent(query.trim())}`);
-        if (res.ok) {
-          const data = await res.json();
-          setResults(data.results || data.businesses || []);
+        const data = await res.json();
+        if (data.success && data.results) {
+          setResults(data.results.slice(0, 5));
           setIsOpen(true);
         }
       } catch (err) {
-        console.error('Search fetch error:', err);
+        console.error('Search error:', err);
       } finally {
         setLoading(false);
       }
-    }, 250);
+    }, 200);
 
     return () => clearTimeout(timer);
   }, [query]);
@@ -114,13 +73,11 @@ export function HomeSearch() {
     e.preventDefault();
     if (!query.trim()) return;
 
-    // If exactly one match and exact or strong, direct to profile
-    if (results.length === 1) {
+    if (results.length > 0) {
       router.push(`/b/${results[0].slug}`);
-      return;
+    } else {
+      router.push(`/verificar?q=${encodeURIComponent(query.trim())}`);
     }
-
-    router.push(`/verificar?q=${encodeURIComponent(query.trim())}&tab=${activeTab}`);
   };
 
   const handleSelectBusiness = (slug: string) => {
@@ -129,185 +86,123 @@ export function HomeSearch() {
   };
 
   return (
-    <div className="w-full max-w-3xl mx-auto" ref={dropdownRef}>
-      {/* Tabs */}
-      <div className="flex flex-wrap items-center justify-center gap-1.5 p-1 mb-2 bg-neutral-900/80 backdrop-blur-md rounded-xl border border-neutral-800/80 w-fit mx-auto">
-        {tabs.map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => {
-                setActiveTab(tab.id);
-                setQuery('');
-                setResults([]);
-              }}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                isActive
-                  ? 'bg-neutral-800 text-emerald-400 shadow-sm ring-1 ring-neutral-700/80'
-                  : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50'
-              }`}
-            >
-              <Icon className={`h-3.5 w-3.5 ${isActive ? 'text-emerald-400' : 'text-neutral-400'}`} />
-              <span>{tab.label}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Main Search Input Form */}
-      <form onSubmit={handleSubmit} className="relative group">
-        <div className="relative flex items-center rounded-2xl bg-neutral-900/90 p-2 border-2 border-neutral-800 transition-all focus-within:border-emerald-500/80 focus-within:ring-4 focus-within:ring-emerald-500/10 shadow-2xl shadow-black/60">
-          <div className="flex items-center justify-center pl-3 pr-2 text-neutral-400">
-            {loading ? (
-              <Loader2 className="h-5 w-5 animate-spin text-emerald-400" />
-            ) : (
-              <Search className="h-5 w-5 text-neutral-400 group-focus-within:text-emerald-400 transition-colors" />
-            )}
-          </div>
-
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onFocus={() => results.length > 0 && setIsOpen(true)}
-            placeholder={currentTabConfig.placeholder}
-            className="w-full bg-transparent px-2 py-2.5 text-sm sm:text-base text-white placeholder-neutral-500 focus:outline-none"
-          />
-
-          <button
-            type="submit"
-            className="flex items-center gap-2 rounded-xl bg-emerald-500 px-4 sm:px-6 py-2.5 text-xs sm:text-sm font-semibold text-neutral-950 transition-all hover:bg-emerald-400 active:scale-98 shrink-0 shadow-md shadow-emerald-950/40"
-          >
-            <span className="hidden sm:inline">Verificar Pasaporte</span>
-            <span className="sm:hidden">Buscar</span>
-            <ArrowRight className="h-4 w-4" />
-          </button>
+    <div className="w-full max-w-3xl mx-auto relative" ref={dropdownRef}>
+      {/* Big Trustpilot-style Floating Search Capsule */}
+      <form
+        onSubmit={handleSubmit}
+        className="relative flex items-center bg-white rounded-full p-2 border border-gray-200 shadow-[0_12px_35px_-8px_rgba(0,0,0,0.08)] hover:border-gray-300 focus-within:border-[#00B67A] focus-within:shadow-[0_16px_40px_-8px_rgba(0,182,122,0.18)] transition-all"
+      >
+        <div className="pl-4 text-gray-400">
+          {loading ? (
+            <Loader2 className="w-5 h-5 animate-spin text-[#00B67A]" />
+          ) : (
+            <Search className="w-5 h-5 text-gray-400" />
+          )}
         </div>
 
-        {/* Live Search Suggestions Dropdown */}
-        {isOpen && results.length > 0 && (
-          <div className="absolute left-0 right-0 top-full mt-2 rounded-xl border border-neutral-800 bg-neutral-900/95 backdrop-blur-2xl shadow-2xl z-50 overflow-hidden divide-y divide-neutral-850">
-            <div className="p-2.5 bg-neutral-950/70 text-[11px] font-medium text-neutral-400 flex items-center justify-between">
-              <span>Negocios encontrados con evidencia</span>
-              <span className="text-emerald-400 font-semibold">{results.length} coincidencias</span>
-            </div>
-            
-            <div className="max-h-80 overflow-y-auto divide-y divide-neutral-800/60">
-              {results.map((biz) => {
-                const score = Number(biz.trust_score) || 0;
-                const coverage = Number(biz.coverage_percentage) || 0;
-                return (
-                  <button
-                    key={biz.slug}
-                    type="button"
-                    onClick={() => handleSelectBusiness(biz.slug)}
-                    className="w-full text-left p-3 hover:bg-neutral-800/60 transition-colors flex items-center justify-between gap-3 group/item"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-neutral-800 border border-neutral-700 font-bold text-emerald-400 group-hover/item:border-emerald-500/50">
-                        {biz.brand_name.charAt(0)}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold text-white truncate group-hover/item:text-emerald-400 transition-colors">
-                            {biz.brand_name}
-                          </span>
-                          {biz.verified_level === 'transparent_coverage' && (
-                            <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-500/10 px-1.5 py-0.2 text-[10px] font-medium text-emerald-400 ring-1 ring-inset ring-emerald-500/20">
-                              <CheckCircle2 className="h-2.5 w-2.5" />
-                              Auditado
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-xs text-neutral-400 truncate">
-                          {biz.legal_name || biz.category} • {biz.domain || biz.whatsapp || 'México'}
-                        </p>
-                      </div>
-                    </div>
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onFocus={() => {
+            if (results.length > 0) setIsOpen(true);
+          }}
+          placeholder="Busca una empresa, categoría, RFC o número de WhatsApp (+52)..."
+          className="w-full bg-transparent px-4 py-3 text-sm sm:text-base text-[#121511] placeholder:text-gray-400 focus:outline-none font-medium"
+        />
 
-                    <div className="flex items-center gap-3 shrink-0 text-right">
-                      <div>
-                        <div className="text-sm font-bold text-white flex items-center justify-end gap-1">
-                          <span className="text-xs text-neutral-400">Score</span>
-                          <span className={score >= 80 ? 'text-emerald-400' : 'text-amber-400'}>
-                            {score}
-                          </span>
-                          <span className="text-[10px] text-neutral-500">/100</span>
-                        </div>
-                        {coverage > 0 && (
-                          <div className="text-[11px] text-neutral-400">
-                            {coverage}% cobertura
-                          </div>
-                        )}
-                      </div>
-                      <ArrowRight className="h-4 w-4 text-neutral-500 group-hover/item:text-emerald-400 group-hover/item:translate-x-0.5 transition-all" />
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="p-2.5 bg-neutral-950/80 text-center">
-              <button
-                type="button"
-                onClick={handleSubmit}
-                className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 flex items-center justify-center gap-1 w-full"
-              >
-                <span>Ver todos los resultados para &quot;{query}&quot;</span>
-                <ArrowRight className="h-3 w-3" />
-              </button>
-            </div>
-          </div>
-        )}
+        {/* Circular Blue Action Button */}
+        <button
+          type="submit"
+          className="w-12 h-12 rounded-full bg-[#2050E6] hover:bg-[#1A42C2] text-white flex items-center justify-center shrink-0 transition-transform active:scale-95 shadow-sm"
+          title="Buscar en Opinio"
+        >
+          <Search className="w-5 h-5" />
+        </button>
       </form>
 
-      {/* Suggested Quick Searches */}
-      <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-xs text-neutral-500">
-        <span className="text-neutral-400">Consultas frecuentes:</span>
-        <button
-          type="button"
-          onClick={() => {
-            setActiveTab('name');
-            setQuery('Luuna');
-          }}
-          className="rounded-md bg-neutral-900 px-2 py-0.5 text-neutral-300 hover:bg-neutral-800 hover:text-emerald-400 transition-colors border border-neutral-800"
-        >
-          Luuna
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setActiveTab('name');
-            setQuery('doto.com.mx');
-          }}
-          className="rounded-md bg-neutral-900 px-2 py-0.5 text-neutral-300 hover:bg-neutral-800 hover:text-emerald-400 transition-colors border border-neutral-800"
-        >
-          doto.com.mx
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setActiveTab('name');
-            setQuery('Ahal');
-          }}
-          className="rounded-md bg-neutral-900 px-2 py-0.5 text-neutral-300 hover:bg-neutral-800 hover:text-emerald-400 transition-colors border border-neutral-800"
-        >
-          Ahal BioCosmética
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setActiveTab('whatsapp');
-            setQuery('+52 55 4164 0533');
-          }}
-          className="rounded-md bg-neutral-900 px-2 py-0.5 text-neutral-300 hover:bg-neutral-800 hover:text-emerald-400 transition-colors border border-neutral-800"
-        >
-          WhatsApp Luuna (+52 55...)
-        </button>
+      {/* Quick Search Chips below Capsule */}
+      <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-xs text-gray-600">
+        <span className="font-medium text-gray-400 text-[11px]">Sugerencias:</span>
+        {[
+          { label: 'Luuna Colchones', query: 'Luuna' },
+          { label: 'doto.com.mx', query: 'doto' },
+          { label: 'Ahal BioCosmética', query: 'Ahal' },
+          { label: 'Xaman Joyería', query: 'Xaman' },
+          { label: 'Möbel Studio GDL', query: 'Möbel' },
+        ].map((tag) => (
+          <button
+            key={tag.label}
+            type="button"
+            onClick={() => {
+              setQuery(tag.query);
+              router.push(`/verificar?q=${encodeURIComponent(tag.query)}`);
+            }}
+            className="px-3 py-1 rounded-full bg-white/80 hover:bg-white text-gray-700 hover:text-[#121511] border border-gray-200/80 shadow-2xs transition-all hover:border-gray-300 font-medium"
+          >
+            {tag.label}
+          </button>
+        ))}
       </div>
+
+      {/* Autocomplete Dropdown */}
+      {isOpen && results.length > 0 && (
+        <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl border border-gray-200 shadow-2xl overflow-hidden z-40 animate-in fade-in duration-100">
+          <div className="p-2 border-b border-gray-100 bg-[#FCFBF3] flex items-center justify-between text-[11px] text-gray-500 font-semibold px-3">
+            <span>Resultados en tiempo real</span>
+            <span className="text-[#00B67A] font-bold">Pasaportes Verificados</span>
+          </div>
+
+          <div className="divide-y divide-gray-100 max-h-80 overflow-y-auto">
+            {results.map((b) => (
+              <button
+                key={b.id}
+                type="button"
+                onClick={() => handleSelectBusiness(b.slug)}
+                className="w-full text-left p-3.5 hover:bg-[#F9F9F6] flex items-center justify-between gap-4 transition-colors group"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-center font-bold text-gray-700 text-xs shrink-0">
+                    {b.brand_name.slice(0, 2).toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-sm font-bold text-[#121511] group-hover:text-[#00B67A] transition-colors flex items-center gap-1.5">
+                      <span className="truncate">{b.brand_name}</span>
+                      <CheckCircle2 className="w-3.5 h-3.5 text-[#00B67A] shrink-0" />
+                    </div>
+                    <p className="text-xs text-gray-500 truncate mt-0.5">
+                      {b.legal_name || b.category} • {b.domain || 'WhatsApp Oficial'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="text-right shrink-0">
+                  <div className="flex items-center gap-1 justify-end text-xs font-bold text-[#121511]">
+                    <div className="flex items-center text-[#00B67A]">
+                      {'★'.repeat(5)}
+                    </div>
+                    <span className="font-mono text-sm">{b.trust_score}</span>
+                  </div>
+                  <div className="text-[10px] text-gray-500 font-medium mt-0.5">
+                    {b.coverage_percentage}% Cobertura
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          <div className="p-2.5 bg-gray-50 border-t border-gray-100 text-center">
+            <button
+              type="button"
+              onClick={() => router.push(`/verificar?q=${encodeURIComponent(query)}`)}
+              className="text-xs font-bold text-[#2050E6] hover:underline inline-flex items-center gap-1"
+            >
+              <span>Ver todos los resultados para &ldquo;{query}&rdquo;</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

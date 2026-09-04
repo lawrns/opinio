@@ -1,56 +1,88 @@
 @import "tailwindcss";
 
 :root {
-  --background: #FAFAF8;
-  --foreground: #0F172A;
-  
-  --surface-canvas: #FAFAF8;
-  --surface-sheet: #FFFFFF;
-  --surface-shaded: #F4F2EB;
-  --surface-inset: #EAE7DD;
+  /* Trustpilot-inspired Warm Cream & Emerald Design System */
+  --background: #FCFBF3;
+  --foreground: #121511;
 
-  --ink-primary: #0F172A;
-  --ink-secondary: #334155;
-  --ink-muted: #64748B;
-  --ink-faint: #94A3B8;
+  --tp-cream: #FCFBF3;
+  --tp-cream-darker: #F7F5EA;
+  --tp-white: #FFFFFF;
+  --tp-black: #121511;
+  --tp-green: #00B67A;
+  --tp-green-dark: #008B5D;
+  --tp-green-light: #E6F8F2;
+  --tp-blue: #2050E6;
+  --tp-blue-light: #EEF2FE;
+  --tp-yellow: #FFDA38;
+  --tp-peach: #FEECEC;
+  --tp-sand: #FBF5EA;
 
-  --border-hairline: #E2E8F0;
-  --border-editorial: #DDD7CD;
+  --border-light: #E5E7EB;
+  --border-subtle: #EBEAE1;
 
-  --pilar-existe-ink: #1E3A8A;
-  --pilar-existe-tint: #EFF6FF;
-  --pilar-existe-border: #BFDBFE;
-
-  --pilar-cumple-ink: #065F46;
-  --pilar-cumple-tint: #ECFDF5;
-  --pilar-cumple-border: #A7F3D0;
-
-  --pilar-resuelve-ink: #5B21B6;
-  --pilar-resuelve-tint: #F5F3FF;
-  --pilar-resuelve-border: #DDD6FE;
+  --ink-primary: #121511;
+  --ink-secondary: #454744;
+  --ink-muted: #6C706B;
 }
 
-body {
-  background-color: #FAFAF8;
-  color: #0F172A;
+/* Force pure Light Mode across the entire application — NO dark mode */
+html, body {
+  background-color: #FCFBF3 !important;
+  color: #121511 !important;
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom editorial rules and letterpress shadows */
-.shadow-paper {
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
+/* Trustpilot-style Star Tile styling */
+.tp-star-box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #00B67A;
+  color: white;
+  border-radius: 3px;
+  width: 22px;
+  height: 22px;
+  font-size: 14px;
 }
 
-.shadow-paper-lg {
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.04), 0 2px 4px -2px rgba(0, 0, 0, 0.03);
+.tp-star-box-empty {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #DCDCE6;
+  color: white;
+  border-radius: 3px;
+  width: 22px;
+  height: 22px;
+  font-size: 14px;
 }
 
-.border-editorial {
-  border-color: #DDD7CD;
+/* Card hover elevations */
+.tp-card {
+  background-color: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  border-radius: 16px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.border-hairline {
-  border-color: #E2E8F0;
+.tp-card:hover {
+  border-color: #D1D5DB;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.03);
+}
+
+/* Big Search Capsule */
+.tp-search-capsule {
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  box-shadow: 0 12px 35px -8px rgba(0, 0, 0, 0.08);
+  border-radius: 9999px;
+  transition: all 0.2s ease;
+}
+
+.tp-search-capsule:focus-within {
+  border-color: #00B67A;
+  box-shadow: 0 16px 40px -8px rgba(0, 182, 122, 0.18);
 }
