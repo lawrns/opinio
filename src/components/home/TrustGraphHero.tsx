@@ -135,37 +135,32 @@ export function TrustGraphHero() {
       {/* ========================================================================= */}
       {/* 2. FOREGROUND EDITORIAL HERO CONTENT                                      */}
       {/* ========================================================================= */}
-      <motion.div 
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        className="max-w-4xl mx-auto text-center space-y-7 relative z-10"
-      >
+      <div className="max-w-4xl mx-auto text-center space-y-7 relative z-10">
         {/* Eyebrow: Institutional Trust Standard */}
-        <motion.div variants={itemVariants} className="flex items-center justify-center gap-2">
+        <div className="flex items-center justify-center gap-2">
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-mono font-bold tracking-wider uppercase bg-[#F1EFEA] text-[#334155] border border-[#E2E8F0] shadow-2xs">
             <span className="w-1.5 h-1.5 rounded-full bg-[#059669] animate-pulse" />
             Infraestructura de Confianza Comercial • México
           </span>
-        </motion.div>
+        </div>
 
         {/* Display Headline */}
-        <motion.div variants={itemVariants} className="space-y-2">
+        <div className="space-y-2">
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight text-[#0F172A] leading-[1.08]">
             La confianza se demuestra con el denominador.
           </h1>
           <p className="text-base sm:text-lg text-[#334155] font-normal max-w-2xl mx-auto leading-relaxed pt-1">
             Antes de pagar por WhatsApp, SPEI o tienda en línea, comprueba quién respalda al negocio, cuántos pedidos entrega realmente y cómo responde ante una queja.
           </p>
-        </motion.div>
+        </div>
 
         {/* Hero Search Capsule */}
-        <motion.div variants={itemVariants} className="pt-2">
+        <div className="pt-2">
           <HomeSearch />
-        </motion.div>
+        </div>
 
         {/* Ambient Evidence Pipeline Ribbon */}
-        <motion.div variants={itemVariants} className="pt-2 max-w-3xl mx-auto">
+        <div className="pt-2 max-w-3xl mx-auto">
           <div className="p-3 rounded-2xl bg-white border border-[#E2E8F0] shadow-flat flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs font-mono text-[#475569]">
             <span className="flex items-center gap-1.5 font-bold text-[#0F172A]">
               <TreeStructure weight="bold" className="w-3.5 h-3.5 text-[#059669]" />
@@ -188,8 +183,8 @@ export function TrustGraphHero() {
               Pasaporte Certificado
             </span>
           </div>
-        </motion.div>
-      </motion.div>
+        </div>
+      </div>
     </section>
   );
 }
