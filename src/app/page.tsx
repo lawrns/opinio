@@ -18,9 +18,10 @@ import { CategoryBar } from '@/components/home/CategoryBar';
 import { BusinessCard } from '@/components/home/BusinessCard';
 import { SpeiValidatorCard } from '@/components/home/SpeiValidatorCard';
 import { query } from '@/lib/db';
+import { TrustGraphHero } from '@/components/home/TrustGraphHero';
 import { TrustMarquee } from '@/components/home/TrustMarquee';
 import { MetricsStrip } from '@/components/home/NumberTicker';
-import { ProofBentoGrid } from '@/components/home/ProofBentoGrid';
+import { ConnectedPipeline } from '@/components/home/ConnectedPipeline';
 
 interface BusinessItem {
   id: number;
@@ -98,54 +99,19 @@ export default async function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FCFBF3] text-[#121511] flex flex-col font-sans selection:bg-[#00B67A] selection:text-white">
+    <div className="min-h-screen bg-[#FAF9F5] text-[#0F172A] flex flex-col font-sans selection:bg-[#059669] selection:text-white">
       <Navbar />
 
       <main className="flex-1">
         {/* ========================================================================= */}
-        {/* 1. TRUSTPILOT-STYLE WARM HERO WITH ORGANIC FLUID BLOBS                    */}
+        {/* 1. THE LIVING TRUST GRAPH HERO                                            */}
         {/* ========================================================================= */}
-        <section className="relative overflow-hidden pt-12 pb-14 sm:pt-16 sm:pb-20 px-4 sm:px-6 lg:px-8 bg-[#FCFBF3]">
-          {/* Organic Playful Color Shapes in Background */}
-          <div className="absolute -top-12 -left-16 w-80 h-80 rounded-full bg-[#FFDA38]/40 blur-2xl pointer-events-none -z-10" />
-          <div className="absolute top-1/4 -right-20 w-96 h-96 rounded-full bg-[#FF7527]/25 blur-3xl pointer-events-none -z-10" />
-          <div className="absolute -bottom-16 left-1/3 w-96 h-72 rounded-full bg-[#00B67A]/20 blur-3xl pointer-events-none -z-10" />
+        <TrustGraphHero />
 
-          <div className="max-w-4xl mx-auto text-center space-y-6">
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight text-[#121511] leading-[1.12]">
-              Encuentra un negocio en el que puedas confiar
-            </h1>
-
-            <p className="text-base sm:text-lg text-gray-700 font-medium max-w-2xl mx-auto leading-relaxed">
-              Descubre, comprueba y califica comercios en México antes de pagar por WhatsApp, SPEI o tienda en línea.
-            </p>
-
-            {/* Giant Pill Search Capsule with Spring Micro-Interactions */}
-            <div className="pt-2">
-              <HomeSearch />
-            </div>
-
-            <div className="pt-1">
-              <Link
-                href="/#metodologia"
-                className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-700 hover:text-[#121511] underline underline-offset-4 hover:decoration-[#00B67A] transition-all"
-              >
-                <span>Conoce más sobre cómo funciona el Pasaporte Opinio</span>
-                <ArrowRight weight="bold" className="w-3.5 h-3.5" />
-              </Link>
-            </div>
-          </div>
-
-          {/* Live 21st.dev Trust Marquee */}
-          <div className="mt-8 pt-4 border-t border-gray-200/60 max-w-7xl mx-auto">
-            <div className="text-center mb-1.5">
-              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-500">
-                Auditoría en Vivo • Transacciones Reales en México
-              </span>
-            </div>
-            <TrustMarquee />
-          </div>
-        </section>
+        {/* Live Ambient Transaction Ticker */}
+        <div className="bg-white border-b border-[#E2E8F0]">
+          <TrustMarquee />
+        </div>
 
         {/* Live Real-Time Number Ticker Metrics Strip */}
         <MetricsStrip />
@@ -325,7 +291,10 @@ export default async function HomePage() {
           </div>
         </section>
 
-        <ProofBentoGrid />
+        {/* ========================================================================= */}
+        {/* 8. CONNECTED 3-PILLAR PIPELINE (EXISTE -> CUMPLE -> RESUELVE)             */}
+        {/* ========================================================================= */}
+        <ConnectedPipeline />
       </main>
 
       <Footer />

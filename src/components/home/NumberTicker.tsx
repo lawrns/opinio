@@ -29,9 +29,7 @@ export function NumberTicker({
     stiffness: 100,
   });
   const isInView = useInView(ref, { once: true, margin: '0px' });
-  const [displayValue, setDisplayValue] = useState(
-    direction === 'down' ? value : 0
-  );
+  const [displayValue, setDisplayValue] = useState(value);
 
   useEffect(() => {
     if (isInView) {

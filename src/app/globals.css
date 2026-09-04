@@ -1,93 +1,58 @@
 @import "tailwindcss";
 
 :root {
-  /* Trustpilot-inspired Warm Cream & Emerald Design System */
-  --background: #FCFBF3;
-  --foreground: #121511;
+  /* Opinio Institutional Trust Infrastructure Palette */
+  --background: #FAF9F5;
+  --foreground: #0F172A;
 
-  --tp-cream: #FCFBF3;
-  --tp-cream-darker: #F7F5EA;
-  --tp-white: #FFFFFF;
-  --tp-black: #121511;
-  --tp-green: #00B67A;
-  --tp-green-dark: #008B5D;
-  --tp-green-light: #E6F8F2;
-  --tp-blue: #2050E6;
-  --tp-blue-light: #EEF2FE;
-  --tp-yellow: #FFDA38;
-  --tp-peach: #FEECEC;
-  --tp-sand: #FBF5EA;
+  --op-canvas: #FAF9F5;
+  --op-sheet: #FFFFFF;
+  --op-shaded: #F2EFE9;
+  --op-inset: #EBE7DE;
 
-  --border-light: #E5E7EB;
-  --border-subtle: #EBEAE1;
+  --op-ink-primary: #0F172A;
+  --op-ink-secondary: #334155;
+  --op-ink-muted: #64748B;
+  --op-ink-faint: #94A3B8;
 
-  --ink-primary: #121511;
-  --ink-secondary: #454744;
-  --ink-muted: #6C706B;
+  --op-verified-ink: #065F46;
+  --op-verified-accent: #059669;
+  --op-verified-tint: #ECFDF5;
+  --op-verified-border: #A7F3D0;
+
+  --op-border-hairline: #E2E8F0;
+  --op-border-strong: #CBD5E1;
 }
 
-/* Force pure Light Mode across the entire application — NO dark mode */
+/* Force pure Light Mode across the entire application */
 html, body {
-  background-color: #FCFBF3 !important;
-  color: #121511 !important;
+  background-color: #FAF9F5 !important;
+  color: #0F172A !important;
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Trustpilot-style Star Tile styling */
-.tp-star-box {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background-color: #00B67A;
-  color: white;
-  border-radius: 3px;
-  width: 22px;
-  height: 22px;
-  font-size: 14px;
+/* Tabular Numerals for Evidence, RFCs, and Denominators */
+.font-data {
+  font-family: var(--font-geist-mono), monospace;
+  font-variant-numeric: tabular-nums;
 }
 
-.tp-star-box-empty {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background-color: #DCDCE6;
-  color: white;
-  border-radius: 3px;
-  width: 22px;
-  height: 22px;
-  font-size: 14px;
+/* Subtle flat paper shadow */
+.shadow-flat {
+  box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.04);
 }
 
-/* Card hover elevations */
-.tp-card {
-  background-color: #FFFFFF;
-  border: 1px solid #E5E7EB;
-  border-radius: 16px;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+.shadow-elevated {
+  box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.04), 0 2px 4px -2px rgba(15, 23, 42, 0.02);
 }
 
-.tp-card:hover {
-  border-color: #D1D5DB;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.03);
+.shadow-inset {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
-/* Big Search Capsule */
-.tp-search-capsule {
-  background: #FFFFFF;
-  border: 1px solid #E5E7EB;
-  box-shadow: 0 12px 35px -8px rgba(0, 0, 0, 0.08);
-  border-radius: 9999px;
-  transition: all 0.2s ease;
-}
-
-.tp-search-capsule:focus-within {
-  border-color: #00B67A;
-  box-shadow: 0 16px 40px -8px rgba(0, 182, 122, 0.18);
-}
-
-/* Infinite Ticker Marquee (21st.dev componentry style) */
+/* Marquee linear movement */
 @keyframes marquee {
   0% {
     transform: translateX(0%);
@@ -100,5 +65,5 @@ html, body {
 .animate-marquee {
   display: flex;
   width: max-content;
-  animation: marquee 35s linear infinite;
+  animation: marquee 40s linear infinite;
 }
