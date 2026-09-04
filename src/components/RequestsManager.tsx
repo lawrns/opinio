@@ -84,7 +84,7 @@ export function RequestsManager({
   const copyInviteLink = async (token: string) => {
     setCopyError('');
     try {
-      await navigator.clipboard.writeText(`https://opinio.mx/r/${token}`);
+      await navigator.clipboard.writeText(`${window.location.origin}/escribir-opinion/${encodeURIComponent(business.slug)}`);
       setCopiedToken(token);
     } catch {
       setCopyError('No se pudo copiar el enlace. Selecciona el texto para copiarlo manualmente.');
@@ -155,7 +155,7 @@ export function RequestsManager({
           </div>
           <div className="flex flex-wrap gap-2 justify-between text-xs text-op-muted font-mono">
             <span>0%</span>
-            
+
             <span className="text-op-green-dark font-bold">Umbral Transparente: 90%</span>
             <span>100%</span>
           </div>
@@ -169,15 +169,15 @@ export function RequestsManager({
           <div className="text-2xl font-bold text-op-ink font-mono mt-1">
             {business.observed_orders_count.toLocaleString('es-MX')}
           </div>
-          <div className="text-xs text-op-muted mt-1">Sincronizados vía Shopify/Tiendanube</div>
+          <div className="text-xs text-op-muted mt-1">Disponible en el historial del negocio</div>
         </div>
 
         <div className="p-4 rounded-xl bg-white border border-op-border shadow-xs">
-          <div className="text-op-muted font-medium">Invitaciones Disparadas</div>
+          <div className="text-op-muted font-medium">Invitaciones registradas</div>
           <div className="text-2xl font-bold text-op-green-dark font-mono mt-1">
             {business.invited_orders_count.toLocaleString('es-MX')}
           </div>
-          <div className="text-xs text-op-muted mt-1">Vía WhatsApp Business y Correo</div>
+          <div className="text-xs text-op-muted mt-1">Registros de invitación del negocio</div>
         </div>
 
         <div className="p-4 rounded-xl bg-white border border-op-border shadow-xs">
@@ -208,7 +208,7 @@ export function RequestsManager({
             </h3>
           </div>
           <p className="text-xs text-op-muted">
-            Crea un enlace y compártelo por el canal elegido. El registro no confirma la entrega del mensaje.
+            Registra una invitación y comparte el formulario público. Este enlace no identifica la invitación ni acredita una compra. El registro tampoco confirma la entrega del mensaje.
           </p>
 
           <form onSubmit={handleSendInvite} className="space-y-4 pt-2">
@@ -286,10 +286,10 @@ export function RequestsManager({
                   Invitación registrada correctamente
                 </div>
                 <div className="p-2 rounded bg-white border border-op-green-border font-mono text-xs flex items-center justify-between gap-2 overflow-hidden">
-                  <span className="truncate text-op-ink">https://opinio.mx/r/{feedback.token}</span>
+                  <input aria-label="Enlace al formulario público de opiniones" readOnly value={`${window.location.origin}/escribir-opinion/${encodeURIComponent(business.slug)}`} onFocus={(event) => event.target.select()} className="min-w-0 flex-1 bg-op-sheet text-base text-op-ink" />
                   <button
                     type="button"
-                    aria-label="Copiar enlace de invitación"
+                    aria-label="Copiar enlace al formulario público"
                     onClick={() => copyInviteLink(feedback.token!)}
                     className="p-1 rounded bg-op-shaded hover:bg-op-border text-op-ink shrink-0"
                   >
@@ -309,7 +309,7 @@ export function RequestsManager({
               ) : (
                 <>
                   <Send className="h-3.5 w-3.5" />
-                  <span>Crear enlace de opinión</span>
+                  <span>Registrar invitación</span>
                 </>
               )}
             </button>
@@ -329,15 +329,15 @@ export function RequestsManager({
           <div className="flex items-center gap-2">
             <Package className="h-4 w-4 text-op-secondary" />
             <h3 className="font-semibold text-sm text-op-ink">
-              Pedidos Monitoreados Recientes (Feed de Tienda)
+              Pedidos registrados recientes
             </h3>
           </div>
           <span className="text-xs text-op-muted">
-            Mostrando {orders.length} pedidos conectados
+            Mostrando {orders.length} pedidos registrados
           </span>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Pedidos registrados, tabla desplazable">
           <table className="w-full text-left text-xs">
             <thead className="bg-op-canvas border-b border-op-border text-op-muted uppercase text-xs tracking-wider">
               <tr>
@@ -421,7 +421,7 @@ export function RequestsManager({
           </span>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Historial de invitaciones, tabla desplazable">
           <table className="w-full text-left text-xs">
             <thead className="bg-op-canvas border-b border-op-border text-op-muted uppercase text-xs tracking-wider">
               <tr>
@@ -485,7 +485,7 @@ export function RequestsManager({
                         className="text-op-muted hover:text-op-ink text-xs flex items-center gap-1 font-mono"
                       >
                         <Copy className="h-3 w-3" />
-                        <span>{copiedToken === inv.token ? '¡Copiado!' : 'Copiar'}</span>
+                        <span>{copiedToken === inv.token ? '¡Copiado!' : 'Copiar formulario'}</span>
                       </button>
                     </td>
                   </tr>

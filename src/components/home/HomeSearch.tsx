@@ -13,6 +13,8 @@ interface SearchResult {
   domain: string | null;
   trust_score: number | string;
   effective_reviews_count: number;
+  review_count: number;
+  average_rating: number | null;
 }
 
 export function HomeSearch() {
@@ -46,6 +48,10 @@ export function HomeSearch() {
     }, 250);
     return () => { clearTimeout(timer); controller.abort(); };
   }, [trimmed]);
+
+  useEffect(() => {
+    if (expanded && active >= 0) document.getElementById(`${id}-option-${active}`)?.scrollIntoView({ block: 'nearest' });
+  }, [active, expanded, id]);
 
   function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -85,12 +91,12 @@ export function HomeSearch() {
               onPointerDown={(event) => event.preventDefault()} onMouseMove={() => setActive(index)} onClick={() => { setOpen(false); router.push(`/b/${business.slug}`); }}
               className={`flex cursor-pointer items-center justify-between gap-3 border-b border-op-border px-4 py-4 ${active === index ? 'bg-op-green-soft' : 'hover:bg-op-shaded'}`}>
               <div className="min-w-0"><p className="truncate text-sm font-semibold">{business.brand_name}</p><p className="mt-1 truncate text-xs text-op-muted">{business.domain || business.category}</p></div>
-              <ArrowRight aria-hidden="true" className="size-4 shrink-0 text-op-green" />
+              <div className="flex shrink-0 items-center gap-2 text-xs text-op-muted">{business.average_rating != null && <span className="font-semibold text-op-green-dark">{Number(business.average_rating).toFixed(1)} / 5</span>}<ArrowRight aria-hidden="true" className="size-4" /></div>
             </li>)}
           </ul>
           {loading && <p className="p-5 text-sm text-op-muted">Buscando en el directorio…</p>}
           {!loading && !results.length && <p className="p-5 text-sm leading-relaxed text-op-secondary">{current?.error ? 'No pudimos cargar las sugerencias. Abre el directorio para volver a intentar.' : 'No encontramos coincidencias. Prueba con el nombre comercial o su sitio web.'}</p>}
-          {!loading && <Link href={searchHref} onClick={() => setOpen(false)} className="flex min-h-12 items-center justify-between gap-3 bg-op-shaded px-4 py-3 text-sm font-semibold text-op-green-dark">Ver resultados en el directorio <ArrowRight aria-hidden="true" className="size-4 shrink-0" /></Link>}
+          {!loading && <Link href={searchHref} onClick={() => setOpen(false)} className="flex min-h-12 items-center justify-between gap-3 bg-op-shaded px-4 py-3 text-sm font-semibold text-op-blue-dark">Ver resultados en el directorio <ArrowRight aria-hidden="true" className="size-4 shrink-0" /></Link>}
         </div>}
       </form>
       <p id={`${id}-hint`} className="mt-3 text-xs leading-relaxed text-op-muted">También puedes buscar por RFC. La información disponible cambia según cada comercio.</p>

@@ -40,6 +40,9 @@ export type RequestedRemedy =
   | 'clarification';
 
 export interface Business {
+  /** Unweighted published-review summary, separate from the evidence-weighted Opinio score. */
+  review_count?: number;
+  average_rating?: number | string | null;
   id: number;
   slug: string;
   brand_name: string;

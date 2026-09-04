@@ -32,7 +32,7 @@ export default async function MerchantInboxPage({ searchParams }: PageProps) {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-op-border pb-5">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-2xl font-bold tracking-tight text-op-ink">
               Bandeja de Resolución
             </h1>
@@ -71,6 +71,7 @@ export default async function MerchantInboxPage({ searchParams }: PageProps) {
 
       {/* Main Inbox Interface */}
       <ResolutionInboxManager
+        key={currentBusiness.id}
         initialCases={cases}
         businessId={currentBusiness.id}
         businessSlug={currentBusiness.slug}

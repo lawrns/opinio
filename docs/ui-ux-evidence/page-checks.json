@@ -1,0 +1,3599 @@
+{
+  "base": "http://localhost:3008",
+  "generatedAt": "2026-09-04T20:53:24.304Z",
+  "mode": "All mutations intercepted",
+  "routes": [
+    {
+      "device": "desktop",
+      "route": "/",
+      "status": 200,
+      "expectedStatus": 200,
+      "errors": [],
+      "failed": [],
+      "title": "Opinio.mx | Pasaporte de Confianza Comercial en México",
+      "h1": [
+        "Antes de comprar,conoce a quiénle compras."
+      ],
+      "width": {
+        "viewport": 1440,
+        "document": 1440
+      },
+      "overflowing": [],
+      "violations": [],
+      "links": [
+        {
+          "text": "Saltar al contenido",
+          "href": "#contenido"
+        },
+        {
+          "text": "opinio.mx",
+          "href": "/"
+        },
+        {
+          "text": "Explorar comercios",
+          "href": "/verificar"
+        },
+        {
+          "text": "Cómo funciona",
+          "href": "/#metodologia"
+        },
+        {
+          "text": "Resolver un problema",
+          "href": "/caso/nuevo"
+        },
+        {
+          "text": "Escribir opinión",
+          "href": "/verificar?accion=opinar"
+        },
+        {
+          "text": "Para comercios",
+          "href": "/merchant"
+        },
+        {
+          "text": "Luuna",
+          "href": "/verificar?q=Luuna"
+        },
+        {
+          "text": "doto",
+          "href": "/verificar?q=doto"
+        },
+        {
+          "text": "Ahal",
+          "href": "/verificar?q=Ahal"
+        },
+        {
+          "text": "Consultar este pasaporte",
+          "href": "/b/xaman-joyeria"
+        },
+        {
+          "text": "Explorar categorías",
+          "href": "/verificar"
+        },
+        {
+          "text": "Hogar1 comercio",
+          "href": "/verificar?categoria=Hogar"
+        },
+        {
+          "text": "Muebles2 comercios",
+          "href": "/verificar?categoria=Muebles"
+        },
+        {
+          "text": "Tecnología2 comercios",
+          "href": "/verificar?categoria=Electr%C3%B3nica"
+        },
+        {
+          "text": "Belleza1 comercio",
+          "href": "/verificar?categoria=Belleza"
+        },
+        {
+          "text": "Joyería1 comercio",
+          "href": "/verificar?categoria=Joyer%C3%ADa"
+        },
+        {
+          "text": "Moda0 comercios",
+          "href": "/verificar?categoria=Moda"
+        },
+        {
+          "text": "Servicios0 comercios",
+          "href": "/verificar?categoria=Servicios"
+        },
+        {
+          "text": "Café0 comercios",
+          "href": "/verificar?categoria=Caf%C3%A9"
+        },
+        {
+          "text": "Explorar todos",
+          "href": "/verificar"
+        },
+        {
+          "text": "XAXaman Joyeríaxamanjoyeria.com4.7/ 53 opiniones publicadasJoyería y AccesoriosOpinio 83.9 / 100Cobertura de pedidos registrada92.2% de 3,200 pedidos registrados con invitación",
+          "href": "/b/xaman-joyeria"
+        },
+        {
+          "text": "AHAhal BioCosméticaahal.mx4.7/ 53 opiniones publicadasBelleza y Cuidado PersonalOpinio 83.8 / 100Cobertura de pedidos registrada93.3% de 8,200 pedidos registrados con invitación",
+          "href": "/b/ahal-cosmetica"
+        },
+        {
+          "text": "DOdoto.com.mxdoto.com.mx4.3/ 54 opiniones publicadasElectrónica y GadgetsOpinio 83.4 / 100Cobertura de pedidos registrada93.1% de 24,500 pedidos registrados con invitación",
+          "href": "/b/doto"
+        },
+        {
+          "text": "MÖMöbel Studio GDLmobelstudio.mx4.5/ 52 opiniones publicadasMuebles y Diseño de InterioresOpinio 83.2 / 100Pedidos conectados89.4% de 850 pedidos registrados con invitación",
+          "href": "/b/mobel-studio"
+        },
+        {
+          "text": "LULuunaluuna.mx4.2/ 55 opiniones publicadasHogar, Muebles y ColchonesOpinio 83 / 100Cobertura de pedidos registrada93.9% de 14,820 pedidos registrados con invitación",
+          "href": "/b/luuna"
+        },
+        {
+          "text": "TETechStore MXtechstoremx.com3.0/ 51 opinión publicadaElectrónica y AccesoriosOpinio 74.6 / 100Información pública",
+          "href": "/b/techstore-mx"
+        },
+        {
+          "text": "Escribir una opinión",
+          "href": "/verificar?accion=opinar"
+        },
+        {
+          "text": "doto.com.mx",
+          "href": "/b/doto#opiniones"
+        },
+        {
+          "text": "Xaman Joyería",
+          "href": "/b/xaman-joyeria#opiniones"
+        },
+        {
+          "text": "Luuna",
+          "href": "/b/luuna#opiniones"
+        },
+        {
+          "text": "Ahal BioCosmética",
+          "href": "/b/ahal-cosmetica#opiniones"
+        },
+        {
+          "text": "Möbel Studio GDL",
+          "href": "/b/mobel-studio#opiniones"
+        },
+        {
+          "text": "TechStore MX",
+          "href": "/b/techstore-mx#opiniones"
+        },
+        {
+          "text": "Abrir un caso",
+          "href": "/caso/nuevo"
+        },
+        {
+          "text": "Conocer el panel para comercios",
+          "href": "/merchant"
+        },
+        {
+          "text": "opinio.mx",
+          "href": "/"
+        },
+        {
+          "text": "Explorar comercios",
+          "href": "/verificar"
+        },
+        {
+          "text": "Compartir una opinión",
+          "href": "/verificar?accion=opinar"
+        },
+        {
+          "text": "Abrir un caso",
+          "href": "/caso/nuevo"
+        },
+        {
+          "text": "Cómo leemos la evidencia",
+          "href": "/#metodologia"
+        },
+        {
+          "text": "Nuestra independencia",
+          "href": "/#independencia"
+        },
+        {
+          "text": "Panel para comercios",
+          "href": "/merchant"
+        }
+      ],
+      "metrics": [
+        {
+          "domContentLoaded": 1520.8000000715256,
+          "load": 2081.8000000715256,
+          "transferSize": 24388
+        }
+      ]
+    },
+    {
+      "device": "desktop",
+      "route": "/verificar",
+      "status": 200,
+      "expectedStatus": 200,
+      "errors": [],
+      "failed": [],
+      "title": "Opinio.mx | Pasaporte de Confianza Comercial en México",
+      "h1": [
+        "Conoce el negocio antes de comprar."
+      ],
+      "width": {
+        "viewport": 1440,
+        "document": 1440
+      },
+      "overflowing": [],
+      "violations": [],
+      "links": [
+        {
+          "text": "Saltar al contenido",
+          "href": "#contenido"
+        },
+        {
+          "text": "opinio.mx",
+          "href": "/"
+        },
+        {
+          "text": "Explorar comercios",
+          "href": "/verificar"
+        },
+        {
+          "text": "Cómo funciona",
+          "href": "/#metodologia"
+        },
+        {
+          "text": "Resolver un problema",
+          "href": "/caso/nuevo"
+        },
+        {
+          "text": "Escribir opinión",
+          "href": "/verificar?accion=opinar"
+        },
+        {
+          "text": "Para comercios",
+          "href": "/merchant"
+        },
+        {
+          "text": "Xaman Joyería",
+          "href": "/b/xaman-joyeria"
+        },
+        {
+          "text": "3 opiniones publicadas",
+          "href": "/b/xaman-joyeria#opiniones"
+        },
+        {
+          "text": "Ver opiniones y perfil",
+          "href": "/b/xaman-joyeria"
+        },
+        {
+          "text": "Ahal BioCosmética",
+          "href": "/b/ahal-cosmetica"
+        },
+        {
+          "text": "3 opiniones publicadas",
+          "href": "/b/ahal-cosmetica#opiniones"
+        },
+        {
+          "text": "Ver opiniones y perfil",
+          "href": "/b/ahal-cosmetica"
+        },
+        {
+          "text": "doto.com.mx",
+          "href": "/b/doto"
+        },
+        {
+          "text": "4 opiniones publicadas",
+          "href": "/b/doto#opiniones"
+        },
+        {
+          "text": "Ver opiniones y perfil",
+          "href": "/b/doto"
+        },
+        {
+          "text": "Möbel Studio GDL",
+          "href": "/b/mobel-studio"
+        },
+        {
+          "text": "2 opiniones publicadas",
+          "href": "/b/mobel-studio#opiniones"
+        },
+        {
+          "text": "Ver opiniones y perfil",
+          "href": "/b/mobel-studio"
+        },
+        {
+          "text": "Luuna",
+          "href": "/b/luuna"
+        },
+        {
+          "text": "5 opiniones publicadas",
+          "href": "/b/luuna#opiniones"
+        },
+        {
+          "text": "Ver opiniones y perfil",
+          "href": "/b/luuna"
+        },
+        {
+          "text": "TechStore MX",
+          "href": "/b/techstore-mx"
+        },
+        {
+          "text": "1 opinión publicada",
+          "href": "/b/techstore-mx#opiniones"
+        },
+        {
+          "text": "Ver opiniones y perfil",
+          "href": "/b/techstore-mx"
+        },
+        {
+          "text": "opinio.mx",
+          "href": "/"
+        },
+        {
+          "text": "Explorar comercios",
+          "href": "/verificar"
+        },
+        {
+          "text": "Compartir una opinión",
+          "href": "/verificar?accion=opinar"
+        },
+        {
+          "text": "Abrir un caso",
+          "href": "/caso/nuevo"
+        },
+        {
+          "text": "Cómo leemos la evidencia",
+          "href": "/#metodologia"
+        },
+        {
+          "text": "Nuestra independencia",
+          "href": "/#independencia"
+        },
+        {
+          "text": "Panel para comercios",
+          "href": "/merchant"
+        }
+      ],
+      "metrics": [
+        {
+          "domContentLoaded": 921.7000000476837,
+          "load": 1826,
+          "transferSize": 5067
+        }
+      ]
+    },
+    {
+      "device": "desktop",
+      "route": "/b/luuna",
+      "status": 200,
+      "expectedStatus": 200,
+      "errors": [],
+      "failed": [],
+      "title": "Opinio.mx | Pasaporte de Confianza Comercial en México",
+      "h1": [
+        "Luuna"
+      ],
+      "width": {
+        "viewport": 1440,
+        "document": 1440
+      },
+      "overflowing": [],
+      "violations": [],
+      "links": [
+        {
+          "text": "Saltar al contenido",
+          "href": "#contenido"
+        },
+        {
+          "text": "opinio.mx",
+          "href": "/"
+        },
+        {
+          "text": "Explorar comercios",
+          "href": "/verificar"
+        },
+        {
+          "text": "Cómo funciona",
+          "href": "/#metodologia"
+        },
+        {
+          "text": "Resolver un problema",
+          "href": "/caso/nuevo"
+        },
+        {
+          "text": "Escribir opinión",
+          "href": "/verificar?accion=opinar"
+        },
+        {
+          "text": "Para comercios",
+          "href": "/merchant"
+        },
+        {
+          "text": "4.2 de 55 opiniones",
+          "href": "#opiniones"
+        },
+        {
+          "text": "Escribir opinión",
+          "href": "/escribir-opinion/luuna"
+        },
+        {
+          "text": "Abrir un caso",
+          "href": "/caso/nuevo?b=luuna"
+        },
+        {
+          "text": "Consultar identidad",
+          "href": "#existe"
+        },
+        {
+          "text": "Identidad",
+          "href": "#existe"
+        },
+        {
+          "text": "Pedidos",
+          "href": "#cobertura"
+        },
+        {
+          "text": "Casos",
+          "href": "#resuelve"
+        },
+        {
+          "text": "Fuentes",
+          "href": "#fuentes"
+        },
+        {
+          "text": "Opiniones",
+          "href": "#opiniones"
+        },
+        {
+          "text": "Consultar fuente PROFECO Buró Comercial, abre en otra pestaña",
+          "href": "https://burocomercial.profeco.gob.mx"
+        },
+        {
+          "text": "Consultar fuente INEGI DENUE, abre en otra pestaña",
+          "href": "https://www.inegi.org.mx/app/mapa/denue/"
+        },
+        {
+          "text": "Escribir opinión",
+          "href": "/escribir-opinion/luuna"
+        },
+        {
+          "text": "opinio.mx",
+          "href": "/"
+        },
+        {
+          "text": "Explorar comercios",
+          "href": "/verificar"
+        },
+        {
+          "text": "Compartir una opinión",
+          "href": "/verificar?accion=opinar"
+        },
+        {
+          "text": "Abrir un caso",
+          "href": "/caso/nuevo"
+        },
+        {
+          "text": "Cómo leemos la evidencia",
+          "href": "/#metodologia"
+        },
+        {
+          "text": "Nuestra independencia",
+          "href": "/#independencia"
+        },
+        {
+          "text": "Panel para comercios",
+          "href": "/merchant"
+        }
+      ],
+      "metrics": [
+        {
+          "domContentLoaded": 2312.899999976158,
+          "load": 2370.2999999523163,
+          "transferSize": 22744
+        }
+      ]
+    },
+    {
+      "device": "desktop",
+      "route": "/escribir-opinion/luuna",
+      "status": 200,
+      "expectedStatus": 200,
+      "errors": [],
+      "failed": [],
+      "title": "Opinio.mx | Pasaporte de Confianza Comercial en México",
+      "h1": [
+        "Opinar sobre Luuna"
+      ],
+      "width": {
+        "viewport": 1440,
+        "document": 1440
+      },
+      "overflowing": [],
+      "violations": [],
+      "links": [
+        {
+          "text": "Saltar al contenido",
+          "href": "#contenido"
+        },
+        {
+          "text": "opinio.mx",
+          "href": "/"
+        },
+        {
+          "text": "Explorar comercios",
+          "href": "/verificar"
+        },
+        {
+          "text": "Cómo funciona",
+          "href": "/#metodologia"
+        },
+        {
+          "text": "Resolver un problema",
+          "href": "/caso/nuevo"
+        },
+        {
+          "text": "Escribir opinión",
+          "href": "/verificar?accion=opinar"
+        },
+        {
+          "text": "Para comercios",
+          "href": "/merchant"
+        },
+        {
+          "text": "Volver al negocio",
+          "href": "/b/luuna"
+        },
+        {
+          "text": "opinio.mx",
+          "href": "/"
+        },
+        {
+          "text": "Explorar comercios",
+          "href": "/verificar"
+        },
+        {
+          "text": "Compartir una opinión",
+          "href": "/verificar?accion=opinar"
+        },
+        {
+          "text": "Abrir un caso",
+          "href": "/caso/nuevo"
+        },
+        {
+          "text": "Cómo leemos la evidencia",
+          "href": "/#metodologia"
+        },
+        {
+          "text": "Nuestra independencia",
+          "href": "/#independencia"
+        },
+        {
+          "text": "Panel para comercios",
+          "href": "/merchant"
+        }
+      ],
+      "metrics": [
+        {
+          "domContentLoaded": 1221.3000000715256,
+          "load": 2241.399999976158,
+          "transferSize": 8158
+        }
+      ]
+    },
+    {
+      "device": "desktop",
+      "route": "/caso/nuevo?b=luuna",
+      "status": 200,
+      "expectedStatus": 200,
+      "errors": [],
+      "failed": [],
+      "title": "Opinio.mx | Pasaporte de Confianza Comercial en México",
+      "h1": [
+        "Cuéntanos qué pasó con tu compra"
+      ],
+      "width": {
+        "viewport": 1440,
+        "document": 1440
+      },
+      "overflowing": [],
+      "violations": [],
+      "links": [
+        {
+          "text": "Saltar al contenido",
+          "href": "#contenido"
+        },
+        {
+          "text": "opinio.mx",
+          "href": "/"
+        },
+        {
+          "text": "Explorar comercios",
+          "href": "/verificar"
+        },
+        {
+          "text": "Cómo funciona",
+          "href": "/#metodologia"
+        },
+        {
+          "text": "Resolver un problema",
+          "href": "/caso/nuevo"
+        },
+        {
+          "text": "Escribir opinión",
+          "href": "/verificar?accion=opinar"
+        },
+        {
+          "text": "Para comercios",
+          "href": "/merchant"
+        },
+        {
+          "text": "Volver al inicio",
+          "href": "/"
+        },
+        {
+          "text": "opinio.mx",
+          "href": "/"
+        },
+        {
+          "text": "Explorar comercios",
+          "href": "/verificar"
+        },
+        {
+          "text": "Compartir una opinión",
+          "href": "/verificar?accion=opinar"
+        },
+        {
+          "text": "Abrir un caso",
+          "href": "/caso/nuevo"
+        },
+        {
+          "text": "Cómo leemos la evidencia",
+          "href": "/#metodologia"
+        },
+        {
+          "text": "Nuestra independencia",
+          "href": "/#independencia"
+        },
+        {
+          "text": "Panel para comercios",
+          "href": "/merchant"
+        }
+      ],
+      "metrics": [
+        {
+          "domContentLoaded": 580,
+          "load": 1285.7000000476837,
+          "transferSize": 5166
+        }
+      ]
+    },
+    {
+      "device": "desktop",
+      "route": "/merchant",
+      "status": 200,
+      "expectedStatus": 200,
+      "errors": [],
+      "failed": [],
+      "title": "Resumen del negocio · Opinio.mx",
+      "h1": [
+        "Panel de Control Comercial"
+      ],
+      "width": {
+        "viewport": 1440,
+        "document": 1440
+      },
+      "overflowing": [],
+      "violations": [],
+      "links": [
+        {
+          "text": "Saltar al contenido",
+          "href": "#contenido"
+        },
+        {
+          "text": "opinio.mx",
+          "href": "/"
+        },
+        {
+          "text": "Resumen",
+          "href": "/merchant?business=xaman-joyeria"
+        },
+        {
+          "text": "Opiniones",
+          "href": "/merchant/reviews?business=xaman-joyeria"
+        },
+        {
+          "text": "Resolver casos",
+          "href": "/merchant/inbox?business=xaman-joyeria"
+        },
+        {
+          "text": "Invitar clientes",
+          "href": "/merchant/requests?business=xaman-joyeria"
+        },
+        {
+          "text": "Métricas",
+          "href": "/merchant/insights?business=xaman-joyeria"
+        },
+        {
+          "text": "Widgets",
+          "href": "/merchant/widgets?business=xaman-joyeria"
+        },
+        {
+          "text": "Integraciones",
+          "href": "/merchant/integrations?business=xaman-joyeria"
+        },
+        {
+          "text": "Configuración",
+          "href": "/merchant/settings?business=xaman-joyeria"
+        },
+        {
+          "text": "Ver perfil público (nueva pestaña)",
+          "href": "/b/xaman-joyeria"
+        },
+        {
+          "text": "Invitar clientes",
+          "href": "/merchant/requests?business=xaman-joyeria"
+        },
+        {
+          "text": "Perfil público (nueva pestaña)",
+          "href": "/b/xaman-joyeria"
+        },
+        {
+          "text": "Pasaporte Público",
+          "href": "/b/xaman-joyeria"
+        },
+        {
+          "text": "Gestionar Envíos",
+          "href": "/merchant/requests?business=xaman-joyeria"
+        },
+        {
+          "text": "Ver todas (3)",
+          "href": "/merchant/reviews?business=xaman-joyeria"
+        },
+        {
+          "text": "Responder oficialmente",
+          "href": "/merchant/reviews?business=xaman-joyeria"
+        },
+        {
+          "text": "Responder oficialmente",
+          "href": "/merchant/reviews?business=xaman-joyeria"
+        },
+        {
+          "text": "Responder oficialmente",
+          "href": "/merchant/reviews?business=xaman-joyeria"
+        },
+        {
+          "text": "Administrar Respuestas Oficiales",
+          "href": "/merchant/reviews?business=xaman-joyeria"
+        },
+        {
+          "text": "Ver bandeja (5)",
+          "href": "/merchant/inbox?business=xaman-joyeria"
+        },
+        {
+          "text": "Proponer Remedios SPEI / Reemplazo",
+          "href": "/merchant/inbox?business=xaman-joyeria"
+        },
+        {
+          "text": "Configurar Widgets EmbebidosInserta el Sello Flotante o el Badge de Checkout en Shopify, Tiendanube o código HTML.",
+          "href": "/merchant/widgets?business=xaman-joyeria"
+        },
+        {
+          "text": "Comparativa Sectorial MéxicoCompara tu tasa de incidencias y velocidad de reembolso contra el percentil 90 del país.",
+          "href": "/merchant/insights?business=xaman-joyeria"
+        },
+        {
+          "text": "Identidad SAT & DENUEVincula tu Cédula Fiscal SAT, código CLEE de INEGI y canal oficial de WhatsApp Business.",
+          "href": "/merchant/settings?business=xaman-joyeria"
+        }
+      ],
+      "metrics": [
+        {
+          "domContentLoaded": 693.1999999284744,
+          "load": 1674.3999999761581,
+          "transferSize": 24074
+        }
+      ]
+    },
+    {
+      "device": "desktop",
+      "route": "/merchant/reviews",
+      "status": 200,
+      "expectedStatus": 200,
+      "errors": [],
+      "failed": [],
+      "title": "Opiniones del negocio · Opinio.mx",
+      "h1": [
+        "Opiniones de clientes"
+      ],
+      "width": {
+        "viewport": 1440,
+        "document": 1440
+      },
+      "overflowing": [],
+      "violations": [],
+      "links": [
+        {
+          "text": "Saltar al contenido",
+          "href": "#contenido"
+        },
+        {
+          "text": "opinio.mx",
+          "href": "/"
+        },
+        {
+          "text": "Resumen",
+          "href": "/merchant?business=xaman-joyeria"
+        },
+        {
+          "text": "Opiniones",
+          "href": "/merchant/reviews?business=xaman-joyeria"
+        },
+        {
+          "text": "Resolver casos",
+          "href": "/merchant/inbox?business=xaman-joyeria"
+        },
+        {
+          "text": "Invitar clientes",
+          "href": "/merchant/requests?business=xaman-joyeria"
+        },
+        {
+          "text": "Métricas",
+          "href": "/merchant/insights?business=xaman-joyeria"
+        },
+        {
+          "text": "Widgets",
+          "href": "/merchant/widgets?business=xaman-joyeria"
+        },
+        {
+          "text": "Integraciones",
+          "href": "/merchant/integrations?business=xaman-joyeria"
+        },
+        {
+          "text": "Configuración",
+          "href": "/merchant/settings?business=xaman-joyeria"
+        },
+        {
+          "text": "Ver perfil público (nueva pestaña)",
+          "href": "/b/xaman-joyeria"
+        },
+        {
+          "text": "Invitar clientes",
+          "href": "/merchant/requests?business=xaman-joyeria"
+        },
+        {
+          "text": "Perfil público (nueva pestaña)",
+          "href": "/b/xaman-joyeria"
+        }
+      ],
+      "metrics": [
+        {
+          "domContentLoaded": 1296,
+          "load": 2686.899999976158,
+          "transferSize": 15965
+        }
+      ]
+    },
+    {
+      "device": "desktop",
+      "route": "/merchant/requests",
+      "status": 200,
+      "expectedStatus": 200,
+      "errors": [],
+      "failed": [],
+      "title": "Invitaciones del negocio · Opinio.mx",
+      "h1": [
+        "Solicitudes y Cobertura de Pedidos"
+      ],
+      "width": {
+        "viewport": 1440,
+        "document": 1440
+      },
+      "overflowing": [],
+      "violations": [],
+      "links": [
+        {
+          "text": "Saltar al contenido",
+          "href": "#contenido"
+        },
+        {
+          "text": "opinio.mx",
+          "href": "/"
+        },
+        {
+          "text": "Resumen",
+          "href": "/merchant?business=xaman-joyeria"
+        },
+        {
+          "text": "Opiniones",
+          "href": "/merchant/reviews?business=xaman-joyeria"
+        },
+        {
+          "text": "Resolver casos",
+          "href": "/merchant/inbox?business=xaman-joyeria"
+        },
+        {
+          "text": "Invitar clientes",
+          "href": "/merchant/requests?business=xaman-joyeria"
+        },
+        {
+          "text": "Métricas",
+          "href": "/merchant/insights?business=xaman-joyeria"
+        },
+        {
+          "text": "Widgets",
+          "href": "/merchant/widgets?business=xaman-joyeria"
+        },
+        {
+          "text": "Integraciones",
+          "href": "/merchant/integrations?business=xaman-joyeria"
+        },
+        {
+          "text": "Configuración",
+          "href": "/merchant/settings?business=xaman-joyeria"
+        },
+        {
+          "text": "Ver perfil público (nueva pestaña)",
+          "href": "/b/xaman-joyeria"
+        },
+        {
+          "text": "Invitar clientes",
+          "href": "/merchant/requests?business=xaman-joyeria"
+        },
+        {
+          "text": "Perfil público (nueva pestaña)",
+          "href": "/b/xaman-joyeria"
+        }
+      ],
+      "metrics": [
+        {
+          "domContentLoaded": 444.3000000715256,
+          "load": 650.6000000238419,
+          "transferSize": 16959
+        }
+      ]
+    },
+    {
+      "device": "desktop",
+      "route": "/merchant/inbox",
+      "status": 200,
+      "expectedStatus": 200,
+      "errors": [],
+      "failed": [],
+      "title": "Casos del negocio · Opinio.mx",
+      "h1": [
+        "Bandeja de Resolución"
+      ],
+      "width": {
+        "viewport": 1440,
+        "document": 1440
+      },
+      "overflowing": [],
+      "violations": [],
+      "links": [
+        {
+          "text": "Saltar al contenido",
+          "href": "#contenido"
+        },
+        {
+          "text": "opinio.mx",
+          "href": "/"
+        },
+        {
+          "text": "Resumen",
+          "href": "/merchant?business=xaman-joyeria"
+        },
+        {
+          "text": "Opiniones",
+          "href": "/merchant/reviews?business=xaman-joyeria"
+        },
+        {
+          "text": "Resolver casos",
+          "href": "/merchant/inbox?business=xaman-joyeria"
+        },
+        {
+          "text": "Invitar clientes",
+          "href": "/merchant/requests?business=xaman-joyeria"
+        },
+        {
+          "text": "Métricas",
+          "href": "/merchant/insights?business=xaman-joyeria"
+        },
+        {
+          "text": "Widgets",
+          "href": "/merchant/widgets?business=xaman-joyeria"
+        },
+        {
+          "text": "Integraciones",
+          "href": "/merchant/integrations?business=xaman-joyeria"
+        },
+        {
+          "text": "Configuración",
+          "href": "/merchant/settings?business=xaman-joyeria"
+        },
+        {
+          "text": "Ver perfil público (nueva pestaña)",
+          "href": "/b/xaman-joyeria"
+        },
+        {
+          "text": "Invitar clientes",
+          "href": "/merchant/requests?business=xaman-joyeria"
+        },
+        {
+          "text": "Perfil público (nueva pestaña)",
+          "href": "/b/xaman-joyeria"
+        }
+      ],
+      "metrics": [
+        {
+          "domContentLoaded": 515.7999999523163,
+          "load": 785.5,
+          "transferSize": 17552
+        }
+      ]
+    },
+    {
+      "device": "desktop",
+      "route": "/merchant/widgets",
+      "status": 200,
+      "expectedStatus": 200,
+      "errors": [],
+      "failed": [],
+      "title": "Widgets del negocio · Opinio.mx",
+      "h1": [
+        "Widgets y Sellos Embebidos"
+      ],
+      "width": {
+        "viewport": 1440,
+        "document": 1440
+      },
+      "overflowing": [],
+      "violations": [],
+      "links": [
+        {
+          "text": "Saltar al contenido",
+          "href": "#contenido"
+        },
+        {
+          "text": "opinio.mx",
+          "href": "/"
+        },
+        {
+          "text": "Resumen",
+          "href": "/merchant?business=xaman-joyeria"
+        },
+        {
+          "text": "Opiniones",
+          "href": "/merchant/reviews?business=xaman-joyeria"
+        },
+        {
+          "text": "Resolver casos",
+          "href": "/merchant/inbox?business=xaman-joyeria"
+        },
+        {
+          "text": "Invitar clientes",
+          "href": "/merchant/requests?business=xaman-joyeria"
+        },
+        {
+          "text": "Métricas",
+          "href": "/merchant/insights?business=xaman-joyeria"
+        },
+        {
+          "text": "Widgets",
+          "href": "/merchant/widgets?business=xaman-joyeria"
+        },
+        {
+          "text": "Integraciones",
+          "href": "/merchant/integrations?business=xaman-joyeria"
+        },
+        {
+          "text": "Configuración",
+          "href": "/merchant/settings?business=xaman-joyeria"
+        },
+        {
+          "text": "Ver perfil público (nueva pestaña)",
+          "href": "/b/xaman-joyeria"
+        },
+        {
+          "text": "Invitar clientes",
+          "href": "/merchant/requests?business=xaman-joyeria"
+        },
+        {
+          "text": "Perfil público (nueva pestaña)",
+          "href": "/b/xaman-joyeria"
+        },
+        {
+          "text": "Abrir vista previa (nueva pestaña)",
+          "href": "/widget/badge/wgt_xaman-joyeria_badge_2026?theme=light"
+        }
+      ],
+      "metrics": [
+        {
+          "domContentLoaded": 841.6000000238419,
+          "load": 2557,
+          "transferSize": 15159
+        }
+      ]
+    },
+    {
+      "device": "desktop",
+      "route": "/merchant/integrations",
+      "status": 200,
+      "expectedStatus": 200,
+      "errors": [],
+      "failed": [],
+      "title": "Integraciones del negocio · Opinio.mx",
+      "h1": [
+        "Integraciones y Feed de Pedidos"
+      ],
+      "width": {
+        "viewport": 1440,
+        "document": 1440
+      },
+      "overflowing": [],
+      "violations": [],
+      "links": [
+        {
+          "text": "Saltar al contenido",
+          "href": "#contenido"
+        },
+        {
+          "text": "opinio.mx",
+          "href": "/"
+        },
+        {
+          "text": "Resumen",
+          "href": "/merchant?business=xaman-joyeria"
+        },
+        {
+          "text": "Opiniones",
+          "href": "/merchant/reviews?business=xaman-joyeria"
+        },
+        {
+          "text": "Resolver casos",
+          "href": "/merchant/inbox?business=xaman-joyeria"
+        },
+        {
+          "text": "Invitar clientes",
+          "href": "/merchant/requests?business=xaman-joyeria"
+        },
+        {
+          "text": "Métricas",
+          "href": "/merchant/insights?business=xaman-joyeria"
+        },
+        {
+          "text": "Widgets",
+          "href": "/merchant/widgets?business=xaman-joyeria"
+        },
+        {
+          "text": "Integraciones",
+          "href": "/merchant/integrations?business=xaman-joyeria"
+        },
+        {
+          "text": "Configuración",
+          "href": "/merchant/settings?business=xaman-joyeria"
+        },
+        {
+          "text": "Ver perfil público (nueva pestaña)",
+          "href": "/b/xaman-joyeria"
+        },
+        {
+          "text": "Invitar clientes",
+          "href": "/merchant/requests?business=xaman-joyeria"
+        },
+        {
+          "text": "Perfil público (nueva pestaña)",
+          "href": "/b/xaman-joyeria"
+        },
+        {
+          "text": "Ver pedidos e invitaciones",
+          "href": "/merchant/requests?business=xaman-joyeria"
+        }
+      ],
+      "metrics": [
+        {
+          "domContentLoaded": 471.39999997615814,
+          "load": 769.2000000476837,
+          "transferSize": 14353
+        }
+      ]
+    },
+    {
+      "device": "desktop",
+      "route": "/merchant/insights",
+      "status": 200,
+      "expectedStatus": 200,
+      "errors": [],
+      "failed": [],
+      "title": "Métricas del negocio · Opinio.mx",
+      "h1": [
+        "Métricas de Xaman Joyería"
+      ],
+      "width": {
+        "viewport": 1440,
+        "document": 1440
+      },
+      "overflowing": [],
+      "violations": [],
+      "links": [
+        {
+          "text": "Saltar al contenido",
+          "href": "#contenido"
+        },
+        {
+          "text": "opinio.mx",
+          "href": "/"
+        },
+        {
+          "text": "Resumen",
+          "href": "/merchant?business=xaman-joyeria"
+        },
+        {
+          "text": "Opiniones",
+          "href": "/merchant/reviews?business=xaman-joyeria"
+        },
+        {
+          "text": "Resolver casos",
+          "href": "/merchant/inbox?business=xaman-joyeria"
+        },
+        {
+          "text": "Invitar clientes",
+          "href": "/merchant/requests?business=xaman-joyeria"
+        },
+        {
+          "text": "Métricas",
+          "href": "/merchant/insights?business=xaman-joyeria"
+        },
+        {
+          "text": "Widgets",
+          "href": "/merchant/widgets?business=xaman-joyeria"
+        },
+        {
+          "text": "Integraciones",
+          "href": "/merchant/integrations?business=xaman-joyeria"
+        },
+        {
+          "text": "Configuración",
+          "href": "/merchant/settings?business=xaman-joyeria"
+        },
+        {
+          "text": "Ver perfil público (nueva pestaña)",
+          "href": "/b/xaman-joyeria"
+        },
+        {
+          "text": "Invitar clientes",
+          "href": "/merchant/requests?business=xaman-joyeria"
+        },
+        {
+          "text": "Perfil público (nueva pestaña)",
+          "href": "/b/xaman-joyeria"
+        },
+        {
+          "text": "Revisar casos",
+          "href": "/merchant/inbox?business=xaman-joyeria"
+        }
+      ],
+      "metrics": [
+        {
+          "domContentLoaded": 1195.8000000715256,
+          "load": 2281.9000000953674,
+          "transferSize": 15630
+        }
+      ]
+    },
+    {
+      "device": "desktop",
+      "route": "/merchant/settings",
+      "status": 200,
+      "expectedStatus": 200,
+      "errors": [],
+      "failed": [],
+      "title": "Configuración del negocio · Opinio.mx",
+      "h1": [
+        "Configuración e Identidad Comercial"
+      ],
+      "width": {
+        "viewport": 1440,
+        "document": 1440
+      },
+      "overflowing": [],
+      "violations": [],
+      "links": [
+        {
+          "text": "Saltar al contenido",
+          "href": "#contenido"
+        },
+        {
+          "text": "opinio.mx",
+          "href": "/"
+        },
+        {
+          "text": "Resumen",
+          "href": "/merchant?business=xaman-joyeria"
+        },
+        {
+          "text": "Opiniones",
+          "href": "/merchant/reviews?business=xaman-joyeria"
+        },
+        {
+          "text": "Resolver casos",
+          "href": "/merchant/inbox?business=xaman-joyeria"
+        },
+        {
+          "text": "Invitar clientes",
+          "href": "/merchant/requests?business=xaman-joyeria"
+        },
+        {
+          "text": "Métricas",
+          "href": "/merchant/insights?business=xaman-joyeria"
+        },
+        {
+          "text": "Widgets",
+          "href": "/merchant/widgets?business=xaman-joyeria"
+        },
+        {
+          "text": "Integraciones",
+          "href": "/merchant/integrations?business=xaman-joyeria"
+        },
+        {
+          "text": "Configuración",
+          "href": "/merchant/settings?business=xaman-joyeria"
+        },
+        {
+          "text": "Ver perfil público (nueva pestaña)",
+          "href": "/b/xaman-joyeria"
+        },
+        {
+          "text": "Invitar clientes",
+          "href": "/merchant/requests?business=xaman-joyeria"
+        },
+        {
+          "text": "Perfil público (nueva pestaña)",
+          "href": "/b/xaman-joyeria"
+        }
+      ],
+      "metrics": [
+        {
+          "domContentLoaded": 399.6999999284744,
+          "load": 769.1999999284744,
+          "transferSize": 15910
+        }
+      ]
+    },
+    {
+      "device": "desktop",
+      "route": "/caso/1",
+      "status": 200,
+      "expectedStatus": 200,
+      "errors": [],
+      "failed": [],
+      "title": "Opinio.mx | Pasaporte de Confianza Comercial en México",
+      "h1": [
+        "Seguimiento de tu caso"
+      ],
+      "width": {
+        "viewport": 1440,
+        "document": 1440
+      },
+      "overflowing": [],
+      "violations": [],
+      "links": [
+        {
+          "text": "Saltar al contenido",
+          "href": "#contenido"
+        },
+        {
+          "text": "opinio.mx",
+          "href": "/"
+        },
+        {
+          "text": "Explorar comercios",
+          "href": "/verificar"
+        },
+        {
+          "text": "Cómo funciona",
+          "href": "/#metodologia"
+        },
+        {
+          "text": "Resolver un problema",
+          "href": "/caso/nuevo"
+        },
+        {
+          "text": "Escribir opinión",
+          "href": "/verificar?accion=opinar"
+        },
+        {
+          "text": "Para comercios",
+          "href": "/merchant"
+        },
+        {
+          "text": "Volver al Pasaporte de Luuna",
+          "href": "/b/luuna"
+        },
+        {
+          "text": "opinio.mx",
+          "href": "/"
+        },
+        {
+          "text": "Explorar comercios",
+          "href": "/verificar"
+        },
+        {
+          "text": "Compartir una opinión",
+          "href": "/verificar?accion=opinar"
+        },
+        {
+          "text": "Abrir un caso",
+          "href": "/caso/nuevo"
+        },
+        {
+          "text": "Cómo leemos la evidencia",
+          "href": "/#metodologia"
+        },
+        {
+          "text": "Nuestra independencia",
+          "href": "/#independencia"
+        },
+        {
+          "text": "Panel para comercios",
+          "href": "/merchant"
+        }
+      ],
+      "metrics": [
+        {
+          "domContentLoaded": 322.5,
+          "load": 602.4000000953674,
+          "transferSize": 9301
+        }
+      ]
+    },
+    {
+      "device": "desktop",
+      "route": "/widget/badge/wgt_luuna_badge_2026",
+      "status": 200,
+      "expectedStatus": 200,
+      "errors": [],
+      "failed": [],
+      "title": "Perfil de confianza · Opinio.mx",
+      "h1": [
+        "Luuna"
+      ],
+      "width": {
+        "viewport": 1440,
+        "document": 1440
+      },
+      "overflowing": [],
+      "violations": [],
+      "links": [
+        {
+          "text": "Saltar al contenido",
+          "href": "#contenido"
+        },
+        {
+          "text": "Ver perfil y metodología (nueva pestaña)",
+          "href": "/b/luuna"
+        }
+      ],
+      "metrics": [
+        {
+          "domContentLoaded": 159,
+          "load": 398.1999999284744,
+          "transferSize": 6017
+        }
+      ]
+    },
+    {
+      "device": "desktop",
+      "route": "/widget/card/wgt_luuna_card_2026",
+      "status": 200,
+      "expectedStatus": 200,
+      "errors": [],
+      "failed": [],
+      "title": "Perfil de confianza · Opinio.mx",
+      "h1": [
+        "Luuna"
+      ],
+      "width": {
+        "viewport": 1440,
+        "document": 1440
+      },
+      "overflowing": [],
+      "violations": [],
+      "links": [
+        {
+          "text": "Saltar al contenido",
+          "href": "#contenido"
+        },
+        {
+          "text": "Ver perfil y metodología (nueva pestaña)",
+          "href": "/b/luuna"
+        }
+      ],
+      "metrics": [
+        {
+          "domContentLoaded": 219.10000002384186,
+          "load": 628.2000000476837,
+          "transferSize": 6709
+        }
+      ]
+    },
+    {
+      "device": "desktop",
+      "route": "/widget/reassurance/wgt_luuna_reassurance_2026",
+      "status": 200,
+      "expectedStatus": 200,
+      "errors": [],
+      "failed": [],
+      "title": "Perfil de confianza · Opinio.mx",
+      "h1": [
+        "Luuna"
+      ],
+      "width": {
+        "viewport": 1440,
+        "document": 1440
+      },
+      "overflowing": [],
+      "violations": [],
+      "links": [
+        {
+          "text": "Saltar al contenido",
+          "href": "#contenido"
+        },
+        {
+          "text": "Ver perfil y metodología (nueva pestaña)",
+          "href": "/b/luuna"
+        }
+      ],
+      "metrics": [
+        {
+          "domContentLoaded": 187.89999997615814,
+          "load": 337.2999999523163,
+          "transferSize": 6318
+        }
+      ]
+    },
+    {
+      "device": "desktop",
+      "route": "/widget/card/wgt_luuna_card_2026?theme=dark",
+      "status": 200,
+      "expectedStatus": 200,
+      "errors": [],
+      "failed": [],
+      "title": "Perfil de confianza · Opinio.mx",
+      "h1": [
+        "Luuna"
+      ],
+      "width": {
+        "viewport": 1440,
+        "document": 1440
+      },
+      "overflowing": [],
+      "violations": [],
+      "links": [
+        {
+          "text": "Saltar al contenido",
+          "href": "#contenido"
+        },
+        {
+          "text": "Ver perfil y metodología (nueva pestaña)",
+          "href": "/b/luuna"
+        }
+      ],
+      "metrics": [
+        {
+          "domContentLoaded": 168.10000002384186,
+          "load": 308.89999997615814,
+          "transferSize": 6747
+        }
+      ]
+    },
+    {
+      "device": "desktop",
+      "route": "/widget/badge/invalid-token-qa",
+      "status": 404,
+      "expectedStatus": 404,
+      "errors": [],
+      "failed": [
+        {
+          "path": "/widget/badge/invalid-token-qa",
+          "status": 404
+        }
+      ],
+      "title": "Perfil de confianza · Opinio.mx",
+      "h1": [
+        "Busquemos por otro lado."
+      ],
+      "width": {
+        "viewport": 1440,
+        "document": 1440
+      },
+      "overflowing": [],
+      "violations": [],
+      "links": [
+        {
+          "text": "Saltar al contenido",
+          "href": "#contenido"
+        },
+        {
+          "text": "opinio.mx",
+          "href": "/"
+        },
+        {
+          "text": "Explorar comercios",
+          "href": "/verificar"
+        },
+        {
+          "text": "Cómo funciona",
+          "href": "/#metodologia"
+        },
+        {
+          "text": "Resolver un problema",
+          "href": "/caso/nuevo"
+        },
+        {
+          "text": "Escribir opinión",
+          "href": "/verificar?accion=opinar"
+        },
+        {
+          "text": "Para comercios",
+          "href": "/merchant"
+        },
+        {
+          "text": "Buscar un comercio",
+          "href": "/verificar"
+        },
+        {
+          "text": "Volver al inicio",
+          "href": "/"
+        },
+        {
+          "text": "opinio.mx",
+          "href": "/"
+        },
+        {
+          "text": "Explorar comercios",
+          "href": "/verificar"
+        },
+        {
+          "text": "Compartir una opinión",
+          "href": "/verificar?accion=opinar"
+        },
+        {
+          "text": "Abrir un caso",
+          "href": "/caso/nuevo"
+        },
+        {
+          "text": "Cómo leemos la evidencia",
+          "href": "/#metodologia"
+        },
+        {
+          "text": "Nuestra independencia",
+          "href": "/#independencia"
+        },
+        {
+          "text": "Panel para comercios",
+          "href": "/merchant"
+        }
+      ],
+      "metrics": [
+        {
+          "domContentLoaded": 34.39999997615814,
+          "load": 303.7999999523163,
+          "transferSize": 4365
+        }
+      ]
+    },
+    {
+      "device": "desktop",
+      "route": "/pagina-que-no-existe",
+      "status": 404,
+      "expectedStatus": 404,
+      "errors": [],
+      "failed": [
+        {
+          "path": "/pagina-que-no-existe",
+          "status": 404
+        }
+      ],
+      "title": "Opinio.mx | Pasaporte de Confianza Comercial en México",
+      "h1": [
+        "Busquemos por otro lado."
+      ],
+      "width": {
+        "viewport": 1440,
+        "document": 1440
+      },
+      "overflowing": [],
+      "violations": [],
+      "links": [
+        {
+          "text": "Saltar al contenido",
+          "href": "#contenido"
+        },
+        {
+          "text": "opinio.mx",
+          "href": "/"
+        },
+        {
+          "text": "Explorar comercios",
+          "href": "/verificar"
+        },
+        {
+          "text": "Cómo funciona",
+          "href": "/#metodologia"
+        },
+        {
+          "text": "Resolver un problema",
+          "href": "/caso/nuevo"
+        },
+        {
+          "text": "Escribir opinión",
+          "href": "/verificar?accion=opinar"
+        },
+        {
+          "text": "Para comercios",
+          "href": "/merchant"
+        },
+        {
+          "text": "Buscar un comercio",
+          "href": "/verificar"
+        },
+        {
+          "text": "Volver al inicio",
+          "href": "/"
+        },
+        {
+          "text": "opinio.mx",
+          "href": "/"
+        },
+        {
+          "text": "Explorar comercios",
+          "href": "/verificar"
+        },
+        {
+          "text": "Compartir una opinión",
+          "href": "/verificar?accion=opinar"
+        },
+        {
+          "text": "Abrir un caso",
+          "href": "/caso/nuevo"
+        },
+        {
+          "text": "Cómo leemos la evidencia",
+          "href": "/#metodologia"
+        },
+        {
+          "text": "Nuestra independencia",
+          "href": "/#independencia"
+        },
+        {
+          "text": "Panel para comercios",
+          "href": "/merchant"
+        }
+      ],
+      "metrics": [
+        {
+          "domContentLoaded": 151.10000002384186,
+          "load": 373.60000002384186,
+          "transferSize": 5009
+        }
+      ]
+    },
+    {
+      "device": "mobile",
+      "route": "/",
+      "status": 200,
+      "expectedStatus": 200,
+      "errors": [],
+      "failed": [],
+      "title": "Opinio.mx | Pasaporte de Confianza Comercial en México",
+      "h1": [
+        "Antes de comprar,conoce a quiénle compras."
+      ],
+      "width": {
+        "viewport": 390,
+        "document": 390
+      },
+      "overflowing": [],
+      "violations": [],
+      "links": [
+        {
+          "text": "Saltar al contenido",
+          "href": "#contenido"
+        },
+        {
+          "text": "opinio.mx",
+          "href": "/"
+        },
+        {
+          "text": "Explorar comercios",
+          "href": "/verificar"
+        },
+        {
+          "text": "Cómo funciona",
+          "href": "/#metodologia"
+        },
+        {
+          "text": "Resolver un problema",
+          "href": "/caso/nuevo"
+        },
+        {
+          "text": "Escribir opinión",
+          "href": "/verificar?accion=opinar"
+        },
+        {
+          "text": "Para comercios",
+          "href": "/merchant"
+        },
+        {
+          "text": "Luuna",
+          "href": "/verificar?q=Luuna"
+        },
+        {
+          "text": "doto",
+          "href": "/verificar?q=doto"
+        },
+        {
+          "text": "Ahal",
+          "href": "/verificar?q=Ahal"
+        },
+        {
+          "text": "Consultar este pasaporte",
+          "href": "/b/xaman-joyeria"
+        },
+        {
+          "text": "Explorar categorías",
+          "href": "/verificar"
+        },
+        {
+          "text": "Hogar1 comercio",
+          "href": "/verificar?categoria=Hogar"
+        },
+        {
+          "text": "Muebles2 comercios",
+          "href": "/verificar?categoria=Muebles"
+        },
+        {
+          "text": "Tecnología2 comercios",
+          "href": "/verificar?categoria=Electr%C3%B3nica"
+        },
+        {
+          "text": "Belleza1 comercio",
+          "href": "/verificar?categoria=Belleza"
+        },
+        {
+          "text": "Joyería1 comercio",
+          "href": "/verificar?categoria=Joyer%C3%ADa"
+        },
+        {
+          "text": "Moda0 comercios",
+          "href": "/verificar?categoria=Moda"
+        },
+        {
+          "text": "Servicios0 comercios",
+          "href": "/verificar?categoria=Servicios"
+        },
+        {
+          "text": "Café0 comercios",
+          "href": "/verificar?categoria=Caf%C3%A9"
+        },
+        {
+          "text": "Explorar todos",
+          "href": "/verificar"
+        },
+        {
+          "text": "XAXaman Joyeríaxamanjoyeria.com4.7/ 53 opiniones publicadasJoyería y AccesoriosOpinio 83.9 / 100Cobertura de pedidos registrada92.2% de 3,200 pedidos registrados con invitación",
+          "href": "/b/xaman-joyeria"
+        },
+        {
+          "text": "AHAhal BioCosméticaahal.mx4.7/ 53 opiniones publicadasBelleza y Cuidado PersonalOpinio 83.8 / 100Cobertura de pedidos registrada93.3% de 8,200 pedidos registrados con invitación",
+          "href": "/b/ahal-cosmetica"
+        },
+        {
+          "text": "DOdoto.com.mxdoto.com.mx4.3/ 54 opiniones publicadasElectrónica y GadgetsOpinio 83.4 / 100Cobertura de pedidos registrada93.1% de 24,500 pedidos registrados con invitación",
+          "href": "/b/doto"
+        },
+        {
+          "text": "MÖMöbel Studio GDLmobelstudio.mx4.5/ 52 opiniones publicadasMuebles y Diseño de InterioresOpinio 83.2 / 100Pedidos conectados89.4% de 850 pedidos registrados con invitación",
+          "href": "/b/mobel-studio"
+        },
+        {
+          "text": "LULuunaluuna.mx4.2/ 55 opiniones publicadasHogar, Muebles y ColchonesOpinio 83 / 100Cobertura de pedidos registrada93.9% de 14,820 pedidos registrados con invitación",
+          "href": "/b/luuna"
+        },
+        {
+          "text": "TETechStore MXtechstoremx.com3.0/ 51 opinión publicadaElectrónica y AccesoriosOpinio 74.6 / 100Información pública",
+          "href": "/b/techstore-mx"
+        },
+        {
+          "text": "Escribir una opinión",
+          "href": "/verificar?accion=opinar"
+        },
+        {
+          "text": "doto.com.mx",
+          "href": "/b/doto#opiniones"
+        },
+        {
+          "text": "Xaman Joyería",
+          "href": "/b/xaman-joyeria#opiniones"
+        },
+        {
+          "text": "Luuna",
+          "href": "/b/luuna#opiniones"
+        },
+        {
+          "text": "Ahal BioCosmética",
+          "href": "/b/ahal-cosmetica#opiniones"
+        },
+        {
+          "text": "Möbel Studio GDL",
+          "href": "/b/mobel-studio#opiniones"
+        },
+        {
+          "text": "TechStore MX",
+          "href": "/b/techstore-mx#opiniones"
+        },
+        {
+          "text": "Abrir un caso",
+          "href": "/caso/nuevo"
+        },
+        {
+          "text": "Conocer el panel para comercios",
+          "href": "/merchant"
+        },
+        {
+          "text": "opinio.mx",
+          "href": "/"
+        },
+        {
+          "text": "Explorar comercios",
+          "href": "/verificar"
+        },
+        {
+          "text": "Compartir una opinión",
+          "href": "/verificar?accion=opinar"
+        },
+        {
+          "text": "Abrir un caso",
+          "href": "/caso/nuevo"
+        },
+        {
+          "text": "Cómo leemos la evidencia",
+          "href": "/#metodologia"
+        },
+        {
+          "text": "Nuestra independencia",
+          "href": "/#independencia"
+        },
+        {
+          "text": "Panel para comercios",
+          "href": "/merchant"
+        }
+      ],
+      "metrics": [
+        {
+          "domContentLoaded": 165.79999995231628,
+          "load": 299.60000002384186,
+          "transferSize": 24388
+        }
+      ]
+    },
+    {
+      "device": "mobile",
+      "route": "/verificar",
+      "status": 200,
+      "expectedStatus": 200,
+      "errors": [],
+      "failed": [],
+      "title": "Opinio.mx | Pasaporte de Confianza Comercial en México",
+      "h1": [
+        "Conoce el negocio antes de comprar."
+      ],
+      "width": {
+        "viewport": 390,
+        "document": 390
+      },
+      "overflowing": [],
+      "violations": [],
+      "links": [
+        {
+          "text": "Saltar al contenido",
+          "href": "#contenido"
+        },
+        {
+          "text": "opinio.mx",
+          "href": "/"
+        },
+        {
+          "text": "Explorar comercios",
+          "href": "/verificar"
+        },
+        {
+          "text": "Cómo funciona",
+          "href": "/#metodologia"
+        },
+        {
+          "text": "Resolver un problema",
+          "href": "/caso/nuevo"
+        },
+        {
+          "text": "Escribir opinión",
+          "href": "/verificar?accion=opinar"
+        },
+        {
+          "text": "Para comercios",
+          "href": "/merchant"
+        },
+        {
+          "text": "Xaman Joyería",
+          "href": "/b/xaman-joyeria"
+        },
+        {
+          "text": "3 opiniones publicadas",
+          "href": "/b/xaman-joyeria#opiniones"
+        },
+        {
+          "text": "Ver opiniones y perfil",
+          "href": "/b/xaman-joyeria"
+        },
+        {
+          "text": "Ahal BioCosmética",
+          "href": "/b/ahal-cosmetica"
+        },
+        {
+          "text": "3 opiniones publicadas",
+          "href": "/b/ahal-cosmetica#opiniones"
+        },
+        {
+          "text": "Ver opiniones y perfil",
+          "href": "/b/ahal-cosmetica"
+        },
+        {
+          "text": "doto.com.mx",
+          "href": "/b/doto"
+        },
+        {
+          "text": "4 opiniones publicadas",
+          "href": "/b/doto#opiniones"
+        },
+        {
+          "text": "Ver opiniones y perfil",
+          "href": "/b/doto"
+        },
+        {
+          "text": "Möbel Studio GDL",
+          "href": "/b/mobel-studio"
+        },
+        {
+          "text": "2 opiniones publicadas",
+          "href": "/b/mobel-studio#opiniones"
+        },
+        {
+          "text": "Ver opiniones y perfil",
+          "href": "/b/mobel-studio"
+        },
+        {
+          "text": "Luuna",
+          "href": "/b/luuna"
+        },
+        {
+          "text": "5 opiniones publicadas",
+          "href": "/b/luuna#opiniones"
+        },
+        {
+          "text": "Ver opiniones y perfil",
+          "href": "/b/luuna"
+        },
+        {
+          "text": "TechStore MX",
+          "href": "/b/techstore-mx"
+        },
+        {
+          "text": "1 opinión publicada",
+          "href": "/b/techstore-mx#opiniones"
+        },
+        {
+          "text": "Ver opiniones y perfil",
+          "href": "/b/techstore-mx"
+        },
+        {
+          "text": "opinio.mx",
+          "href": "/"
+        },
+        {
+          "text": "Explorar comercios",
+          "href": "/verificar"
+        },
+        {
+          "text": "Compartir una opinión",
+          "href": "/verificar?accion=opinar"
+        },
+        {
+          "text": "Abrir un caso",
+          "href": "/caso/nuevo"
+        },
+        {
+          "text": "Cómo leemos la evidencia",
+          "href": "/#metodologia"
+        },
+        {
+          "text": "Nuestra independencia",
+          "href": "/#independencia"
+        },
+        {
+          "text": "Panel para comercios",
+          "href": "/merchant"
+        }
+      ],
+      "metrics": [
+        {
+          "domContentLoaded": 185.40000009536743,
+          "load": 243.80000007152557,
+          "transferSize": 5067
+        }
+      ]
+    },
+    {
+      "device": "mobile",
+      "route": "/b/luuna",
+      "status": 200,
+      "expectedStatus": 200,
+      "errors": [],
+      "failed": [],
+      "title": "Opinio.mx | Pasaporte de Confianza Comercial en México",
+      "h1": [
+        "Luuna"
+      ],
+      "width": {
+        "viewport": 390,
+        "document": 390
+      },
+      "overflowing": [],
+      "violations": [],
+      "links": [
+        {
+          "text": "Saltar al contenido",
+          "href": "#contenido"
+        },
+        {
+          "text": "opinio.mx",
+          "href": "/"
+        },
+        {
+          "text": "Explorar comercios",
+          "href": "/verificar"
+        },
+        {
+          "text": "Cómo funciona",
+          "href": "/#metodologia"
+        },
+        {
+          "text": "Resolver un problema",
+          "href": "/caso/nuevo"
+        },
+        {
+          "text": "Escribir opinión",
+          "href": "/verificar?accion=opinar"
+        },
+        {
+          "text": "Para comercios",
+          "href": "/merchant"
+        },
+        {
+          "text": "4.2 de 55 opiniones",
+          "href": "#opiniones"
+        },
+        {
+          "text": "Escribir opinión",
+          "href": "/escribir-opinion/luuna"
+        },
+        {
+          "text": "Abrir un caso",
+          "href": "/caso/nuevo?b=luuna"
+        },
+        {
+          "text": "Consultar identidad",
+          "href": "#existe"
+        },
+        {
+          "text": "Identidad",
+          "href": "#existe"
+        },
+        {
+          "text": "Pedidos",
+          "href": "#cobertura"
+        },
+        {
+          "text": "Casos",
+          "href": "#resuelve"
+        },
+        {
+          "text": "Fuentes",
+          "href": "#fuentes"
+        },
+        {
+          "text": "Opiniones",
+          "href": "#opiniones"
+        },
+        {
+          "text": "Consultar fuente PROFECO Buró Comercial, abre en otra pestaña",
+          "href": "https://burocomercial.profeco.gob.mx"
+        },
+        {
+          "text": "Consultar fuente INEGI DENUE, abre en otra pestaña",
+          "href": "https://www.inegi.org.mx/app/mapa/denue/"
+        },
+        {
+          "text": "Escribir opinión",
+          "href": "/escribir-opinion/luuna"
+        },
+        {
+          "text": "opinio.mx",
+          "href": "/"
+        },
+        {
+          "text": "Explorar comercios",
+          "href": "/verificar"
+        },
+        {
+          "text": "Compartir una opinión",
+          "href": "/verificar?accion=opinar"
+        },
+        {
+          "text": "Abrir un caso",
+          "href": "/caso/nuevo"
+        },
+        {
+          "text": "Cómo leemos la evidencia",
+          "href": "/#metodologia"
+        },
+        {
+          "text": "Nuestra independencia",
+          "href": "/#independencia"
+        },
+        {
+          "text": "Panel para comercios",
+          "href": "/merchant"
+        }
+      ],
+      "metrics": [
+        {
+          "domContentLoaded": 131.80000007152557,
+          "load": 247.80000007152557,
+          "transferSize": 22744
+        }
+      ]
+    },
+    {
+      "device": "mobile",
+      "route": "/escribir-opinion/luuna",
+      "status": 200,
+      "expectedStatus": 200,
+      "errors": [],
+      "failed": [],
+      "title": "Opinio.mx | Pasaporte de Confianza Comercial en México",
+      "h1": [
+        "Opinar sobre Luuna"
+      ],
+      "width": {
+        "viewport": 390,
+        "document": 390
+      },
+      "overflowing": [],
+      "violations": [],
+      "links": [
+        {
+          "text": "Saltar al contenido",
+          "href": "#contenido"
+        },
+        {
+          "text": "opinio.mx",
+          "href": "/"
+        },
+        {
+          "text": "Explorar comercios",
+          "href": "/verificar"
+        },
+        {
+          "text": "Cómo funciona",
+          "href": "/#metodologia"
+        },
+        {
+          "text": "Resolver un problema",
+          "href": "/caso/nuevo"
+        },
+        {
+          "text": "Escribir opinión",
+          "href": "/verificar?accion=opinar"
+        },
+        {
+          "text": "Para comercios",
+          "href": "/merchant"
+        },
+        {
+          "text": "Volver al negocio",
+          "href": "/b/luuna"
+        },
+        {
+          "text": "opinio.mx",
+          "href": "/"
+        },
+        {
+          "text": "Explorar comercios",
+          "href": "/verificar"
+        },
+        {
+          "text": "Compartir una opinión",
+          "href": "/verificar?accion=opinar"
+        },
+        {
+          "text": "Abrir un caso",
+          "href": "/caso/nuevo"
+        },
+        {
+          "text": "Cómo leemos la evidencia",
+          "href": "/#metodologia"
+        },
+        {
+          "text": "Nuestra independencia",
+          "href": "/#independencia"
+        },
+        {
+          "text": "Panel para comercios",
+          "href": "/merchant"
+        }
+      ],
+      "metrics": [
+        {
+          "domContentLoaded": 166.59999990463257,
+          "load": 263.2999999523163,
+          "transferSize": 8158
+        }
+      ]
+    },
+    {
+      "device": "mobile",
+      "route": "/caso/nuevo?b=luuna",
+      "status": 200,
+      "expectedStatus": 200,
+      "errors": [],
+      "failed": [],
+      "title": "Opinio.mx | Pasaporte de Confianza Comercial en México",
+      "h1": [
+        "Cuéntanos qué pasó con tu compra"
+      ],
+      "width": {
+        "viewport": 390,
+        "document": 390
+      },
+      "overflowing": [],
+      "violations": [],
+      "links": [
+        {
+          "text": "Saltar al contenido",
+          "href": "#contenido"
+        },
+        {
+          "text": "opinio.mx",
+          "href": "/"
+        },
+        {
+          "text": "Explorar comercios",
+          "href": "/verificar"
+        },
+        {
+          "text": "Cómo funciona",
+          "href": "/#metodologia"
+        },
+        {
+          "text": "Resolver un problema",
+          "href": "/caso/nuevo"
+        },
+        {
+          "text": "Escribir opinión",
+          "href": "/verificar?accion=opinar"
+        },
+        {
+          "text": "Para comercios",
+          "href": "/merchant"
+        },
+        {
+          "text": "Volver al inicio",
+          "href": "/"
+        },
+        {
+          "text": "opinio.mx",
+          "href": "/"
+        },
+        {
+          "text": "Explorar comercios",
+          "href": "/verificar"
+        },
+        {
+          "text": "Compartir una opinión",
+          "href": "/verificar?accion=opinar"
+        },
+        {
+          "text": "Abrir un caso",
+          "href": "/caso/nuevo"
+        },
+        {
+          "text": "Cómo leemos la evidencia",
+          "href": "/#metodologia"
+        },
+        {
+          "text": "Nuestra independencia",
+          "href": "/#independencia"
+        },
+        {
+          "text": "Panel para comercios",
+          "href": "/merchant"
+        }
+      ],
+      "metrics": [
+        {
+          "domContentLoaded": 97.10000002384186,
+          "load": 158.80000007152557,
+          "transferSize": 5166
+        }
+      ]
+    },
+    {
+      "device": "mobile",
+      "route": "/merchant",
+      "status": 200,
+      "expectedStatus": 200,
+      "errors": [],
+      "failed": [],
+      "title": "Resumen del negocio · Opinio.mx",
+      "h1": [
+        "Panel de Control Comercial"
+      ],
+      "width": {
+        "viewport": 390,
+        "document": 390
+      },
+      "overflowing": [],
+      "violations": [],
+      "links": [
+        {
+          "text": "Saltar al contenido",
+          "href": "#contenido"
+        },
+        {
+          "text": "opinio.mx",
+          "href": "/"
+        },
+        {
+          "text": "Resumen",
+          "href": "/merchant?business=xaman-joyeria"
+        },
+        {
+          "text": "Opiniones",
+          "href": "/merchant/reviews?business=xaman-joyeria"
+        },
+        {
+          "text": "Resolver casos",
+          "href": "/merchant/inbox?business=xaman-joyeria"
+        },
+        {
+          "text": "Invitar clientes",
+          "href": "/merchant/requests?business=xaman-joyeria"
+        },
+        {
+          "text": "Métricas",
+          "href": "/merchant/insights?business=xaman-joyeria"
+        },
+        {
+          "text": "Widgets",
+          "href": "/merchant/widgets?business=xaman-joyeria"
+        },
+        {
+          "text": "Integraciones",
+          "href": "/merchant/integrations?business=xaman-joyeria"
+        },
+        {
+          "text": "Configuración",
+          "href": "/merchant/settings?business=xaman-joyeria"
+        },
+        {
+          "text": "Ver perfil público (nueva pestaña)",
+          "href": "/b/xaman-joyeria"
+        },
+        {
+          "text": "Invitar clientes",
+          "href": "/merchant/requests?business=xaman-joyeria"
+        },
+        {
+          "text": "Perfil público (nueva pestaña)",
+          "href": "/b/xaman-joyeria"
+        },
+        {
+          "text": "Pasaporte Público",
+          "href": "/b/xaman-joyeria"
+        },
+        {
+          "text": "Gestionar Envíos",
+          "href": "/merchant/requests?business=xaman-joyeria"
+        },
+        {
+          "text": "Ver todas (3)",
+          "href": "/merchant/reviews?business=xaman-joyeria"
+        },
+        {
+          "text": "Responder oficialmente",
+          "href": "/merchant/reviews?business=xaman-joyeria"
+        },
+        {
+          "text": "Responder oficialmente",
+          "href": "/merchant/reviews?business=xaman-joyeria"
+        },
+        {
+          "text": "Responder oficialmente",
+          "href": "/merchant/reviews?business=xaman-joyeria"
+        },
+        {
+          "text": "Administrar Respuestas Oficiales",
+          "href": "/merchant/reviews?business=xaman-joyeria"
+        },
+        {
+          "text": "Ver bandeja (5)",
+          "href": "/merchant/inbox?business=xaman-joyeria"
+        },
+        {
+          "text": "Proponer Remedios SPEI / Reemplazo",
+          "href": "/merchant/inbox?business=xaman-joyeria"
+        },
+        {
+          "text": "Configurar Widgets EmbebidosInserta el Sello Flotante o el Badge de Checkout en Shopify, Tiendanube o código HTML.",
+          "href": "/merchant/widgets?business=xaman-joyeria"
+        },
+        {
+          "text": "Comparativa Sectorial MéxicoCompara tu tasa de incidencias y velocidad de reembolso contra el percentil 90 del país.",
+          "href": "/merchant/insights?business=xaman-joyeria"
+        },
+        {
+          "text": "Identidad SAT & DENUEVincula tu Cédula Fiscal SAT, código CLEE de INEGI y canal oficial de WhatsApp Business.",
+          "href": "/merchant/settings?business=xaman-joyeria"
+        }
+      ],
+      "metrics": [
+        {
+          "domContentLoaded": 116.39999997615814,
+          "load": 223.39999997615814,
+          "transferSize": 21082
+        }
+      ]
+    },
+    {
+      "device": "mobile",
+      "route": "/merchant/reviews",
+      "status": 200,
+      "expectedStatus": 200,
+      "errors": [],
+      "failed": [],
+      "title": "Opiniones del negocio · Opinio.mx",
+      "h1": [
+        "Opiniones de clientes"
+      ],
+      "width": {
+        "viewport": 390,
+        "document": 390
+      },
+      "overflowing": [],
+      "violations": [],
+      "links": [
+        {
+          "text": "Saltar al contenido",
+          "href": "#contenido"
+        },
+        {
+          "text": "opinio.mx",
+          "href": "/"
+        },
+        {
+          "text": "Resumen",
+          "href": "/merchant?business=xaman-joyeria"
+        },
+        {
+          "text": "Opiniones",
+          "href": "/merchant/reviews?business=xaman-joyeria"
+        },
+        {
+          "text": "Resolver casos",
+          "href": "/merchant/inbox?business=xaman-joyeria"
+        },
+        {
+          "text": "Invitar clientes",
+          "href": "/merchant/requests?business=xaman-joyeria"
+        },
+        {
+          "text": "Métricas",
+          "href": "/merchant/insights?business=xaman-joyeria"
+        },
+        {
+          "text": "Widgets",
+          "href": "/merchant/widgets?business=xaman-joyeria"
+        },
+        {
+          "text": "Integraciones",
+          "href": "/merchant/integrations?business=xaman-joyeria"
+        },
+        {
+          "text": "Configuración",
+          "href": "/merchant/settings?business=xaman-joyeria"
+        },
+        {
+          "text": "Ver perfil público (nueva pestaña)",
+          "href": "/b/xaman-joyeria"
+        },
+        {
+          "text": "Invitar clientes",
+          "href": "/merchant/requests?business=xaman-joyeria"
+        },
+        {
+          "text": "Perfil público (nueva pestaña)",
+          "href": "/b/xaman-joyeria"
+        }
+      ],
+      "metrics": [
+        {
+          "domContentLoaded": 307.1999999284744,
+          "load": 535.0999999046326,
+          "transferSize": 15965
+        }
+      ]
+    },
+    {
+      "device": "mobile",
+      "route": "/merchant/requests",
+      "status": 200,
+      "expectedStatus": 200,
+      "errors": [],
+      "failed": [],
+      "title": "Invitaciones del negocio · Opinio.mx",
+      "h1": [
+        "Solicitudes y Cobertura de Pedidos"
+      ],
+      "width": {
+        "viewport": 390,
+        "document": 390
+      },
+      "overflowing": [
+        {
+          "tag": "TABLE",
+          "className": "w-full text-left text-xs",
+          "text": "PedidoPlataformaClienteMontoEstadoInvitaciónORD-XAMAN-JOYERIA-1001shopifyCliente 1 Opinio$1,450Entre"
+        },
+        {
+          "tag": "THEAD",
+          "className": "bg-op-canvas border-b border-op-border text-op-muted uppercase text-xs tracking-wider",
+          "text": "PedidoPlataformaClienteMontoEstadoInvitación"
+        },
+        {
+          "tag": "TR",
+          "className": "",
+          "text": "PedidoPlataformaClienteMontoEstadoInvitación"
+        },
+        {
+          "tag": "TH",
+          "className": "py-2.5 px-3",
+          "text": "Estado"
+        },
+        {
+          "tag": "TH",
+          "className": "py-2.5 px-3",
+          "text": "Invitación"
+        },
+        {
+          "tag": "TBODY",
+          "className": "divide-y divide-op-border",
+          "text": "ORD-XAMAN-JOYERIA-1001shopifyCliente 1 Opinio$1,450Entregado InvitadoORD-XAMAN-JOYERIA-1002shopifyCl"
+        },
+        {
+          "tag": "TR",
+          "className": "hover:bg-op-canvas transition-colors",
+          "text": "ORD-XAMAN-JOYERIA-1001shopifyCliente 1 Opinio$1,450Entregado Invitado"
+        },
+        {
+          "tag": "TD",
+          "className": "py-2.5 px-3",
+          "text": "Entregado"
+        },
+        {
+          "tag": "SPAN",
+          "className": "text-xs font-medium text-op-green-dark bg-op-green-soft px-2 py-0.5 rounded border border-op-green-border",
+          "text": "Entregado"
+        },
+        {
+          "tag": "TD",
+          "className": "py-2.5 px-3",
+          "text": " Invitado"
+        }
+      ],
+      "violations": [],
+      "links": [
+        {
+          "text": "Saltar al contenido",
+          "href": "#contenido"
+        },
+        {
+          "text": "opinio.mx",
+          "href": "/"
+        },
+        {
+          "text": "Resumen",
+          "href": "/merchant?business=xaman-joyeria"
+        },
+        {
+          "text": "Opiniones",
+          "href": "/merchant/reviews?business=xaman-joyeria"
+        },
+        {
+          "text": "Resolver casos",
+          "href": "/merchant/inbox?business=xaman-joyeria"
+        },
+        {
+          "text": "Invitar clientes",
+          "href": "/merchant/requests?business=xaman-joyeria"
+        },
+        {
+          "text": "Métricas",
+          "href": "/merchant/insights?business=xaman-joyeria"
+        },
+        {
+          "text": "Widgets",
+          "href": "/merchant/widgets?business=xaman-joyeria"
+        },
+        {
+          "text": "Integraciones",
+          "href": "/merchant/integrations?business=xaman-joyeria"
+        },
+        {
+          "text": "Configuración",
+          "href": "/merchant/settings?business=xaman-joyeria"
+        },
+        {
+          "text": "Ver perfil público (nueva pestaña)",
+          "href": "/b/xaman-joyeria"
+        },
+        {
+          "text": "Invitar clientes",
+          "href": "/merchant/requests?business=xaman-joyeria"
+        },
+        {
+          "text": "Perfil público (nueva pestaña)",
+          "href": "/b/xaman-joyeria"
+        }
+      ],
+      "metrics": [
+        {
+          "domContentLoaded": 346.2000000476837,
+          "load": 749,
+          "transferSize": 16959
+        }
+      ]
+    },
+    {
+      "device": "mobile",
+      "route": "/merchant/inbox",
+      "status": 200,
+      "expectedStatus": 200,
+      "errors": [],
+      "failed": [],
+      "title": "Casos del negocio · Opinio.mx",
+      "h1": [
+        "Bandeja de Resolución"
+      ],
+      "width": {
+        "viewport": 390,
+        "document": 390
+      },
+      "overflowing": [],
+      "violations": [],
+      "links": [
+        {
+          "text": "Saltar al contenido",
+          "href": "#contenido"
+        },
+        {
+          "text": "opinio.mx",
+          "href": "/"
+        },
+        {
+          "text": "Resumen",
+          "href": "/merchant?business=xaman-joyeria"
+        },
+        {
+          "text": "Opiniones",
+          "href": "/merchant/reviews?business=xaman-joyeria"
+        },
+        {
+          "text": "Resolver casos",
+          "href": "/merchant/inbox?business=xaman-joyeria"
+        },
+        {
+          "text": "Invitar clientes",
+          "href": "/merchant/requests?business=xaman-joyeria"
+        },
+        {
+          "text": "Métricas",
+          "href": "/merchant/insights?business=xaman-joyeria"
+        },
+        {
+          "text": "Widgets",
+          "href": "/merchant/widgets?business=xaman-joyeria"
+        },
+        {
+          "text": "Integraciones",
+          "href": "/merchant/integrations?business=xaman-joyeria"
+        },
+        {
+          "text": "Configuración",
+          "href": "/merchant/settings?business=xaman-joyeria"
+        },
+        {
+          "text": "Ver perfil público (nueva pestaña)",
+          "href": "/b/xaman-joyeria"
+        },
+        {
+          "text": "Invitar clientes",
+          "href": "/merchant/requests?business=xaman-joyeria"
+        },
+        {
+          "text": "Perfil público (nueva pestaña)",
+          "href": "/b/xaman-joyeria"
+        }
+      ],
+      "metrics": [
+        {
+          "domContentLoaded": 584,
+          "load": 1123.6000000238419,
+          "transferSize": 18254
+        }
+      ]
+    },
+    {
+      "device": "mobile",
+      "route": "/merchant/widgets",
+      "status": 200,
+      "expectedStatus": 200,
+      "errors": [],
+      "failed": [],
+      "title": "Widgets del negocio · Opinio.mx",
+      "h1": [
+        "Widgets y Sellos Embebidos"
+      ],
+      "width": {
+        "viewport": 390,
+        "document": 390
+      },
+      "overflowing": [],
+      "violations": [],
+      "links": [
+        {
+          "text": "Saltar al contenido",
+          "href": "#contenido"
+        },
+        {
+          "text": "opinio.mx",
+          "href": "/"
+        },
+        {
+          "text": "Resumen",
+          "href": "/merchant?business=xaman-joyeria"
+        },
+        {
+          "text": "Opiniones",
+          "href": "/merchant/reviews?business=xaman-joyeria"
+        },
+        {
+          "text": "Resolver casos",
+          "href": "/merchant/inbox?business=xaman-joyeria"
+        },
+        {
+          "text": "Invitar clientes",
+          "href": "/merchant/requests?business=xaman-joyeria"
+        },
+        {
+          "text": "Métricas",
+          "href": "/merchant/insights?business=xaman-joyeria"
+        },
+        {
+          "text": "Widgets",
+          "href": "/merchant/widgets?business=xaman-joyeria"
+        },
+        {
+          "text": "Integraciones",
+          "href": "/merchant/integrations?business=xaman-joyeria"
+        },
+        {
+          "text": "Configuración",
+          "href": "/merchant/settings?business=xaman-joyeria"
+        },
+        {
+          "text": "Ver perfil público (nueva pestaña)",
+          "href": "/b/xaman-joyeria"
+        },
+        {
+          "text": "Invitar clientes",
+          "href": "/merchant/requests?business=xaman-joyeria"
+        },
+        {
+          "text": "Perfil público (nueva pestaña)",
+          "href": "/b/xaman-joyeria"
+        },
+        {
+          "text": "Abrir vista previa (nueva pestaña)",
+          "href": "/widget/badge/wgt_xaman-joyeria_badge_2026?theme=light"
+        }
+      ],
+      "metrics": [
+        {
+          "domContentLoaded": 242.10000002384186,
+          "load": 470.89999997615814,
+          "transferSize": 15159
+        }
+      ]
+    },
+    {
+      "device": "mobile",
+      "route": "/merchant/integrations",
+      "status": 200,
+      "expectedStatus": 200,
+      "errors": [],
+      "failed": [],
+      "title": "Integraciones del negocio · Opinio.mx",
+      "h1": [
+        "Integraciones y Feed de Pedidos"
+      ],
+      "width": {
+        "viewport": 390,
+        "document": 390
+      },
+      "overflowing": [],
+      "violations": [],
+      "links": [
+        {
+          "text": "Saltar al contenido",
+          "href": "#contenido"
+        },
+        {
+          "text": "opinio.mx",
+          "href": "/"
+        },
+        {
+          "text": "Resumen",
+          "href": "/merchant?business=xaman-joyeria"
+        },
+        {
+          "text": "Opiniones",
+          "href": "/merchant/reviews?business=xaman-joyeria"
+        },
+        {
+          "text": "Resolver casos",
+          "href": "/merchant/inbox?business=xaman-joyeria"
+        },
+        {
+          "text": "Invitar clientes",
+          "href": "/merchant/requests?business=xaman-joyeria"
+        },
+        {
+          "text": "Métricas",
+          "href": "/merchant/insights?business=xaman-joyeria"
+        },
+        {
+          "text": "Widgets",
+          "href": "/merchant/widgets?business=xaman-joyeria"
+        },
+        {
+          "text": "Integraciones",
+          "href": "/merchant/integrations?business=xaman-joyeria"
+        },
+        {
+          "text": "Configuración",
+          "href": "/merchant/settings?business=xaman-joyeria"
+        },
+        {
+          "text": "Ver perfil público (nueva pestaña)",
+          "href": "/b/xaman-joyeria"
+        },
+        {
+          "text": "Invitar clientes",
+          "href": "/merchant/requests?business=xaman-joyeria"
+        },
+        {
+          "text": "Perfil público (nueva pestaña)",
+          "href": "/b/xaman-joyeria"
+        },
+        {
+          "text": "Ver pedidos e invitaciones",
+          "href": "/merchant/requests?business=xaman-joyeria"
+        }
+      ],
+      "metrics": [
+        {
+          "domContentLoaded": 260.39999997615814,
+          "load": 617.2999999523163,
+          "transferSize": 14353
+        }
+      ]
+    },
+    {
+      "device": "mobile",
+      "route": "/merchant/insights",
+      "status": 200,
+      "expectedStatus": 200,
+      "errors": [],
+      "failed": [],
+      "title": "Métricas del negocio · Opinio.mx",
+      "h1": [
+        "Métricas de Xaman Joyería"
+      ],
+      "width": {
+        "viewport": 390,
+        "document": 390
+      },
+      "overflowing": [],
+      "violations": [],
+      "links": [
+        {
+          "text": "Saltar al contenido",
+          "href": "#contenido"
+        },
+        {
+          "text": "opinio.mx",
+          "href": "/"
+        },
+        {
+          "text": "Resumen",
+          "href": "/merchant?business=xaman-joyeria"
+        },
+        {
+          "text": "Opiniones",
+          "href": "/merchant/reviews?business=xaman-joyeria"
+        },
+        {
+          "text": "Resolver casos",
+          "href": "/merchant/inbox?business=xaman-joyeria"
+        },
+        {
+          "text": "Invitar clientes",
+          "href": "/merchant/requests?business=xaman-joyeria"
+        },
+        {
+          "text": "Métricas",
+          "href": "/merchant/insights?business=xaman-joyeria"
+        },
+        {
+          "text": "Widgets",
+          "href": "/merchant/widgets?business=xaman-joyeria"
+        },
+        {
+          "text": "Integraciones",
+          "href": "/merchant/integrations?business=xaman-joyeria"
+        },
+        {
+          "text": "Configuración",
+          "href": "/merchant/settings?business=xaman-joyeria"
+        },
+        {
+          "text": "Ver perfil público (nueva pestaña)",
+          "href": "/b/xaman-joyeria"
+        },
+        {
+          "text": "Invitar clientes",
+          "href": "/merchant/requests?business=xaman-joyeria"
+        },
+        {
+          "text": "Perfil público (nueva pestaña)",
+          "href": "/b/xaman-joyeria"
+        },
+        {
+          "text": "Revisar casos",
+          "href": "/merchant/inbox?business=xaman-joyeria"
+        }
+      ],
+      "metrics": [
+        {
+          "domContentLoaded": 166.39999997615814,
+          "load": 270,
+          "transferSize": 15630
+        }
+      ]
+    },
+    {
+      "device": "mobile",
+      "route": "/merchant/settings",
+      "status": 200,
+      "expectedStatus": 200,
+      "errors": [],
+      "failed": [],
+      "title": "Configuración del negocio · Opinio.mx",
+      "h1": [
+        "Configuración e Identidad Comercial"
+      ],
+      "width": {
+        "viewport": 390,
+        "document": 390
+      },
+      "overflowing": [],
+      "violations": [],
+      "links": [
+        {
+          "text": "Saltar al contenido",
+          "href": "#contenido"
+        },
+        {
+          "text": "opinio.mx",
+          "href": "/"
+        },
+        {
+          "text": "Resumen",
+          "href": "/merchant?business=xaman-joyeria"
+        },
+        {
+          "text": "Opiniones",
+          "href": "/merchant/reviews?business=xaman-joyeria"
+        },
+        {
+          "text": "Resolver casos",
+          "href": "/merchant/inbox?business=xaman-joyeria"
+        },
+        {
+          "text": "Invitar clientes",
+          "href": "/merchant/requests?business=xaman-joyeria"
+        },
+        {
+          "text": "Métricas",
+          "href": "/merchant/insights?business=xaman-joyeria"
+        },
+        {
+          "text": "Widgets",
+          "href": "/merchant/widgets?business=xaman-joyeria"
+        },
+        {
+          "text": "Integraciones",
+          "href": "/merchant/integrations?business=xaman-joyeria"
+        },
+        {
+          "text": "Configuración",
+          "href": "/merchant/settings?business=xaman-joyeria"
+        },
+        {
+          "text": "Ver perfil público (nueva pestaña)",
+          "href": "/b/xaman-joyeria"
+        },
+        {
+          "text": "Invitar clientes",
+          "href": "/merchant/requests?business=xaman-joyeria"
+        },
+        {
+          "text": "Perfil público (nueva pestaña)",
+          "href": "/b/xaman-joyeria"
+        }
+      ],
+      "metrics": [
+        {
+          "domContentLoaded": 243.39999997615814,
+          "load": 775,
+          "transferSize": 15910
+        }
+      ]
+    },
+    {
+      "device": "mobile",
+      "route": "/caso/1",
+      "status": 200,
+      "expectedStatus": 200,
+      "errors": [],
+      "failed": [],
+      "title": "Opinio.mx | Pasaporte de Confianza Comercial en México",
+      "h1": [
+        "Seguimiento de tu caso"
+      ],
+      "width": {
+        "viewport": 390,
+        "document": 390
+      },
+      "overflowing": [],
+      "violations": [],
+      "links": [
+        {
+          "text": "Saltar al contenido",
+          "href": "#contenido"
+        },
+        {
+          "text": "opinio.mx",
+          "href": "/"
+        },
+        {
+          "text": "Explorar comercios",
+          "href": "/verificar"
+        },
+        {
+          "text": "Cómo funciona",
+          "href": "/#metodologia"
+        },
+        {
+          "text": "Resolver un problema",
+          "href": "/caso/nuevo"
+        },
+        {
+          "text": "Escribir opinión",
+          "href": "/verificar?accion=opinar"
+        },
+        {
+          "text": "Para comercios",
+          "href": "/merchant"
+        },
+        {
+          "text": "Volver al Pasaporte de Luuna",
+          "href": "/b/luuna"
+        },
+        {
+          "text": "opinio.mx",
+          "href": "/"
+        },
+        {
+          "text": "Explorar comercios",
+          "href": "/verificar"
+        },
+        {
+          "text": "Compartir una opinión",
+          "href": "/verificar?accion=opinar"
+        },
+        {
+          "text": "Abrir un caso",
+          "href": "/caso/nuevo"
+        },
+        {
+          "text": "Cómo leemos la evidencia",
+          "href": "/#metodologia"
+        },
+        {
+          "text": "Nuestra independencia",
+          "href": "/#independencia"
+        },
+        {
+          "text": "Panel para comercios",
+          "href": "/merchant"
+        }
+      ],
+      "metrics": [
+        {
+          "domContentLoaded": 479.5,
+          "load": 1313.2000000476837,
+          "transferSize": 9301
+        }
+      ]
+    },
+    {
+      "device": "mobile",
+      "route": "/widget/badge/wgt_luuna_badge_2026",
+      "status": 200,
+      "expectedStatus": 200,
+      "errors": [],
+      "failed": [],
+      "title": "Perfil de confianza · Opinio.mx",
+      "h1": [
+        "Luuna"
+      ],
+      "width": {
+        "viewport": 390,
+        "document": 390
+      },
+      "overflowing": [],
+      "violations": [],
+      "links": [
+        {
+          "text": "Saltar al contenido",
+          "href": "#contenido"
+        },
+        {
+          "text": "Ver perfil y metodología (nueva pestaña)",
+          "href": "/b/luuna"
+        }
+      ],
+      "metrics": [
+        {
+          "domContentLoaded": 544.2000000476837,
+          "load": 685,
+          "transferSize": 6017
+        }
+      ]
+    },
+    {
+      "device": "mobile",
+      "route": "/widget/card/wgt_luuna_card_2026",
+      "status": 200,
+      "expectedStatus": 200,
+      "errors": [],
+      "failed": [],
+      "title": "Perfil de confianza · Opinio.mx",
+      "h1": [
+        "Luuna"
+      ],
+      "width": {
+        "viewport": 390,
+        "document": 390
+      },
+      "overflowing": [],
+      "violations": [],
+      "links": [
+        {
+          "text": "Saltar al contenido",
+          "href": "#contenido"
+        },
+        {
+          "text": "Ver perfil y metodología (nueva pestaña)",
+          "href": "/b/luuna"
+        }
+      ],
+      "metrics": [
+        {
+          "domContentLoaded": 583.2000000476837,
+          "load": 1155.7999999523163,
+          "transferSize": 6709
+        }
+      ]
+    },
+    {
+      "device": "mobile",
+      "route": "/widget/reassurance/wgt_luuna_reassurance_2026",
+      "status": 200,
+      "expectedStatus": 200,
+      "errors": [],
+      "failed": [],
+      "title": "Perfil de confianza · Opinio.mx",
+      "h1": [
+        "Luuna"
+      ],
+      "width": {
+        "viewport": 390,
+        "document": 390
+      },
+      "overflowing": [],
+      "violations": [],
+      "links": [
+        {
+          "text": "Saltar al contenido",
+          "href": "#contenido"
+        },
+        {
+          "text": "Ver perfil y metodología (nueva pestaña)",
+          "href": "/b/luuna"
+        }
+      ],
+      "metrics": [
+        {
+          "domContentLoaded": 447.5,
+          "load": 987.3000000715256,
+          "transferSize": 6318
+        }
+      ]
+    },
+    {
+      "device": "mobile",
+      "route": "/widget/card/wgt_luuna_card_2026?theme=dark",
+      "status": 200,
+      "expectedStatus": 200,
+      "errors": [],
+      "failed": [],
+      "title": "Perfil de confianza · Opinio.mx",
+      "h1": [
+        "Luuna"
+      ],
+      "width": {
+        "viewport": 390,
+        "document": 390
+      },
+      "overflowing": [],
+      "violations": [],
+      "links": [
+        {
+          "text": "Saltar al contenido",
+          "href": "#contenido"
+        },
+        {
+          "text": "Ver perfil y metodología (nueva pestaña)",
+          "href": "/b/luuna"
+        }
+      ],
+      "metrics": [
+        {
+          "domContentLoaded": 905.8999999761581,
+          "load": 1085.1999999284744,
+          "transferSize": 6747
+        }
+      ]
+    },
+    {
+      "device": "mobile",
+      "route": "/widget/badge/invalid-token-qa",
+      "status": 404,
+      "expectedStatus": 404,
+      "errors": [],
+      "failed": [
+        {
+          "path": "/widget/badge/invalid-token-qa",
+          "status": 404
+        }
+      ],
+      "title": "Perfil de confianza · Opinio.mx",
+      "h1": [
+        "Busquemos por otro lado."
+      ],
+      "width": {
+        "viewport": 390,
+        "document": 390
+      },
+      "overflowing": [],
+      "violations": [],
+      "links": [
+        {
+          "text": "Saltar al contenido",
+          "href": "#contenido"
+        },
+        {
+          "text": "opinio.mx",
+          "href": "/"
+        },
+        {
+          "text": "Explorar comercios",
+          "href": "/verificar"
+        },
+        {
+          "text": "Cómo funciona",
+          "href": "/#metodologia"
+        },
+        {
+          "text": "Resolver un problema",
+          "href": "/caso/nuevo"
+        },
+        {
+          "text": "Escribir opinión",
+          "href": "/verificar?accion=opinar"
+        },
+        {
+          "text": "Para comercios",
+          "href": "/merchant"
+        },
+        {
+          "text": "Buscar un comercio",
+          "href": "/verificar"
+        },
+        {
+          "text": "Volver al inicio",
+          "href": "/"
+        },
+        {
+          "text": "opinio.mx",
+          "href": "/"
+        },
+        {
+          "text": "Explorar comercios",
+          "href": "/verificar"
+        },
+        {
+          "text": "Compartir una opinión",
+          "href": "/verificar?accion=opinar"
+        },
+        {
+          "text": "Abrir un caso",
+          "href": "/caso/nuevo"
+        },
+        {
+          "text": "Cómo leemos la evidencia",
+          "href": "/#metodologia"
+        },
+        {
+          "text": "Nuestra independencia",
+          "href": "/#independencia"
+        },
+        {
+          "text": "Panel para comercios",
+          "href": "/merchant"
+        }
+      ],
+      "metrics": [
+        {
+          "domContentLoaded": 661.1000000238419,
+          "load": 1101.7000000476837,
+          "transferSize": 4365
+        }
+      ]
+    },
+    {
+      "device": "mobile",
+      "route": "/pagina-que-no-existe",
+      "status": 404,
+      "expectedStatus": 404,
+      "errors": [],
+      "failed": [
+        {
+          "path": "/pagina-que-no-existe",
+          "status": 404
+        }
+      ],
+      "title": "Opinio.mx | Pasaporte de Confianza Comercial en México",
+      "h1": [
+        "Busquemos por otro lado."
+      ],
+      "width": {
+        "viewport": 390,
+        "document": 390
+      },
+      "overflowing": [],
+      "violations": [],
+      "links": [
+        {
+          "text": "Saltar al contenido",
+          "href": "#contenido"
+        },
+        {
+          "text": "opinio.mx",
+          "href": "/"
+        },
+        {
+          "text": "Explorar comercios",
+          "href": "/verificar"
+        },
+        {
+          "text": "Cómo funciona",
+          "href": "/#metodologia"
+        },
+        {
+          "text": "Resolver un problema",
+          "href": "/caso/nuevo"
+        },
+        {
+          "text": "Escribir opinión",
+          "href": "/verificar?accion=opinar"
+        },
+        {
+          "text": "Para comercios",
+          "href": "/merchant"
+        },
+        {
+          "text": "Buscar un comercio",
+          "href": "/verificar"
+        },
+        {
+          "text": "Volver al inicio",
+          "href": "/"
+        },
+        {
+          "text": "opinio.mx",
+          "href": "/"
+        },
+        {
+          "text": "Explorar comercios",
+          "href": "/verificar"
+        },
+        {
+          "text": "Compartir una opinión",
+          "href": "/verificar?accion=opinar"
+        },
+        {
+          "text": "Abrir un caso",
+          "href": "/caso/nuevo"
+        },
+        {
+          "text": "Cómo leemos la evidencia",
+          "href": "/#metodologia"
+        },
+        {
+          "text": "Nuestra independencia",
+          "href": "/#independencia"
+        },
+        {
+          "text": "Panel para comercios",
+          "href": "/merchant"
+        }
+      ],
+      "metrics": [
+        {
+          "domContentLoaded": 754.1000000238419,
+          "load": 971.7000000476837,
+          "transferSize": 5009
+        }
+      ]
+    }
+  ],
+  "scope": "Production candidate: 20 routes at desktop and mobile widths. The final build changes only copied-link origin in two merchant components, checked separately."
+}

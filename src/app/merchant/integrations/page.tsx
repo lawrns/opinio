@@ -40,7 +40,7 @@ export default async function MerchantIntegrationsPage({ searchParams }: PagePro
         </p>
       </div>
 
-      <IntegrationsManager business={currentBusiness} />
+      <IntegrationsManager key={currentBusiness.id} business={currentBusiness} />
     </div>
   );
 }

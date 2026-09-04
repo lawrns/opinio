@@ -1,0 +1,34 @@
+
+src/app/merchant/reviews/page.tsx
+  4:10  warning  'Star' is defined but never used           @typescript-eslint/no-unused-vars
+  4:16  warning  'MessageSquare' is defined but never used  @typescript-eslint/no-unused-vars
+
+src/components/ResolutionInboxManager.tsx
+  5:3  warning  'Inbox' is defined but never used          @typescript-eslint/no-unused-vars
+  6:3  warning  'AlertTriangle' is defined but never used  @typescript-eslint/no-unused-vars
+
+src/components/home/ProofBentoGrid.tsx
+  10:3   warning  'ShieldCheck' is defined but never used                    @typescript-eslint/no-unused-vars
+  11:3   warning  'ArrowRight' is defined but never used                     @typescript-eslint/no-unused-vars
+  12:3   warning  'Receipt' is defined but never used                        @typescript-eslint/no-unused-vars
+  13:3   warning  'Clock' is defined but never used                          @typescript-eslint/no-unused-vars
+  14:3   warning  'WarningCircle' is defined but never used                  @typescript-eslint/no-unused-vars
+  15:3   warning  'Eye' is defined but never used                            @typescript-eslint/no-unused-vars
+  16:3   warning  'LockKey' is defined but never used                        @typescript-eslint/no-unused-vars
+  21:10  warning  'activeDisputeStep' is assigned a value but never used     @typescript-eslint/no-unused-vars
+  21:29  warning  'setActiveDisputeStep' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+src/components/home/TransferSimulator.tsx
+  10:3  warning  'ArrowRight' is defined but never used  @typescript-eslint/no-unused-vars
+  13:3  warning  'HelpCircle' is defined but never used  @typescript-eslint/no-unused-vars
+  18:3  warning  'Phone' is defined but never used       @typescript-eslint/no-unused-vars
+
+src/lib/db.ts
+  6:3  warning  Unused eslint-disable directive (no problems were reported from 'no-var')
+
+src/lib/merchant-data.ts
+  338:9  warning  'resolutionRate' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  339:9  warning  'issues' is assigned a value but never used          @typescript-eslint/no-unused-vars
+
+✖ 19 problems (0 errors, 19 warnings)
+  0 errors and 1 warning potentially fixable with the `--fix` option.

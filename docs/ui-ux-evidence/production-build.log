@@ -1,0 +1,56 @@
+▲ Next.js 16.3.4 (webpack)
+✓ Running next.config.ts took 247ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 2.4min
+  Running TypeScript ...
+
+  We detected TypeScript in your project and reconfigured your tsconfig.json file for you.
+  The following suggested values were added to your tsconfig.json. These values can be changed to fit your project's needs:
+
+    - include was updated to add '.next-final/types/**/*.ts'
+    - include was updated to add '.next-final/dev/types/**/*.ts'
+
+  Finished TypeScript in 2.6min ...
+  Collecting page data using 1 worker ...
+  Generating static pages using 1 worker (0/10) ...
+  Generating static pages using 1 worker (2/10)
+  Generating static pages using 1 worker (4/10)
+  Generating static pages using 1 worker (7/10)
+✓ Generating static pages using 1 worker (10/10) in 5.5s
+  Finalizing page optimization ...
+  Collecting build traces ...
+
+Route (app)
+┌ ƒ /
+├ ○ /_not-found
+├ ƒ /api/v1/businesses/[slug]
+├ ƒ /api/v1/cases
+├ ƒ /api/v1/cases/[id]
+├ ƒ /api/v1/cases/[id]/messages
+├ ƒ /api/v1/invitations
+├ ƒ /api/v1/order-events
+├ ƒ /api/v1/reviews
+├ ƒ /api/v1/reviews/[id]/responses
+├ ƒ /api/v1/search
+├ ƒ /api/v1/widgets/[token]
+├ ƒ /b/[slug]
+├ ƒ /caso/[id]
+├ ○ /caso/nuevo
+├ ƒ /escribir-opinion/[slug]
+├ ƒ /merchant
+├ ƒ /merchant/inbox
+├ ƒ /merchant/insights
+├ ƒ /merchant/integrations
+├ ƒ /merchant/requests
+├ ƒ /merchant/reviews
+├ ƒ /merchant/settings
+├ ƒ /merchant/widgets
+├ ○ /verificar
+├ ƒ /widget/badge/[token]
+├ ƒ /widget/card/[token]
+└ ƒ /widget/reassurance/[token]
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand

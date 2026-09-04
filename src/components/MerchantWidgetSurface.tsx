@@ -15,8 +15,8 @@ export function MerchantWidgetSurface({ business, format, theme, review }: { bus
         <div className={cn('shrink-0 text-right', accent)}><p className="font-data text-lg font-bold">{business.trust_score}<span className="text-xs font-normal">/100</span></p><p className={cn('text-xs', secondary)}>Índice de confianza</p></div>
       </div>
       {format !== 'badge' && <dl className={cn('mt-4 grid grid-cols-2 gap-x-4 gap-y-3 border-t pt-4 text-xs', dark ? 'border-op-secondary' : 'border-op-border')}>
-        <div><dt className={secondary}>Cobertura de invitaciones</dt><dd className="mt-1 font-data text-sm font-semibold">{business.coverage_percentage}%</dd></div>
-        <div><dt className={secondary}>Casos resueltos</dt><dd className="mt-1 font-data text-sm font-semibold">{business.resolution_rate}%</dd></div>
+        <div><dt className={secondary}>Cobertura de invitaciones</dt><dd className="mt-1 font-data text-sm font-semibold">{business.observed_orders_count > 0 ? `${business.coverage_percentage}%` : 'Sin pedidos'}</dd></div>
+        <div><dt className={secondary}>Casos resueltos</dt><dd className="mt-1 font-data text-sm font-semibold">{Number(business.issues_per_thousand) > 0 ? `${business.resolution_rate}%` : 'Sin casos medidos'}</dd></div>
         <div className="col-span-2"><dt className={secondary}>RFC registrado</dt><dd className="mt-1 break-words font-data">{business.rfc || 'Sin registro disponible'}</dd></div>
       </dl>}
       {format === 'card' && review && <blockquote className={cn('mt-4 border-t pt-4', dark ? 'border-op-secondary' : 'border-op-border')}><p className="text-sm leading-relaxed line-clamp-3">“{review.body}”</p><footer className={cn('mt-2 text-xs leading-relaxed', secondary)}>{review.author_name} · {review.rating}/5 · {review.verification_level === 'unverified_experience' ? 'Experiencia sin verificar' : review.verification_level === 'confirmed_payment' ? 'Pago confirmado' : review.verification_level === 'confirmed_store_order' ? 'Pedido conectado' : 'Comprobante revisado'}</footer></blockquote>}

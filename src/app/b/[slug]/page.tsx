@@ -5,6 +5,7 @@ import { Building, Receipt, Phone, Globe, SealCheck, CheckCircle } from '@phosph
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { PassportReviewsList, ReviewItem } from '@/components/passport/PassportReviewsList';
+import { StarRating } from '@/components/StarRating';
 import { PassportActionButtons } from '@/components/passport/PassportActionButtons';
 import { TrustGauge } from '@/components/passport/TrustGauge';
 import { OfficialRecordCard } from '@/components/passport/OfficialRecordCard';
@@ -113,9 +114,15 @@ export default async function BusinessPassportPage({ params }: PageProps) {
         r.verification_level, r.score_weight, r.product_name, r.created_at,
         rr.responder_name, rr.response_text, rr.created_at as response_created_at
        FROM reviews r
-       LEFT JOIN review_responses rr ON r.id = rr.review_id
+       LEFT JOIN LATERAL (
+         SELECT responder_name, response_text, created_at
+         FROM review_responses
+         WHERE review_id = r.id
+         ORDER BY created_at DESC, id DESC
+         LIMIT 1
+       ) rr ON true
        WHERE r.business_id = $1 AND r.status = 'published'
-       ORDER BY r.created_at DESC`,
+       ORDER BY r.created_at DESC, r.id DESC`,
       [business.id]
     ),
     query<CaseDbRow>(
@@ -127,6 +134,7 @@ export default async function BusinessPassportPage({ params }: PageProps) {
   const officialRecords = offRes.rows;
   const reviews = revRes.rows;
   const cases = caseRes.rows;
+  const averageRating = reviews.length ? reviews.reduce((sum, review) => sum + Number(review.rating), 0) / reviews.length : null;
 
   const score = Number(business.trust_score) || 0;
   const confidenceLevel = business.confidence_level;
@@ -150,7 +158,7 @@ export default async function BusinessPassportPage({ params }: PageProps) {
     <div className="min-h-screen bg-[var(--op-canvas)] text-[var(--op-ink-primary)] flex flex-col font-sans selection:bg-[var(--op-verified-ink)] selection:text-[var(--op-sheet)]">
       <Navbar />
 
-      <main id="contenido" className="flex-1 pb-20">
+      <main id="contenido" tabIndex={-1} className="flex-1 pb-20">
         {/* ========================================================================= */}
         {/* 1. CERTIFIED FINANCIAL CREDENTIAL HEADER (SECTION 10 COMPLIANCE)          */}
         {/* ========================================================================= */}
@@ -190,6 +198,10 @@ export default async function BusinessPassportPage({ params }: PageProps) {
                     Categoría: {business.category} • Cobertura: {business.operating_area || 'No declarada'}
                   </p>
                 </div>
+
+                <a href="#opiniones" className="inline-flex min-h-12 flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-[var(--op-action-border)] bg-[var(--op-action-tint)] px-4 py-3 text-sm text-[var(--op-action-ink)]">
+                  {averageRating !== null ? <><StarRating rating={averageRating} size="sm" /><span className="font-semibold">{averageRating.toLocaleString('es-MX', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} de 5</span><span className="underline underline-offset-4">{reviews.length.toLocaleString('es-MX')} {reviews.length === 1 ? 'opinión' : 'opiniones'}</span></> : <span>Este negocio todavía no tiene opiniones</span>}
+                </a>
 
                 {business.description && (
                   <p className="text-sm text-[var(--op-ink-secondary)] leading-relaxed max-w-2xl">
@@ -484,7 +496,7 @@ export default async function BusinessPassportPage({ params }: PageProps) {
 
               <Link
                 href={`/escribir-opinion/${business.slug}`}
-                className="px-5 py-2.5 rounded-full text-xs font-bold bg-[var(--op-verified-ink)] hover:bg-[var(--op-verified-ink)] text-[var(--op-sheet)] shadow-2xs transition-all active:scale-95"
+                className="inline-flex min-h-11 items-center px-5 py-2.5 rounded-full text-sm font-semibold bg-[var(--op-action-accent)] hover:bg-[var(--op-action-ink)] text-[var(--op-sheet)] shadow-2xs transition-colors"
               >
                 Escribir opinión
               </Link>

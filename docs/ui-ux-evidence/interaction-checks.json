@@ -1,0 +1,521 @@
+{
+  "base": "http://127.0.0.1:3009",
+  "generatedAt": "2026-09-04T21:02:32.940Z",
+  "mode": "All mutations intercepted",
+  "routes": [
+    {
+      "device": "desktop",
+      "route": "/merchant",
+      "status": 200,
+      "expectedStatus": 200,
+      "errors": [],
+      "failed": [],
+      "title": "Resumen del negocio · Opinio.mx",
+      "h1": [
+        "Panel de Control Comercial"
+      ],
+      "width": {
+        "viewport": 1440,
+        "document": 1440
+      },
+      "overflowing": [],
+      "violations": [],
+      "links": [
+        {
+          "text": "Saltar al contenido",
+          "href": "#contenido"
+        },
+        {
+          "text": "opinio.mx",
+          "href": "/"
+        },
+        {
+          "text": "Resumen",
+          "href": "/merchant?business=xaman-joyeria"
+        },
+        {
+          "text": "Opiniones",
+          "href": "/merchant/reviews?business=xaman-joyeria"
+        },
+        {
+          "text": "Resolver casos",
+          "href": "/merchant/inbox?business=xaman-joyeria"
+        },
+        {
+          "text": "Invitar clientes",
+          "href": "/merchant/requests?business=xaman-joyeria"
+        },
+        {
+          "text": "Métricas",
+          "href": "/merchant/insights?business=xaman-joyeria"
+        },
+        {
+          "text": "Widgets",
+          "href": "/merchant/widgets?business=xaman-joyeria"
+        },
+        {
+          "text": "Integraciones",
+          "href": "/merchant/integrations?business=xaman-joyeria"
+        },
+        {
+          "text": "Configuración",
+          "href": "/merchant/settings?business=xaman-joyeria"
+        },
+        {
+          "text": "Ver perfil público (nueva pestaña)",
+          "href": "/b/xaman-joyeria"
+        },
+        {
+          "text": "Invitar clientes",
+          "href": "/merchant/requests?business=xaman-joyeria"
+        },
+        {
+          "text": "Perfil público (nueva pestaña)",
+          "href": "/b/xaman-joyeria"
+        },
+        {
+          "text": "Pasaporte Público",
+          "href": "/b/xaman-joyeria"
+        },
+        {
+          "text": "Gestionar Envíos",
+          "href": "/merchant/requests?business=xaman-joyeria"
+        },
+        {
+          "text": "Ver todas (3)",
+          "href": "/merchant/reviews?business=xaman-joyeria"
+        },
+        {
+          "text": "Responder oficialmente",
+          "href": "/merchant/reviews?business=xaman-joyeria"
+        },
+        {
+          "text": "Responder oficialmente",
+          "href": "/merchant/reviews?business=xaman-joyeria"
+        },
+        {
+          "text": "Responder oficialmente",
+          "href": "/merchant/reviews?business=xaman-joyeria"
+        },
+        {
+          "text": "Administrar Respuestas Oficiales",
+          "href": "/merchant/reviews?business=xaman-joyeria"
+        },
+        {
+          "text": "Ver bandeja (5)",
+          "href": "/merchant/inbox?business=xaman-joyeria"
+        },
+        {
+          "text": "Proponer Remedios SPEI / Reemplazo",
+          "href": "/merchant/inbox?business=xaman-joyeria"
+        },
+        {
+          "text": "Configurar Widgets EmbebidosInserta el Sello Flotante o el Badge de Checkout en Shopify, Tiendanube o código HTML.",
+          "href": "/merchant/widgets?business=xaman-joyeria"
+        },
+        {
+          "text": "Comparativa Sectorial MéxicoCompara tu tasa de incidencias y velocidad de reembolso contra el percentil 90 del país.",
+          "href": "/merchant/insights?business=xaman-joyeria"
+        },
+        {
+          "text": "Identidad SAT & DENUEVincula tu Cédula Fiscal SAT, código CLEE de INEGI y canal oficial de WhatsApp Business.",
+          "href": "/merchant/settings?business=xaman-joyeria"
+        }
+      ],
+      "metrics": [
+        {
+          "domContentLoaded": 9835.5,
+          "load": 12831.200000047684,
+          "transferSize": 20516
+        }
+      ]
+    },
+    {
+      "device": "desktop",
+      "route": "/merchant/requests",
+      "status": 200,
+      "expectedStatus": 200,
+      "errors": [],
+      "failed": [],
+      "title": "Invitaciones del negocio · Opinio.mx",
+      "h1": [
+        "Solicitudes y Cobertura de Pedidos"
+      ],
+      "width": {
+        "viewport": 1440,
+        "document": 1440
+      },
+      "overflowing": [],
+      "violations": [],
+      "links": [
+        {
+          "text": "Saltar al contenido",
+          "href": "#contenido"
+        },
+        {
+          "text": "opinio.mx",
+          "href": "/"
+        },
+        {
+          "text": "Resumen",
+          "href": "/merchant?business=xaman-joyeria"
+        },
+        {
+          "text": "Opiniones",
+          "href": "/merchant/reviews?business=xaman-joyeria"
+        },
+        {
+          "text": "Resolver casos",
+          "href": "/merchant/inbox?business=xaman-joyeria"
+        },
+        {
+          "text": "Invitar clientes",
+          "href": "/merchant/requests?business=xaman-joyeria"
+        },
+        {
+          "text": "Métricas",
+          "href": "/merchant/insights?business=xaman-joyeria"
+        },
+        {
+          "text": "Widgets",
+          "href": "/merchant/widgets?business=xaman-joyeria"
+        },
+        {
+          "text": "Integraciones",
+          "href": "/merchant/integrations?business=xaman-joyeria"
+        },
+        {
+          "text": "Configuración",
+          "href": "/merchant/settings?business=xaman-joyeria"
+        },
+        {
+          "text": "Ver perfil público (nueva pestaña)",
+          "href": "/b/xaman-joyeria"
+        },
+        {
+          "text": "Invitar clientes",
+          "href": "/merchant/requests?business=xaman-joyeria"
+        },
+        {
+          "text": "Perfil público (nueva pestaña)",
+          "href": "/b/xaman-joyeria"
+        }
+      ],
+      "metrics": [
+        {
+          "domContentLoaded": 11656.800000071526,
+          "load": 14650.5,
+          "transferSize": 16962
+        }
+      ]
+    },
+    {
+      "device": "mobile",
+      "route": "/merchant",
+      "status": 200,
+      "expectedStatus": 200,
+      "errors": [],
+      "failed": [],
+      "title": "Resumen del negocio · Opinio.mx",
+      "h1": [
+        "Panel de Control Comercial"
+      ],
+      "width": {
+        "viewport": 390,
+        "document": 390
+      },
+      "overflowing": [],
+      "violations": [],
+      "links": [
+        {
+          "text": "Saltar al contenido",
+          "href": "#contenido"
+        },
+        {
+          "text": "opinio.mx",
+          "href": "/"
+        },
+        {
+          "text": "Resumen",
+          "href": "/merchant?business=xaman-joyeria"
+        },
+        {
+          "text": "Opiniones",
+          "href": "/merchant/reviews?business=xaman-joyeria"
+        },
+        {
+          "text": "Resolver casos",
+          "href": "/merchant/inbox?business=xaman-joyeria"
+        },
+        {
+          "text": "Invitar clientes",
+          "href": "/merchant/requests?business=xaman-joyeria"
+        },
+        {
+          "text": "Métricas",
+          "href": "/merchant/insights?business=xaman-joyeria"
+        },
+        {
+          "text": "Widgets",
+          "href": "/merchant/widgets?business=xaman-joyeria"
+        },
+        {
+          "text": "Integraciones",
+          "href": "/merchant/integrations?business=xaman-joyeria"
+        },
+        {
+          "text": "Configuración",
+          "href": "/merchant/settings?business=xaman-joyeria"
+        },
+        {
+          "text": "Ver perfil público (nueva pestaña)",
+          "href": "/b/xaman-joyeria"
+        },
+        {
+          "text": "Invitar clientes",
+          "href": "/merchant/requests?business=xaman-joyeria"
+        },
+        {
+          "text": "Perfil público (nueva pestaña)",
+          "href": "/b/xaman-joyeria"
+        },
+        {
+          "text": "Pasaporte Público",
+          "href": "/b/xaman-joyeria"
+        },
+        {
+          "text": "Gestionar Envíos",
+          "href": "/merchant/requests?business=xaman-joyeria"
+        },
+        {
+          "text": "Ver todas (3)",
+          "href": "/merchant/reviews?business=xaman-joyeria"
+        },
+        {
+          "text": "Responder oficialmente",
+          "href": "/merchant/reviews?business=xaman-joyeria"
+        },
+        {
+          "text": "Responder oficialmente",
+          "href": "/merchant/reviews?business=xaman-joyeria"
+        },
+        {
+          "text": "Responder oficialmente",
+          "href": "/merchant/reviews?business=xaman-joyeria"
+        },
+        {
+          "text": "Administrar Respuestas Oficiales",
+          "href": "/merchant/reviews?business=xaman-joyeria"
+        },
+        {
+          "text": "Ver bandeja (5)",
+          "href": "/merchant/inbox?business=xaman-joyeria"
+        },
+        {
+          "text": "Proponer Remedios SPEI / Reemplazo",
+          "href": "/merchant/inbox?business=xaman-joyeria"
+        },
+        {
+          "text": "Configurar Widgets EmbebidosInserta el Sello Flotante o el Badge de Checkout en Shopify, Tiendanube o código HTML.",
+          "href": "/merchant/widgets?business=xaman-joyeria"
+        },
+        {
+          "text": "Comparativa Sectorial MéxicoCompara tu tasa de incidencias y velocidad de reembolso contra el percentil 90 del país.",
+          "href": "/merchant/insights?business=xaman-joyeria"
+        },
+        {
+          "text": "Identidad SAT & DENUEVincula tu Cédula Fiscal SAT, código CLEE de INEGI y canal oficial de WhatsApp Business.",
+          "href": "/merchant/settings?business=xaman-joyeria"
+        }
+      ],
+      "metrics": [
+        {
+          "domContentLoaded": 2638.7999999523163,
+          "load": 4214.700000047684,
+          "transferSize": 20516
+        }
+      ]
+    },
+    {
+      "device": "mobile",
+      "route": "/merchant/requests",
+      "status": 200,
+      "expectedStatus": 200,
+      "errors": [],
+      "failed": [],
+      "title": "Invitaciones del negocio · Opinio.mx",
+      "h1": [
+        "Solicitudes y Cobertura de Pedidos"
+      ],
+      "width": {
+        "viewport": 390,
+        "document": 390
+      },
+      "overflowing": [
+        {
+          "tag": "TABLE",
+          "className": "w-full text-left text-xs",
+          "text": "PedidoPlataformaClienteMontoEstadoInvitaciónORD-XAMAN-JOYERIA-1001shopifyCliente 1 Opinio$1,450Entre"
+        },
+        {
+          "tag": "THEAD",
+          "className": "bg-op-canvas border-b border-op-border text-op-muted uppercase text-xs tracking-wider",
+          "text": "PedidoPlataformaClienteMontoEstadoInvitación"
+        },
+        {
+          "tag": "TR",
+          "className": "",
+          "text": "PedidoPlataformaClienteMontoEstadoInvitación"
+        },
+        {
+          "tag": "TH",
+          "className": "py-2.5 px-3",
+          "text": "Estado"
+        },
+        {
+          "tag": "TH",
+          "className": "py-2.5 px-3",
+          "text": "Invitación"
+        },
+        {
+          "tag": "TBODY",
+          "className": "divide-y divide-op-border",
+          "text": "ORD-XAMAN-JOYERIA-1001shopifyCliente 1 Opinio$1,450Entregado InvitadoORD-XAMAN-JOYERIA-1002shopifyCl"
+        },
+        {
+          "tag": "TR",
+          "className": "hover:bg-op-canvas transition-colors",
+          "text": "ORD-XAMAN-JOYERIA-1001shopifyCliente 1 Opinio$1,450Entregado Invitado"
+        },
+        {
+          "tag": "TD",
+          "className": "py-2.5 px-3",
+          "text": "Entregado"
+        },
+        {
+          "tag": "SPAN",
+          "className": "text-xs font-medium text-op-green-dark bg-op-green-soft px-2 py-0.5 rounded border border-op-green-border",
+          "text": "Entregado"
+        },
+        {
+          "tag": "TD",
+          "className": "py-2.5 px-3",
+          "text": " Invitado"
+        }
+      ],
+      "violations": [],
+      "links": [
+        {
+          "text": "Saltar al contenido",
+          "href": "#contenido"
+        },
+        {
+          "text": "opinio.mx",
+          "href": "/"
+        },
+        {
+          "text": "Resumen",
+          "href": "/merchant?business=xaman-joyeria"
+        },
+        {
+          "text": "Opiniones",
+          "href": "/merchant/reviews?business=xaman-joyeria"
+        },
+        {
+          "text": "Resolver casos",
+          "href": "/merchant/inbox?business=xaman-joyeria"
+        },
+        {
+          "text": "Invitar clientes",
+          "href": "/merchant/requests?business=xaman-joyeria"
+        },
+        {
+          "text": "Métricas",
+          "href": "/merchant/insights?business=xaman-joyeria"
+        },
+        {
+          "text": "Widgets",
+          "href": "/merchant/widgets?business=xaman-joyeria"
+        },
+        {
+          "text": "Integraciones",
+          "href": "/merchant/integrations?business=xaman-joyeria"
+        },
+        {
+          "text": "Configuración",
+          "href": "/merchant/settings?business=xaman-joyeria"
+        },
+        {
+          "text": "Ver perfil público (nueva pestaña)",
+          "href": "/b/xaman-joyeria"
+        },
+        {
+          "text": "Invitar clientes",
+          "href": "/merchant/requests?business=xaman-joyeria"
+        },
+        {
+          "text": "Perfil público (nueva pestaña)",
+          "href": "/b/xaman-joyeria"
+        }
+      ],
+      "metrics": [
+        {
+          "domContentLoaded": 3479.7000000476837,
+          "load": 5402.100000023842,
+          "transferSize": 16962
+        }
+      ]
+    }
+  ],
+  "journeys": [
+    {
+      "name": "mobile-menu-keyboard",
+      "pass": true
+    },
+    {
+      "name": "home-search-keyboard",
+      "pass": true
+    },
+    {
+      "name": "directory-filters-empty-error-retry",
+      "pass": true
+    },
+    {
+      "name": "passport-review-discovery",
+      "pass": true
+    },
+    {
+      "name": "review-validation-error-retry",
+      "pass": true
+    },
+    {
+      "name": "case-form-prefill-error-retention",
+      "pass": true
+    },
+    {
+      "name": "merchant-copy-current-host",
+      "pass": true
+    },
+    {
+      "name": "merchant-navigation-invite-dialog",
+      "pass": true
+    }
+  ],
+  "blockedWrites": [
+    {
+      "method": "POST",
+      "path": "/api/v1/reviews",
+      "mocked": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/reviews",
+      "mocked": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/cases",
+      "mocked": true
+    }
+  ]
+}

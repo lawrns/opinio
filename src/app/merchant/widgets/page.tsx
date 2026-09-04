@@ -39,11 +39,12 @@ export default async function MerchantWidgetsPage({ searchParams }: PageProps) {
         </h1>
         <p className="text-sm text-op-muted mt-2">
           Configura sellos flotantes, badges compactos y tarjetas de checkout para{' '}
-          <strong className="text-op-ink">{currentBusiness.brand_name}</strong>. Todos los widgets están respaldados por tu Pasaporte de Confianza en tiempo real.
+          <strong className="text-op-ink">{currentBusiness.brand_name}</strong>. Los widgets muestran los registros disponibles de tu perfil público.
         </p>
       </div>
 
       <WidgetsCustomizer
+        key={currentBusiness.id}
         business={currentBusiness}
         existingWidgets={widgets}
       />

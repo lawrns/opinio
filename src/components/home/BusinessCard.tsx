@@ -1,10 +1,12 @@
 import Link from 'next/link';
 import { ArrowUpRight, ShieldCheck } from 'lucide-react';
+import { StarRating } from '@/components/StarRating';
+import { categoryStyle } from '@/lib/category-style';
 import type { Business } from '@/lib/types';
 
 export interface BusinessCardProps { business: Business }
 const levels: Record<string, string> = {
-  transparent_coverage: 'Cobertura transparente',
+  transparent_coverage: 'Cobertura de pedidos registrada',
   connected_orders: 'Pedidos conectados',
   identity_verified: 'Identidad verificada',
   claimed: 'Perfil reclamado',
@@ -14,23 +16,24 @@ const levels: Record<string, string> = {
 
 export function BusinessCard({ business }: BusinessCardProps) {
   const hasOrders = business.observed_orders_count > 0;
-  const hasReviews = Number(business.effective_reviews_count) > 0;
+  const hasScore = Number(business.effective_reviews_count) > 0 && business.trust_score !== null;
+  const count = Number(business.review_count || 0);
   const hasIdentity = ['identity_verified', 'connected_orders', 'transparent_coverage'].includes(business.verified_level);
+  const accent = categoryStyle(business.category);
   return (
-    <Link href={`/b/${business.slug}`} className="group flex h-full flex-col rounded-op-card border border-op-border bg-op-sheet p-5 shadow-flat transition-colors hover:border-op-green sm:p-6">
+    <Link href={`/b/${business.slug}`} className="group flex h-full flex-col rounded-op-card border border-op-border bg-op-sheet p-5 shadow-flat transition-colors hover:border-op-blue sm:p-6">
       <div className="flex items-start gap-3">
-        <span aria-hidden="true" className="flex size-11 shrink-0 items-center justify-center rounded-op-control border border-op-border bg-op-shaded text-sm font-semibold">{business.brand_name.slice(0, 2).toUpperCase()}</span>
-        <div className="min-w-0 flex-1"><h3 className="text-base font-semibold tracking-tight group-hover:text-op-green">{business.brand_name}</h3><p className="mt-1 truncate text-xs text-op-muted">{business.domain || business.category}</p></div>
-        <ArrowUpRight aria-hidden="true" className="size-4 shrink-0 text-op-muted" />
+        <span aria-hidden="true" className={`flex size-12 shrink-0 items-center justify-center rounded-op-control border text-sm font-semibold ${accent.tile}`}>{business.brand_name.slice(0, 2).toUpperCase()}</span>
+        <div className="min-w-0 flex-1"><h3 className="text-lg font-semibold tracking-tight group-hover:text-op-blue-dark">{business.brand_name}</h3><p className="mt-1 truncate text-xs text-op-muted">{business.domain || business.category}</p></div>
+        <ArrowUpRight aria-hidden="true" className="mt-1 size-4 shrink-0 text-op-muted" />
       </div>
-      <div className="my-5 flex items-baseline gap-2">
-        <span className="font-mono text-3xl font-medium tracking-tight">{hasReviews ? Number(business.trust_score).toLocaleString('es-MX', { maximumFractionDigits: 1 }) : '—'}</span>
-        <span className="text-xs text-op-muted">{hasReviews ? '/ 100 · Puntaje Opinio' : 'Sin opiniones suficientes'}</span>
+      <div className="my-5">
+        {count > 0 && business.average_rating != null ? <><div className="flex flex-wrap items-center gap-3"><StarRating rating={Number(business.average_rating)} size="sm" /><span className="font-data text-lg font-semibold">{Number(business.average_rating).toLocaleString('es-MX', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}<span className="ml-1 text-xs font-normal text-op-muted">/ 5</span></span></div><p className="mt-2 text-xs text-op-secondary">{count.toLocaleString('es-MX')} {count === 1 ? 'opinión publicada' : 'opiniones publicadas'}</p></> : <p className="text-sm text-op-muted">Aún no tiene opiniones publicadas</p>}
       </div>
       <div className="mt-auto border-t border-op-border pt-4">
-        <div className="flex items-center justify-between gap-2 text-xs"><span className="text-op-secondary">Compradores invitados</span><span className="font-mono font-medium">{hasOrders ? `${Number(business.coverage_percentage).toLocaleString('es-MX', { maximumFractionDigits: 1 })}%` : 'Sin conexión'}</span></div>
-        {hasOrders && <p className="mt-1 text-[11px] text-op-muted">de {business.observed_orders_count.toLocaleString('es-MX')} pedidos registrados</p>}
+        <div className="flex flex-wrap items-center justify-between gap-2"><span className="text-xs text-op-secondary">{business.category}</span><span className="rounded-md bg-op-green-soft px-2 py-1 text-xs font-medium text-op-green-dark">Opinio {hasScore ? `${Number(business.trust_score).toLocaleString('es-MX', { maximumFractionDigits: 1 })} / 100` : 'sin puntaje'}</span></div>
         <p className={`mt-4 flex items-center gap-1.5 text-xs font-medium ${hasIdentity ? 'text-op-green-dark' : 'text-op-muted'}`}>{hasIdentity && <ShieldCheck aria-hidden="true" className="size-4" />}{levels[business.verified_level] || 'Evidencia por consultar'}</p>
+        {hasOrders && <p className="mt-2 text-xs leading-relaxed text-op-muted">{Number(business.coverage_percentage).toLocaleString('es-MX', { maximumFractionDigits: 1 })}% de {Number(business.observed_orders_count).toLocaleString('es-MX')} pedidos registrados con invitación</p>}
       </div>
     </Link>
   );

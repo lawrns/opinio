@@ -46,6 +46,7 @@ export default async function MerchantSettingsPage({ searchParams }: PageProps) 
       </div>
 
       <SettingsManager
+        key={currentBusiness.id}
         business={currentBusiness}
         identities={identities}
         officialRecords={officialRecords}

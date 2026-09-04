@@ -2,9 +2,10 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { LayoutDashboard, Star, Inbox, Send, BarChart3, Code2, Plug, Settings, ShieldCheck, ExternalLink } from 'lucide-react';
+import { LayoutDashboard, Star, Inbox, Send, BarChart3, Code2, Plug, Settings, ExternalLink } from 'lucide-react';
 import { Business } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { Brand } from '@/components/Brand';
 
 interface MerchantSidebarProps {
   currentBusiness: Business;
@@ -30,10 +31,7 @@ export function MerchantSidebar({ currentBusiness, allBusinesses, pendingCasesCo
   return (
     <aside className="shrink-0 border-b border-op-border bg-op-sheet text-op-secondary lg:sticky lg:top-0 lg:flex lg:h-dvh lg:w-64 lg:flex-col lg:border-r lg:border-b-0">
       <div className="flex min-h-16 items-center justify-between gap-4 border-b border-op-border px-4 py-3">
-        <Link href="/" aria-label="Opinio.mx, inicio" className="flex items-center gap-2 font-bold text-op-ink">
-          <ShieldCheck className="h-7 w-7 text-op-green" aria-hidden="true" />
-          <span className="text-xl tracking-tight">Opinio<span className="text-op-green">.mx</span></span>
-        </Link>
+        <Brand />
         <span className="text-xs text-op-muted lg:hidden">Para negocios</span>
       </div>
       <div className="px-4 py-3">

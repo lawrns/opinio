@@ -46,6 +46,7 @@ export default async function MerchantRequestsPage({ searchParams }: PageProps) 
       </div>
 
       <RequestsManager
+        key={currentBusiness.id}
         business={currentBusiness}
         invitations={invitations}
         orders={orders}

@@ -1,0 +1,66 @@
+[
+  {
+    "width": 320,
+    "route": "/",
+    "status": 200,
+    "documentWidth": 320,
+    "errors": [],
+    "pass": true
+  },
+  {
+    "width": 320,
+    "route": "/verificar",
+    "status": 200,
+    "documentWidth": 320,
+    "errors": [],
+    "pass": true
+  },
+  {
+    "width": 320,
+    "route": "/b/luuna",
+    "status": 200,
+    "documentWidth": 320,
+    "errors": [],
+    "pass": true
+  },
+  {
+    "width": 320,
+    "route": "/merchant",
+    "status": 200,
+    "documentWidth": 320,
+    "errors": [],
+    "pass": true
+  },
+  {
+    "width": 768,
+    "route": "/",
+    "status": 200,
+    "documentWidth": 768,
+    "errors": [],
+    "pass": true
+  },
+  {
+    "width": 768,
+    "route": "/verificar",
+    "status": 200,
+    "documentWidth": 768,
+    "errors": [],
+    "pass": true
+  },
+  {
+    "width": 768,
+    "route": "/b/luuna",
+    "status": 200,
+    "documentWidth": 768,
+    "errors": [],
+    "pass": true
+  },
+  {
+    "width": 768,
+    "route": "/merchant",
+    "status": 200,
+    "documentWidth": 768,
+    "errors": [],
+    "pass": true
+  }
+]

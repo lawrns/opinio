@@ -1,0 +1,211 @@
+{
+  "scope": "Local standalone production build, isolated six-business fixture database with visible example-data banner. Fresh Chrome profiles. Lighthouse lab values are not field Core Web Vitals or a universal UX score.",
+  "reports": [
+    {
+      "device": "mobile",
+      "url": "http://127.0.0.1:3009/",
+      "lighthouseVersion": "13.4.1",
+      "fetchTime": "2026-09-04T21:07:43.858Z",
+      "scores": {
+        "performance": 93,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "metrics": {
+        "first-contentful-paint": {
+          "value": 1008.2550000000001,
+          "unit": "millisecond",
+          "display": "1.0 s"
+        },
+        "largest-contentful-paint": {
+          "value": 2933.3825,
+          "unit": "millisecond",
+          "display": "2.9 s"
+        },
+        "speed-index": {
+          "value": 3834.0835220627787,
+          "unit": "millisecond",
+          "display": "3.8 s"
+        },
+        "total-blocking-time": {
+          "value": 104,
+          "unit": "millisecond",
+          "display": "100 ms"
+        },
+        "cumulative-layout-shift": {
+          "value": 0,
+          "unit": "unitless",
+          "display": "0"
+        }
+      },
+      "environment": {
+        "formFactor": "mobile",
+        "throttlingMethod": "simulate",
+        "benchmarkIndex": 1744
+      },
+      "warnings": [],
+      "failingAudits": [
+        {
+          "id": "largest-contentful-paint",
+          "title": "Largest Contentful Paint",
+          "score": 0.8,
+          "display": "2.9 s",
+          "description": "Largest Contentful Paint marks the time at which the largest text or image is painted. [Learn more about the Largest Contentful Paint metric](https://developer.chrome.com/docs/lighthouse/performance/lighthouse-largest-contentful-paint/)"
+        },
+        {
+          "id": "speed-index",
+          "title": "Speed Index",
+          "score": 0.83,
+          "display": "3.8 s",
+          "description": "Speed Index shows how quickly the contents of a page are visibly populated. [Learn more about the Speed Index metric](https://developer.chrome.com/docs/lighthouse/performance/speed-index/)."
+        },
+        {
+          "id": "total-blocking-time",
+          "title": "Total Blocking Time",
+          "score": 0.98,
+          "display": "100 ms",
+          "description": "Sum of all time periods between FCP and Time to Interactive, when task length exceeded 50ms, expressed in milliseconds. [Learn more about the Total Blocking Time metric](https://developer.chrome.com/docs/lighthouse/performance/lighthouse-total-blocking-time/)."
+        },
+        {
+          "id": "max-potential-fid",
+          "title": "Max Potential First Input Delay",
+          "score": 0.82,
+          "display": "150 ms",
+          "description": "The maximum potential First Input Delay that your users could experience is the duration of the longest task. [Learn more about the Maximum Potential First Input Delay metric](https://developer.chrome.com/docs/lighthouse/performance/lighthouse-max-potential-fid/)."
+        },
+        {
+          "id": "server-response-time",
+          "title": "Reduce initial server response time",
+          "score": 0,
+          "display": "Root document took 770 ms",
+          "description": "Keep the server response time for the main document short because all other requests depend on it. [Learn more about the Time to First Byte metric](https://developer.chrome.com/docs/lighthouse/performance/time-to-first-byte/)."
+        },
+        {
+          "id": "interactive",
+          "title": "Time to Interactive",
+          "score": 0.96,
+          "display": "2.9 s",
+          "description": "Time to Interactive is the amount of time it takes for the page to become fully interactive. [Learn more about the Time to Interactive metric](https://developer.chrome.com/docs/lighthouse/performance/interactive/)."
+        },
+        {
+          "id": "unused-javascript",
+          "title": "Reduce unused JavaScript",
+          "score": 0,
+          "display": "Est savings of 49 KiB",
+          "description": "Reduce unused JavaScript and defer loading scripts until they are required to decrease bytes consumed by network activity. [Learn how to reduce unused JavaScript](https://developer.chrome.com/docs/lighthouse/performance/unused-javascript/)."
+        },
+        {
+          "id": "bf-cache",
+          "title": "Page prevented back/forward cache restoration",
+          "score": 0,
+          "display": "2 failure reasons",
+          "description": "Many navigations are performed by going back to a previous page, or forwards again. The back/forward cache (bfcache) can speed up these return navigations. [Learn more about the bfcache](https://developer.chrome.com/docs/lighthouse/performance/bf-cache/)"
+        },
+        {
+          "id": "document-latency-insight",
+          "title": "Document request latency",
+          "score": 0,
+          "display": "Est savings of 670 ms",
+          "description": "Your first network request is the most important. [Reduce its latency](https://developer.chrome.com/docs/performance/insights/document-latency) by avoiding redirects, ensuring a fast server response, and enabling text compression."
+        },
+        {
+          "id": "legacy-javascript-insight",
+          "title": "Legacy JavaScript",
+          "score": 0,
+          "display": "Est savings of 12 KiB",
+          "description": "Polyfills and transforms enable older browsers to use new JavaScript features. However, many aren't necessary for modern browsers. Consider modifying your JavaScript build process to not transpile [Baseline](https://web.dev/articles/baseline-and-polyfills) features, unless you know you must support older browsers. [Learn why most sites can deploy ES6+ code without transpiling](https://developer.chrome.com/docs/performance/insights/legacy-javascript)"
+        },
+        {
+          "id": "render-blocking-insight",
+          "title": "Render-blocking requests",
+          "score": 0,
+          "display": "Est savings of 130 ms",
+          "description": "Requests are blocking the page's initial render, which may delay LCP. [Deferring or inlining](https://developer.chrome.com/docs/performance/insights/render-blocking) can move these network requests out of the critical path."
+        }
+      ]
+    },
+    {
+      "device": "desktop",
+      "url": "http://127.0.0.1:3009/",
+      "lighthouseVersion": "13.4.1",
+      "fetchTime": "2026-09-04T21:08:57.123Z",
+      "scores": {
+        "performance": 100,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "metrics": {
+        "first-contentful-paint": {
+          "value": 288.106,
+          "unit": "millisecond",
+          "display": "0.3 s"
+        },
+        "largest-contentful-paint": {
+          "value": 630.159,
+          "unit": "millisecond",
+          "display": "0.6 s"
+        },
+        "speed-index": {
+          "value": 523.3612666710535,
+          "unit": "millisecond",
+          "display": "0.5 s"
+        },
+        "total-blocking-time": {
+          "value": 0,
+          "unit": "millisecond",
+          "display": "0 ms"
+        },
+        "cumulative-layout-shift": {
+          "value": 0,
+          "unit": "unitless",
+          "display": "0"
+        }
+      },
+      "environment": {
+        "formFactor": "desktop",
+        "throttlingMethod": "simulate",
+        "benchmarkIndex": 1769
+      },
+      "warnings": [],
+      "failingAudits": [
+        {
+          "id": "largest-contentful-paint",
+          "title": "Largest Contentful Paint",
+          "score": 0.99,
+          "display": "0.6 s",
+          "description": "Largest Contentful Paint marks the time at which the largest text or image is painted. [Learn more about the Largest Contentful Paint metric](https://developer.chrome.com/docs/lighthouse/performance/lighthouse-largest-contentful-paint/)"
+        },
+        {
+          "id": "unused-javascript",
+          "title": "Reduce unused JavaScript",
+          "score": 0,
+          "display": "Est savings of 48 KiB",
+          "description": "Reduce unused JavaScript and defer loading scripts until they are required to decrease bytes consumed by network activity. [Learn how to reduce unused JavaScript](https://developer.chrome.com/docs/lighthouse/performance/unused-javascript/)."
+        },
+        {
+          "id": "bf-cache",
+          "title": "Page prevented back/forward cache restoration",
+          "score": 0,
+          "display": "2 failure reasons",
+          "description": "Many navigations are performed by going back to a previous page, or forwards again. The back/forward cache (bfcache) can speed up these return navigations. [Learn more about the bfcache](https://developer.chrome.com/docs/lighthouse/performance/bf-cache/)"
+        },
+        {
+          "id": "legacy-javascript-insight",
+          "title": "Legacy JavaScript",
+          "score": 0.5,
+          "display": "Est savings of 12 KiB",
+          "description": "Polyfills and transforms enable older browsers to use new JavaScript features. However, many aren't necessary for modern browsers. Consider modifying your JavaScript build process to not transpile [Baseline](https://web.dev/articles/baseline-and-polyfills) features, unless you know you must support older browsers. [Learn why most sites can deploy ES6+ code without transpiling](https://developer.chrome.com/docs/performance/insights/legacy-javascript)"
+        },
+        {
+          "id": "render-blocking-insight",
+          "title": "Render-blocking requests",
+          "score": 0,
+          "display": "Est savings of 40 ms",
+          "description": "Requests are blocking the page's initial render, which may delay LCP. [Deferring or inlining](https://developer.chrome.com/docs/performance/insights/render-blocking) can move these network requests out of the critical path."
+        }
+      ]
+    }
+  ]
+}

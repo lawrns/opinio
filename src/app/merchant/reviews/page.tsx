@@ -32,9 +32,9 @@ export default async function MerchantReviewsPage({ searchParams }: PageProps) {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-op-border pb-5">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-2xl font-bold tracking-tight text-op-ink">
-              Opiniones Verificadas
+              Opiniones de clientes
             </h1>
             <span className="px-2.5 py-0.5 rounded text-xs font-semibold bg-op-green-soft text-op-green-dark border border-op-green-border">
               {reviews.length} opiniones
@@ -60,6 +60,7 @@ export default async function MerchantReviewsPage({ searchParams }: PageProps) {
 
       {/* Main Reviews Manager with Filters and Inline Reply Forms */}
       <ReviewsManager
+        key={currentBusiness.id}
         initialReviews={reviews}
         businessId={currentBusiness.id}
         businessSlug={currentBusiness.slug}

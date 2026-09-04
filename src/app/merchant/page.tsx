@@ -277,7 +277,7 @@ export default async function MerchantDashboardPage({ searchParams }: PageProps)
           </div>
           <div className="flex flex-wrap gap-2 justify-between text-xs text-op-muted font-mono">
             <span>0%</span>
-            
+
             <span className="text-op-green-dark font-bold">90% Sello Cobertura Transparente</span>
             <span>100%</span>
           </div>
@@ -293,7 +293,7 @@ export default async function MerchantDashboardPage({ searchParams }: PageProps)
               <div className="flex items-center gap-2">
                 <MessageSquare className="h-4 w-4 text-op-green-dark" />
                 <h3 className="font-semibold text-sm text-op-ink">
-                  Últimas Opiniones Verificadas
+                  Últimas Opiniones de clientes
                 </h3>
               </div>
               <Link

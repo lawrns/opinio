@@ -16,7 +16,7 @@ const { chromium } = requireQA('playwright');
 const base = process.env.BASE_URL || 'http://localhost:3006';
 const tag = process.env.QA_TAG || 'final';
 const output = process.env.QA_OUTPUT || `/tmp/opinio-qa/${tag}`;
-const routes = process.env.QA_ROUTES?.split(',') || ['/', '/verificar', '/b/luuna', '/escribir-opinion/luuna', '/caso/nuevo?b=luuna', '/merchant', '/merchant/reviews', '/merchant/requests', '/merchant/inbox', '/merchant/widgets', '/merchant/integrations', '/merchant/insights', '/merchant/settings', '/caso/1', '/widget/badge/wgt_luuna_badge_2026', '/widget/card/wgt_luuna_card_2026', '/widget/reassurance/wgt_luuna_reassurance_2026', '/widget/card/wgt_luuna_card_2026?theme=dark', '/widget/badge/invalid-token-qa', '/pagina-que-no-existe'];
+const routes = process.env.QA_ROUTE_SCAN === '0' ? [] : process.env.QA_ROUTES?.split(',') || ['/', '/verificar', '/b/luuna', '/escribir-opinion/luuna', '/caso/nuevo?b=luuna', '/merchant', '/merchant/reviews', '/merchant/requests', '/merchant/inbox', '/merchant/widgets', '/merchant/integrations', '/merchant/insights', '/merchant/settings', '/caso/1', '/widget/badge/wgt_luuna_badge_2026', '/widget/card/wgt_luuna_card_2026', '/widget/reassurance/wgt_luuna_reassurance_2026', '/widget/card/wgt_luuna_card_2026?theme=dark', '/widget/badge/invalid-token-qa', '/pagina-que-no-existe'];
 const sizes = { desktop: { width: 1440, height: 1000 }, mobile: { width: 390, height: 844 } };
 const devices = process.env.QA_DEVICES?.split(',') || Object.keys(sizes);
 const report = { base, generatedAt: new Date().toISOString(), mode: 'All mutations intercepted', routes: [], journeys: [], blockedWrites: [] };
@@ -52,6 +52,7 @@ for (const device of devices) {
     const name = route === '/' ? 'home' : route.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '');
     try {
       const response = await goto(page, route);
+      if (route === '/' && process.env.QA_EXPECT_POPULATED !== '0') await page.getByRole('link', { name: 'Consultar este pasaporte' }).waitFor({ timeout: 10000 });
       await page.screenshot({ path: path.join(output, `${device}-${name}.png`), fullPage: true });
       if (route === '/') await page.screenshot({ path: path.join(output, `${device}-home-viewport.png`) });
       await page.addScriptTag({ path: path.join(dependencies, 'axe-core/axe.min.js') });
@@ -79,6 +80,7 @@ for (const device of devices) {
   await context.close();
 }
 async function journey(name, test, viewport = sizes.mobile) {
+  if (process.env.QA_JOURNEY_FILTER && !process.env.QA_JOURNEY_FILTER.split(',').includes(name)) return;
   const context = await contextFor(viewport);
   const page = await context.newPage();
   page.setDefaultTimeout(20000);
@@ -91,7 +93,7 @@ async function journey(name, test, viewport = sizes.mobile) {
 if (process.env.QA_JOURNEYS !== '0') {
   await journey('mobile-menu-keyboard', async page => {
     await goto(page, '/');
-    const trigger = page.getByRole('button', { name: 'Abrir menú', exact: true });
+    const trigger = page.locator('button[aria-controls="mobile-navigation"]');
     await trigger.click();
     assert.equal(await trigger.getAttribute('aria-expanded'), 'true');
     await page.keyboard.press('Escape');
@@ -127,12 +129,49 @@ if (process.env.QA_JOURNEYS !== '0') {
     await page.waitForURL('**/verificar');
     assert.equal(await page.getByLabel('Nombre, sitio web, RFC o teléfono').inputValue(), '');
     assert.equal(await page.getByRole('button', { name: 'Todos', exact: true }).getAttribute('aria-pressed'), 'true');
+    await goto(page, '/verificar?accion=opinar');
+    await page.locator('#business-rating').selectOption('4');
+    await page.locator('#business-sort').selectOption('reviews');
+    await page.getByRole('checkbox', { name: 'Con pedidos registrados', exact: true }).check();
+    const filteredUrl = new URL(page.url());
+    assert.equal(filteredUrl.searchParams.get('rating'), '4');
+    assert.equal(filteredUrl.searchParams.get('sort'), 'reviews');
+    assert.equal(filteredUrl.searchParams.get('connected'), '1');
+    assert.equal(filteredUrl.searchParams.get('accion'), 'opinar');
+    await page.getByRole('button', { name: 'Limpiar filtros', exact: true }).click();
+    assert.equal(new URL(page.url()).search, '?accion=opinar');
+    assert.equal(await page.locator('#business-rating').inputValue(), '0');
+    assert.equal(await page.locator('#business-sort').inputValue(), 'score');
+    assert.equal(await page.getByRole('checkbox', { name: 'Con pedidos registrados', exact: true }).isChecked(), false);
+  });
+  await journey('passport-review-discovery', async page => {
+    await goto(page, '/b/luuna#opiniones');
+    const reviews = page.locator('#opiniones');
+    const summary = page.getByRole('complementary', { name: 'Resumen y distribución de opiniones' });
+    const originalSummary = await summary.innerText();
+    const initialCards = await reviews.locator('article').count();
+    assert.ok(initialCards > 0);
+    await summary.getByRole('checkbox', { name: /^5 estrellas:/ }).check();
+    const filteredCards = reviews.locator('article');
+    for (const card of await filteredCards.all()) assert.equal(await card.getByRole('img', { name: '5 de 5 estrellas', exact: true }).count(), 1);
+    assert.equal(await summary.innerText(), originalSummary);
+    await page.locator('#review-search').fill('qa-sin-coincidencias-74918');
+    await page.getByRole('heading', { name: 'No hay opiniones que coincidan' }).waitFor();
+    assert.equal(await summary.innerText(), originalSummary);
+    await page.getByRole('button', { name: 'Ver todas las opiniones', exact: true }).click();
+    assert.equal(await reviews.locator('article').count(), initialCards);
+    await page.locator('#review-sort').selectOption('lowest');
+    const ratings = await reviews.locator('article [role="img"]').evaluateAll(elements => elements.map(element => Number(element.getAttribute('aria-label')?.match(/[0-9]+/)[0])));
+    assert.deepEqual(ratings, [...ratings].sort((a, b) => a - b));
+    await page.getByRole('checkbox', { name: 'Con respuesta del comercio', exact: true }).check();
+    for (const card of await reviews.locator('article').all()) assert.ok((await card.innerText()).includes('Respuesta de'));
+    assert.equal(await summary.innerText(), originalSummary);
   });
   await journey('review-validation-error-retry', async page => {
     await goto(page, '/escribir-opinion/luuna');
     await page.getByRole('button', { name: 'Revisar mi opinión' }).click();
     assert.equal(await page.getByRole('heading', { name: 'Así se verá tu opinión' }).count(), 0);
-    await page.getByRole('radio', { name: /5.*Excelente/ }).check();
+    await page.locator('label').filter({ has: page.getByRole('radio', { name: /5.*Excelente/ }) }).click();
     await page.getByLabel('Cuéntanos qué pasó').fill('Compré un producto y recibí una atención clara durante la entrega.');
     await page.getByRole('button', { name: 'Revisar mi opinión' }).click();
     await page.getByRole('heading', { name: 'Así se verá tu opinión' }).waitFor();
@@ -161,18 +200,28 @@ if (process.env.QA_JOURNEYS !== '0') {
     await page.waitForFunction(() => document.querySelector('select')?.selectedOptions[0]?.textContent.includes('Luuna'));
     assert.ok((await business.locator('option:checked').textContent()).includes('Luuna'));
     await page.getByLabel(/Nombre completo/i).fill('Persona QA');
-    await page.getByLabel(/Correo o WhatsApp/i).fill('prueba@example.com');
+    await page.getByLabel(/Correo o teléfono/i).fill('prueba@example.com');
     await page.locator('textarea').fill('El pedido llegó incompleto y solicito una aclaración sobre los artículos pendientes.');
     let attempts = 0;
     await page.route('**/api/v1/cases', async route => { attempts += 1; report.blockedWrites.push({ method: 'POST', path: '/api/v1/cases', mocked: true }); await route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ success: false, error: 'No se pudo abrir el caso de prueba.' }) }); });
-    await page.getByRole('button', { name: /Abrir caso/i }).click();
-    await page.getByRole('alert').waitFor();
+    await page.getByRole('button', { name: 'Registrar mi caso', exact: true }).click();
+    await page.getByRole('alert').filter({ hasText: 'No se pudo abrir el caso de prueba.' }).waitFor();
     assert.equal(attempts, 1);
     assert.equal(await page.getByLabel(/Nombre completo/i).inputValue(), 'Persona QA');
     assert.ok((await page.locator('textarea').inputValue()).includes('pedido llegó incompleto'));
   });
-  await journey('merchant-navigation-invite-dialog', async page => {
+  if (process.env.QA_TEST_COPY_HOST === '1') await journey('merchant-copy-current-host', async page => {
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async text => { window.__qaCopiedText = text; } } });
+    });
     await goto(page, '/merchant/requests?business=luuna');
+    await page.getByRole('button', { name: 'Copiar formulario', exact: true }).first().click();
+    const copied = await page.evaluate(() => window.__qaCopiedText);
+    assert.equal(copied, `${new URL(base).origin}/escribir-opinion/luuna`);
+    await page.getByRole('button', { name: '¡Copiado!', exact: true }).first().waitFor();
+  });
+  await journey('merchant-navigation-invite-dialog', async page => {
+    await goto(page, '/merchant?business=luuna');
     const open = page.getByRole('button', { name: 'Crear invitación', exact: true });
     await open.click();
     const dialog = page.getByRole('dialog');
