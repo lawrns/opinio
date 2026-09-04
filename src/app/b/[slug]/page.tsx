@@ -24,6 +24,8 @@ import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { PassportReviewsList, ReviewItem } from '@/components/passport/PassportReviewsList';
 import { PassportActionButtons } from '@/components/passport/PassportActionButtons';
+import { TrustGauge } from '@/components/passport/TrustGauge';
+import { OfficialRecordCard } from '@/components/passport/OfficialRecordCard';
 import { query } from '@/lib/db';
 import { calculateOpinioScore, ReviewCalculationItem, ResolutionMetricsInput } from '@/lib/scoring';
 
@@ -277,30 +279,11 @@ export default async function BusinessPassportPage({ params }: PageProps) {
               </div>
 
               {/* 0-100 Circular Score Dial (Trustpilot Green Accent) */}
-              <div className="flex flex-col sm:flex-row lg:flex-col items-center gap-6 rounded-3xl border border-gray-200 bg-[#FCFBF3] p-6 sm:p-8 shadow-xs shrink-0">
-                <div className="relative flex h-32 w-32 items-center justify-center rounded-full bg-white border-4 border-[#00B67A] shadow-sm">
-                  <div className="text-center">
-                    <div className="text-4xl font-black text-[#008B5D] leading-none font-mono">
-                      {score}
-                    </div>
-                    <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1">
-                      Opinio Score
-                    </div>
-                  </div>
-                </div>
-
-                <div className="text-center space-y-1 sm:text-left lg:text-center">
-                  <div className="flex items-center justify-center gap-1">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <span
-                        key={i}
-                        className={i < starsCount ? "tp-star-box text-xs w-4.5 h-4.5" : "tp-star-box-empty text-xs w-4.5 h-4.5"}
-                      >
-                        ★
-                      </span>
-                    ))}
-                  </div>
-                  <div className="text-xs font-bold text-[#121511] mt-1">
+              {/* Precision Radial TrustGauge (Overhauled Image #1) */}
+              <div className="flex flex-col items-center gap-3 rounded-3xl border border-gray-200 bg-[#FCFBF3] p-6 sm:p-8 shadow-xs shrink-0">
+                <TrustGauge score={score} size="lg" confidenceLevel={confidenceLevel} />
+                <div className="text-center space-y-1 pt-1">
+                  <div className="text-xs font-bold text-[#121511]">
                     Muestra efectiva: <span className="font-mono">{effectiveSampleSize}</span> opiniones
                   </div>
                   <div className="text-[11px] text-gray-500 font-mono">
@@ -625,31 +608,7 @@ export default async function BusinessPassportPage({ params }: PageProps) {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2">
               {officialRecords.map((rec) => (
-                <div key={rec.id} className="p-6 rounded-3xl bg-white border border-gray-200 shadow-xs space-y-2">
-                  <div className="flex items-center justify-between text-xs text-gray-500">
-                    <span className="font-bold text-[#121511] uppercase tracking-wider text-[11px]">
-                      {rec.source_name}
-                    </span>
-                    <span className="font-mono text-[10px]">Corte: {rec.record_date}</span>
-                  </div>
-                  <h3 className="text-sm font-bold text-[#121511]">
-                    {rec.fact_title}
-                  </h3>
-                  <p className="text-xs text-gray-600 leading-relaxed">
-                    {rec.fact_detail}
-                  </p>
-                  {rec.source_url && (
-                    <a
-                      href={rec.source_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-xs font-bold text-[#2050E6] hover:underline pt-2"
-                    >
-                      <span>Consultar fuente oficial original</span>
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                  )}
-                </div>
+                <OfficialRecordCard key={rec.id} record={rec} />
               ))}
             </div>
           </section>
