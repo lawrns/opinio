@@ -1,302 +1,85 @@
-import React from 'react';
 import Link from 'next/link';
-import { 
-  Buildings, 
-  ChartBar, 
-  Scales, 
-  ArrowRight, 
-  CheckCircle,
-  CaretRight,
-  ShieldCheck,
-  SealCheck,
-  Check
-} from '@phosphor-icons/react/dist/ssr';
+import { ArrowRight, ArrowUpRight, Star, MessageSquareText, ShieldCheck } from 'lucide-react';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
-import { HomeSearch } from '@/components/home/HomeSearch';
 import { CategoryBar } from '@/components/home/CategoryBar';
 import { BusinessCard } from '@/components/home/BusinessCard';
-import { SpeiValidatorCard } from '@/components/home/SpeiValidatorCard';
-import { query } from '@/lib/db';
 import { TrustGraphHero } from '@/components/home/TrustGraphHero';
-import { TrustMarquee } from '@/components/home/TrustMarquee';
-import { MetricsStrip } from '@/components/home/NumberTicker';
 import { ConnectedPipeline } from '@/components/home/ConnectedPipeline';
+import { query } from '@/lib/db';
+import type { Business, ReviewVerificationLevel } from '@/lib/types';
 
-interface BusinessItem {
-  id: number;
-  slug: string;
-  brand_name: string;
-  legal_name: string | null;
-  category: string;
-  description: string | null;
-  rfc: string | null;
-  clee: string | null;
-  phone: string | null;
-  whatsapp: string | null;
-  domain: string | null;
-  logo_url: string | null;
-  banner_url: string | null;
-  operating_area: string | null;
-  claimed: boolean;
-  verified_level: string;
-  trust_score: string | number;
-  confidence_level: string;
-  coverage_percentage: string | number;
-  observed_orders_count: number;
-  invited_orders_count: number;
-  issues_per_thousand: string | number;
-  resolution_rate: string | number;
-  median_response_hours: string | number;
-  reopen_rate: string | number;
-  effective_reviews_count: number;
-  created_at: string;
-  updated_at: string;
-}
-
-interface ReviewItem {
+interface RecentReview {
   id: number;
   rating: number;
   title: string | null;
   body: string;
   author_name: string;
-  product_name: string | null;
-  verification_level: string;
+  verification_level: ReviewVerificationLevel;
   created_at: string;
   brand_name: string;
   slug: string;
-  domain: string | null;
 }
+const evidenceLabels: Record<ReviewVerificationLevel, string> = {
+  confirmed_payment: 'Pago confirmado',
+  confirmed_store_order: 'Pedido confirmado',
+  reviewed_proof: 'Comprobante revisado',
+  unverified_experience: 'Sin comprobante verificado',
+};
 
-export const revalidate = 60; // Refresh every minute
+export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
-  let featuredBusinesses: BusinessItem[] = [];
-  let recentReviews: ReviewItem[] = [];
-
-  try {
-    const bRes = await query<BusinessItem>(`
-      SELECT *
-      FROM businesses
-      ORDER BY trust_score DESC
-      LIMIT 8
-    `);
-    featuredBusinesses = bRes.rows;
-
-    const rRes = await query<ReviewItem>(`
-      SELECT 
-        r.id, r.rating, r.title, r.body, r.author_name, r.product_name,
-        r.verification_level, r.created_at, b.brand_name, b.slug, b.domain
-      FROM reviews r
-      JOIN businesses b ON r.business_id = b.id
-      WHERE r.status = 'published'
-      ORDER BY r.created_at DESC
-      LIMIT 8
-    `);
-    recentReviews = rRes.rows;
-  } catch (error) {
-    console.error('Error fetching data for homepage:', error);
-  }
-
+  const [businessResult, reviewResult] = await Promise.allSettled([
+    query<Business>('SELECT * FROM businesses ORDER BY trust_score DESC, id ASC LIMIT 6'),
+    query<RecentReview>(`SELECT r.id, r.rating, r.title, r.body, r.author_name, r.verification_level,
+      r.created_at, b.brand_name, b.slug FROM reviews r JOIN businesses b ON r.business_id = b.id
+      WHERE r.status = 'published' ORDER BY r.created_at DESC, r.id DESC LIMIT 3`),
+  ]);
+  const businesses = businessResult.status === 'fulfilled' ? businessResult.value.rows : [];
+  const reviews = reviewResult.status === 'fulfilled' ? reviewResult.value.rows : [];
   return (
-    <div className="min-h-screen bg-[#FAF9F5] text-[#0F172A] flex flex-col font-sans selection:bg-[#059669] selection:text-white">
+    <div className="flex min-h-screen flex-col bg-op-canvas text-op-ink">
       <Navbar />
-
-      <main className="flex-1">
-        {/* ========================================================================= */}
-        {/* 1. THE LIVING TRUST GRAPH HERO                                            */}
-        {/* ========================================================================= */}
-        <TrustGraphHero />
-
-        {/* Live Ambient Transaction Ticker */}
-        <div className="bg-white border-b border-[#E2E8F0]">
-          <TrustMarquee />
-        </div>
-
-        {/* Live Real-Time Number Ticker Metrics Strip */}
-        <MetricsStrip />
-
-        {/* ========================================================================= */}
-        {/* 2. CENTER DIVIDER PILL (REVIEW INVITATION TRIGGER)                        */}
-        {/* ========================================================================= */}
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 my-4">
-          <div className="absolute inset-0 flex items-center" aria-hidden="true">
-            <div className="w-full border-t border-gray-200" />
-          </div>
-          <div className="relative flex justify-center">
-            <Link
-              href="/escribir-opinion/luuna"
-              className="inline-flex items-center gap-2 bg-white px-5 py-2.5 rounded-full text-xs sm:text-sm font-semibold text-[#121511] border border-gray-300 shadow-2xs hover:shadow-xs hover:border-gray-400 transition-all active:scale-[0.98]"
-            >
-              <span>¿Compraste recientemente?</span>
-              <span className="text-[#00B67A] font-bold flex items-center gap-1">
-                Escribe una opinión con comprobante
-                <ArrowRight weight="bold" className="w-4 h-4" />
-              </span>
-            </Link>
-          </div>
-        </div>
-
-        {/* ========================================================================= */}
-        {/* 3. CATEGORIES ROW (ANTI-SLOP: PHOSPHOR ICONS, ZERO EMOJIS)                */}
-        {/* ========================================================================= */}
+      <main id="contenido" tabIndex={-1} className="flex-1 focus:outline-none">
+        <TrustGraphHero business={businesses[0]} />
         <CategoryBar />
-
-        {/* ========================================================================= */}
-        {/* 4. SOFT PEACH MERCHANT B2B GROWTH BANNER                                  */}
-        {/* ========================================================================= */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 my-6">
-          <div className="p-8 sm:p-10 rounded-3xl bg-[#FEECEC] border border-[#FED7D7] flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden shadow-2xs">
-            <div className="space-y-2 max-w-2xl">
-              <h3 className="text-2xl font-black text-[#121511] tracking-tight">
-                ¿Quieres hacer crecer tu negocio?
-              </h3>
-              <p className="text-sm text-gray-700 font-medium leading-relaxed">
-                Demuestra tu operación real, elimina las dudas antes de transferir por SPEI y convierte la confianza en ventas fuera de los marketplaces cerrados.
-              </p>
-            </div>
-
-            <Link
-              href="/merchant"
-              className="px-6 py-3.5 rounded-full text-xs font-extrabold bg-[#121511] hover:bg-black text-white shadow-xs transition-transform active:scale-95 shrink-0 text-center"
-            >
-              Empezar ahora con Opinio
-            </Link>
+        <section className="op-container pb-16 pt-3" aria-labelledby="businesses-title">
+          <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+            <div><p className="op-eyebrow mb-3">El directorio</p><h2 id="businesses-title" className="text-2xl font-semibold tracking-[-0.035em] sm:text-3xl">Comercios para conocer mejor</h2><p className="mt-2 text-sm text-op-secondary">Consulta su puntaje, sus opiniones y la evidencia disponible.</p></div>
+            <Link href="/verificar" className="op-link">Explorar todos <ArrowRight aria-hidden="true" className="size-4" /></Link>
+          </div>
+          {businesses.length ? <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{businesses.map((business) => <BusinessCard key={business.id} business={business} />)}</div> : <div className="rounded-op-card border border-op-border bg-op-sheet p-8"><p className="font-medium">{businessResult.status === 'rejected' ? 'El directorio no está disponible por el momento.' : 'Todavía no hay comercios para mostrar.'}</p><p className="mt-2 text-sm text-op-secondary">Puedes abrir el buscador e intentarlo de nuevo.</p><Link href="/verificar" className="op-link mt-3">Ir al buscador <ArrowRight aria-hidden="true" className="size-4" /></Link></div>}
+        </section>
+        <section className="border-y border-op-border bg-op-green-soft" aria-labelledby="opinion-title">
+          <div className="op-container flex flex-col justify-between gap-6 py-8 sm:flex-row sm:items-center">
+            <div className="flex items-start gap-4"><MessageSquareText aria-hidden="true" className="mt-1 size-6 shrink-0 text-op-green" /><div><h2 id="opinion-title" className="text-xl font-semibold tracking-tight">Tu experiencia le sirve a alguien más.</h2><p className="mt-2 text-sm text-op-secondary">Cuéntanos cómo te fue. Empieza eligiendo el comercio donde compraste.</p></div></div>
+            <Link href="/verificar?accion=opinar" className="op-button shrink-0">Escribir una opinión <ArrowRight aria-hidden="true" className="size-4" /></Link>
           </div>
         </section>
-
-        {/* ========================================================================= */}
-        {/* 5. VERIFIED MEXICAN PASSPORTS (HIGH-CRAFT TACTILE CARDS)                  */}
-        {/* ========================================================================= */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-6">
-          <div className="flex items-center justify-between border-b border-gray-200 pb-4">
-            <div>
-              <h2 className="text-2xl font-black text-[#121511] tracking-tight">
-                Comercios con Pasaporte Verificado en México
-              </h2>
-              <p className="text-xs text-gray-600 mt-1 font-medium">
-                Negocios con identidad auditada ante el SAT e INEGI DENUE, métrica de cobertura real y compromiso de resolución de quejas.
-              </p>
-            </div>
-
-            <Link
-              href="/verificar"
-              className="hidden sm:inline-flex items-center gap-1 text-xs font-bold text-[#2050E6] hover:underline"
-            >
-              <span>Explorar todo el directorio</span>
-              <ArrowRight weight="bold" className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {featuredBusinesses.map((b) => (
-              <BusinessCard key={b.id} business={b} />
-            ))}
-          </div>
+        <section className="op-container op-section" aria-labelledby="reviews-title">
+          <div className="mb-6"><p className="op-eyebrow mb-3">Voces de compradores</p><h2 id="reviews-title" className="text-2xl font-semibold tracking-[-0.035em] sm:text-3xl">Experiencias que hacen la diferencia</h2><p className="mt-2 text-sm text-op-secondary">Últimas opiniones publicadas, con su nivel de evidencia visible.</p></div>
+          {reviews.length ? <div className="grid gap-4 md:grid-cols-3">{reviews.map((review) => <article key={review.id} className="flex flex-col rounded-op-card border border-op-border bg-op-sheet p-6">
+            <div className="flex items-center justify-between gap-3"><span className="text-sm font-semibold">{review.author_name}</span><time dateTime={new Date(review.created_at).toISOString()} className="text-xs text-op-muted">{new Date(review.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'America/Mexico_City' })}</time></div>
+            <div aria-label={`${review.rating} de 5 estrellas`} className="mb-4 mt-4 flex gap-1">{Array.from({ length: 5 }, (_, i) => <Star key={i} aria-hidden="true" className={`size-4 ${i < review.rating ? 'fill-op-green text-op-green' : 'text-op-strong'}`} />)}</div>
+            {review.title && <h3 className="mb-2 text-base font-semibold leading-snug">{review.title}</h3>}
+            <p className="line-clamp-4 text-sm leading-relaxed text-op-secondary">{review.body}</p>
+            <p className="mb-5 mt-4 text-xs text-op-muted">{evidenceLabels[review.verification_level] || 'Sin comprobante verificado'}</p>
+            <Link href={`/b/${review.slug}#opiniones`} className="mt-auto flex min-h-11 items-center justify-between gap-2 border-t border-op-border pt-4 text-sm font-semibold text-op-green-dark">{review.brand_name}<ArrowUpRight aria-hidden="true" className="size-4 shrink-0" /></Link>
+          </article>)}</div> : <p className="rounded-op-card border border-op-border bg-op-sheet p-6 text-sm text-op-secondary">{reviewResult.status === 'rejected' ? 'No pudimos cargar las opiniones. Inténtalo más tarde.' : 'Las nuevas opiniones aparecerán aquí cuando se publiquen.'}</p>}
         </section>
-
-        {/* ========================================================================= */}
-        {/* 6. INTERACTIVE SPEI & WHATSAPP VALIDATOR TOOL                             */}
-        {/* ========================================================================= */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 my-8">
-          <SpeiValidatorCard />
-        </section>
-
-        {/* ========================================================================= */}
-        {/* 7. RECENT VERIFIED REVIEWS GRID (OPINIONES EN TIEMPO REAL)                */}
-        {/* ========================================================================= */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-6">
-          <div className="flex items-center justify-between border-b border-gray-200 pb-4">
-            <div>
-              <h2 className="text-2xl font-black text-[#121511] tracking-tight">
-                Opiniones Recientes con Comprobante
-              </h2>
-              <p className="text-xs text-gray-600 mt-1 font-medium">
-                Comentarios auditados respaldados por comprobantes de pago SPEI, órdenes conectadas o facturas CFDI 4.0.
-              </p>
-            </div>
-
-            <span className="text-xs font-mono text-[#008B5D] font-bold flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-[#00B67A] animate-pulse" />
-              Feed auditado en vivo
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {recentReviews.slice(0, 8).map((rev) => (
-              <div
-                key={rev.id}
-                className="tp-card p-5 flex flex-col justify-between space-y-4"
-              >
-                <div className="space-y-3">
-                  {/* Reviewer Header */}
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-full bg-[#00B67A] text-white flex items-center justify-center font-bold text-xs">
-                      {rev.author_name.slice(0, 1).toUpperCase()}
-                    </div>
-                    <div>
-                      <div className="text-xs font-bold text-[#121511] flex items-center gap-1">
-                        <span>{rev.author_name}</span>
-                        <Check weight="bold" className="w-3 h-3 text-[#00B67A]" />
-                      </div>
-                      <span className="text-[10px] text-gray-500 font-mono">
-                        {rev.verification_level === 'confirmed_payment'
-                          ? 'Pago SPEI Confirmado'
-                          : rev.verification_level === 'confirmed_store_order'
-                          ? 'Pedido Conectado'
-                          : 'Comprobante Revisado'}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Green Stars */}
-                  <div className="flex items-center gap-0.5">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <span
-                        key={i}
-                        className={i < rev.rating ? "tp-star-box text-xs w-4.5 h-4.5" : "tp-star-box-empty text-xs w-4.5 h-4.5"}
-                      >
-                        ★
-                      </span>
-                    ))}
-                  </div>
-
-                  {/* Review Text */}
-                  <div>
-                    {rev.title && (
-                      <h4 className="text-xs font-bold text-[#121511] line-clamp-1 mb-1">
-                        {rev.title}
-                      </h4>
-                    )}
-                    <p className="text-xs text-gray-700 leading-relaxed line-clamp-3">
-                      &ldquo;{rev.body}&rdquo;
-                    </p>
-                  </div>
-                </div>
-
-                {/* Bottom Store Strip */}
-                <div className="pt-3 border-t border-gray-100 flex items-center justify-between text-[11px]">
-                  <Link
-                    href={`/b/${rev.slug}`}
-                    className="font-bold text-[#121511] hover:text-[#00B67A] transition-colors truncate max-w-[160px]"
-                  >
-                    {rev.brand_name}
-                  </Link>
-                  <span className="text-[10px] text-gray-400 font-mono">
-                    {rev.domain || 'opinio.mx'}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* ========================================================================= */}
-        {/* 8. CONNECTED 3-PILLAR PIPELINE (EXISTE -> CUMPLE -> RESUELVE)             */}
-        {/* ========================================================================= */}
         <ConnectedPipeline />
+        <section id="casos" className="op-container op-section grid gap-8 md:grid-cols-2 md:gap-16">
+          <div><p className="op-eyebrow mb-4">Cuando algo no sale bien</p><h2 className="max-w-md text-3xl font-semibold leading-tight tracking-[-0.04em] sm:text-4xl">La conversación no termina en una estrella.</h2></div>
+          <div><p className="text-base leading-relaxed text-op-secondary">Describe el problema, solicita una solución y consulta el seguimiento de tu caso. Tú confirmas si se resolvió.</p><Link href="/caso/nuevo" className="op-link mt-5">Abrir un caso <ArrowRight aria-hidden="true" className="size-4" /></Link><p className="mt-3 text-xs leading-relaxed text-op-muted">Opinio facilita el registro y seguimiento; no garantiza una respuesta o un reembolso.</p></div>
+        </section>
+        <section id="independencia" className="op-container pb-16">
+          <div className="grid items-center gap-8 rounded-op-card bg-op-ink p-7 text-op-sheet sm:p-10 md:grid-cols-[1.4fr_1fr]">
+            <div><ShieldCheck aria-hidden="true" className="mb-5 size-7 text-op-green-border" /><h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">La confianza no se compra.<br />Se construye, experiencia a experiencia.</h2><p className="mt-4 max-w-xl text-sm leading-relaxed text-op-sheet/80">El plan de un comercio no modifica su puntaje. Las opiniones se ponderan por su evidencia y las soluciones se distinguen por quién las confirma.</p></div>
+            <div className="border-t border-op-sheet/20 pt-7 md:border-l md:border-t-0 md:pl-8 md:pt-0"><h3 className="text-lg font-semibold">¿Tienes un comercio?</h3><p className="mb-5 mt-3 text-sm leading-relaxed text-op-sheet/80">Reúne tus opiniones, responde a tus clientes y conoce las herramientas de tu panel.</p><Link href="/merchant" className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-op-sheet underline underline-offset-4">Conocer el panel para comercios <ArrowUpRight aria-hidden="true" className="size-4" /></Link></div>
+          </div>
+        </section>
       </main>
-
       <Footer />
     </div>
   );

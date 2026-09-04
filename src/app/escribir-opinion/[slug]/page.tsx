@@ -37,11 +37,11 @@ export default async function EscribirOpinionPage({ params }: PageProps) {
   const business = res.rows[0];
 
   return (
-    <div className="min-h-screen bg-[#FCFBF3] text-[#121511] flex flex-col font-sans selection:bg-[#00B67A] selection:text-white">
+    <div className="min-h-screen bg-[var(--op-canvas)] text-[var(--op-ink-primary)] flex flex-col font-sans selection:bg-[var(--op-verified-ink)] selection:text-[var(--op-sheet)]">
       <Navbar />
-      <main className="flex-1 py-10 sm:py-16">
+      <main id="contenido" className="flex-1 py-10 sm:py-16">
         <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-          <ReviewFormWizard 
+          <ReviewFormWizard
             businessId={business.id}
             slug={business.slug}
             brandName={business.brand_name}

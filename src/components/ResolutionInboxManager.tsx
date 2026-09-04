@@ -37,6 +37,12 @@ export function ResolutionInboxManager({
 
   // Remedy drawer state
   const [showRemedyModal, setShowRemedyModal] = React.useState(false);
+  const remedyDialog = React.useRef<HTMLDialogElement>(null);
+  const [actionError, setActionError] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    if (showRemedyModal) remedyDialog.current?.showModal();
+    else remedyDialog.current?.close();
+  }, [showRemedyModal]);
   const [selectedRemedyType, setSelectedRemedyType] = React.useState<string>('spei');
   const [remedyText, setRemedyText] = React.useState('');
   const [responderName, setResponderName] = React.useState('Equipo de Conciliación');
@@ -48,7 +54,6 @@ export function ResolutionInboxManager({
   const [submittingMessage, setSubmittingMessage] = React.useState(false);
   const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
 
-  const selectedCase = cases.find((c) => c.id === selectedCaseId) || cases[0] || null;
 
   // Filter cases
   const filteredCases = cases.filter((c) => {
@@ -59,9 +64,13 @@ export function ResolutionInboxManager({
     return true;
   });
 
+  const selectedCase = filteredCases.find((item) => item.id === selectedCaseId) || filteredCases[0] || null;
+
   const handleSelectCase = (id: number) => {
     setSelectedCaseId(id);
     setActionSuccess(null);
+    setActionError(null);
+    setNewMessageText('');
   };
 
   const handleProposeRemedy = async (e: React.FormEvent) => {
@@ -69,6 +78,7 @@ export function ResolutionInboxManager({
     if (!selectedCase || !remedyText.trim()) return;
 
     setSubmittingRemedy(true);
+    setActionError(null);
     const formData = new FormData();
     formData.append('case_id', String(selectedCase.id));
     formData.append('remedy_offered', remedyText.trim());
@@ -76,8 +86,9 @@ export function ResolutionInboxManager({
     formData.append('resolution_summary', `Remedio propuesto vía ${selectedRemedyType.toUpperCase()}: ${remedyText.trim()}`);
     formData.append('responder_name', responderName);
 
-    const res = await updateCaseRemedyAction(formData);
+    const res = await updateCaseRemedyAction(formData).catch(() => ({ success: false }));
     setSubmittingRemedy(false);
+    if (!res.success) setActionError('No se pudo guardar. Conservamos el texto para que vuelvas a intentarlo.');
 
     if (res.success) {
       setCases((prev) =>
@@ -106,7 +117,7 @@ export function ResolutionInboxManager({
       );
       setShowRemedyModal(false);
       setRemedyText('');
-      setActionSuccess('Propuesta de solución enviada al cliente. El SLA se encuentra en pausa esperando confirmación del consumidor.');
+      setActionSuccess('Propuesta registrada en el expediente. Pendiente de confirmación del consumidor.');
       setTimeout(() => setActionSuccess(null), 5000);
     }
   };
@@ -116,14 +127,16 @@ export function ResolutionInboxManager({
     if (!selectedCase || !newMessageText.trim()) return;
 
     setSubmittingMessage(true);
+    setActionError(null);
     const formData = new FormData();
     formData.append('case_id', String(selectedCase.id));
     formData.append('sender_name', 'Atención Opinio');
     formData.append('message', newMessageText.trim());
     formData.append('is_private', String(isPrivateMessage));
 
-    const res = await sendCaseMessageAction(formData);
+    const res = await sendCaseMessageAction(formData).catch(() => ({ success: false }));
     setSubmittingMessage(false);
+    if (!res.success) setActionError('No se pudo guardar. Conservamos el texto para que vuelvas a intentarlo.');
 
     if (res.success) {
       setCases((prev) =>
@@ -176,37 +189,38 @@ export function ResolutionInboxManager({
       case 'reopened':
         return {
           label: 'Abierto (SLA Urgente)',
-          className: 'bg-rose-50 text-rose-700 border-rose-200',
+          className: 'bg-op-danger-soft text-op-danger border-op-danger-soft',
         };
       case 'remedy_offered':
         return {
           label: 'Remedio Propuesto',
-          className: 'bg-amber-50 text-amber-700 border-amber-200',
+          className: 'bg-op-warning-soft text-op-warning border-op-warning-soft',
         };
       case 'resolved_consumer_confirmed':
         return {
           label: 'Resuelto (Confirmado por Consumidor)',
-          className: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+          className: 'bg-op-green-soft text-op-green-dark border-op-green-border',
         };
       case 'resolved_merchant_asserted':
         return {
           label: 'Aseverado por Comercio',
-          className: 'bg-blue-50 text-blue-700 border-blue-200',
+          className: 'bg-op-shaded text-op-secondary border-op-border',
         };
       default:
         return {
           label: status,
-          className: 'bg-[#F1F5F9] text-[#64748B] border-[#E2E8F0]',
+          className: 'bg-op-shaded text-op-muted border-op-border',
         };
     }
   };
 
   return (
     <div className="space-y-6">
+      {actionError && !showRemedyModal && <p role="alert" className="rounded-xl bg-op-danger-soft p-4 text-sm text-op-danger">{actionError}</p>}
       {/* Action Success Alert */}
       {actionSuccess && (
-        <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-semibold flex items-center gap-2 animate-in fade-in duration-150">
-          <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+        <div role="status" className="p-4 rounded-xl bg-op-green-soft border border-op-green-border text-op-green-dark text-xs font-semibold flex items-center gap-2 animate-in fade-in duration-150">
+          <CheckCircle2 className="h-4 w-4 text-op-green-dark shrink-0" />
           <span>{actionSuccess}</span>
         </div>
       )}
@@ -216,40 +230,43 @@ export function ResolutionInboxManager({
         {/* Left Column: Case List (5 cols) */}
         <div className="lg:col-span-5 space-y-3">
           {/* Filter Bar */}
-          <div className="p-3 rounded-xl bg-white border border-[#E2E8F0] shadow-xs flex flex-wrap items-center justify-between gap-2 text-xs">
-            <div className="flex items-center gap-1">
+          <div className="p-3 rounded-xl bg-white border border-op-border shadow-xs flex flex-wrap items-center justify-between gap-2 text-xs">
+            <div className="flex flex-wrap items-center gap-1">
               <button
                 type="button"
-                onClick={() => setStatusFilter('all')}
+                aria-pressed={statusFilter === 'all'}
+                onClick={() => { setStatusFilter('all'); setNewMessageText(''); }}
                 className={cn(
-                  "px-2.5 py-1 rounded-lg transition-colors font-medium text-[11px]",
+                  "px-2.5 py-1 rounded-lg transition-colors font-medium text-xs",
                   statusFilter === 'all'
-                    ? "bg-[#0F172A] text-white font-bold"
-                    : "text-[#64748B] hover:text-[#0F172A]"
+                    ? "bg-op-ink text-white font-bold"
+                    : "text-op-muted hover:text-op-ink"
                 )}
               >
                 Todos ({cases.length})
               </button>
               <button
                 type="button"
-                onClick={() => setStatusFilter('urgent')}
+                aria-pressed={statusFilter === 'urgent'}
+                onClick={() => { setStatusFilter('urgent'); setNewMessageText(''); }}
                 className={cn(
-                  "px-2.5 py-1 rounded-lg transition-colors font-medium text-[11px]",
+                  "px-2.5 py-1 rounded-lg transition-colors font-medium text-xs",
                   statusFilter === 'urgent'
-                    ? "bg-rose-50 text-rose-700 border border-rose-200 font-bold"
-                    : "text-[#64748B] hover:text-[#0F172A]"
+                    ? "bg-op-danger-soft text-op-danger border border-op-danger-soft font-bold"
+                    : "text-op-muted hover:text-op-ink"
                 )}
               >
                 Urgentes ({cases.filter((c) => c.status === 'opened' || c.status === 'reopened').length})
               </button>
               <button
                 type="button"
-                onClick={() => setStatusFilter('pending_confirmation')}
+                aria-pressed={statusFilter === 'pending_confirmation'}
+                onClick={() => { setStatusFilter('pending_confirmation'); setNewMessageText(''); }}
                 className={cn(
-                  "px-2.5 py-1 rounded-lg transition-colors font-medium text-[11px]",
+                  "px-2.5 py-1 rounded-lg transition-colors font-medium text-xs",
                   statusFilter === 'pending_confirmation'
-                    ? "bg-amber-50 text-amber-700 border border-amber-200 font-bold"
-                    : "text-[#64748B] hover:text-[#0F172A]"
+                    ? "bg-op-warning-soft text-op-warning border border-op-warning-soft font-bold"
+                    : "text-op-muted hover:text-op-ink"
                 )}
               >
                 En Espera ({cases.filter((c) => c.status === 'remedy_offered').length})
@@ -257,22 +274,24 @@ export function ResolutionInboxManager({
             </div>
 
             <select
+              aria-label="Filtrar casos por motivo"
               value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className="px-2 py-1 rounded-lg bg-[#FAFAF8] border border-[#E2E8F0] text-[11px] text-[#0F172A] focus:outline-none"
+              onChange={(e) => { setCategoryFilter(e.target.value); setNewMessageText(''); }}
+              className="px-2 py-1 rounded-lg bg-op-canvas border border-op-border text-base text-op-ink focus:outline-none"
             >
               <option value="all">Todas las causas</option>
               <option value="delay">Demora</option>
               <option value="damaged_goods">Daño</option>
               <option value="wrong_item">Incongruencia</option>
               <option value="refund_pending">Reembolso</option>
+              <option value="no_response">Sin respuesta</option>
             </select>
           </div>
 
           {/* Cases Scrollable List */}
-          <div className="space-y-2.5 max-h-[720px] overflow-y-auto pr-1">
+          <div className="space-y-2.5 max-h-[360px] lg:max-h-[720px] overflow-y-auto pr-1">
             {filteredCases.length === 0 ? (
-              <div className="p-8 text-center rounded-2xl bg-white border border-[#E2E8F0] shadow-xs text-[#64748B] text-xs">
+              <div className="p-8 text-center rounded-2xl bg-white border border-op-border shadow-xs text-op-muted text-xs">
                 No hay casos que coincidan con los filtros seleccionados.
               </div>
             ) : (
@@ -282,23 +301,25 @@ export function ResolutionInboxManager({
                 const isUrgent = c.status === 'opened' || c.status === 'reopened';
 
                 return (
-                  <div
+                  <button
+                    type="button"
+                    aria-pressed={isSelected}
                     key={c.id}
                     onClick={() => handleSelectCase(c.id)}
                     className={cn(
-                      "p-4 rounded-xl border text-left cursor-pointer transition-all space-y-2",
+                      "block w-full p-4 rounded-xl border text-left cursor-pointer transition-all space-y-2",
                       isSelected
-                        ? "bg-[#F8FAFC] border-emerald-500/60 shadow-xs ring-1 ring-emerald-500/20"
-                        : "bg-white hover:bg-[#F8FAFC] border-[#E2E8F0] shadow-xs"
+                        ? "bg-op-canvas border-op-green-border/60 shadow-xs ring-1 ring-op-green-border/20"
+                        : "bg-white hover:bg-op-canvas border-op-border shadow-xs"
                     )}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-mono text-xs font-bold text-[#0F172A]">
+                      <span className="font-mono text-xs font-bold text-op-ink">
                         {c.case_number}
                       </span>
                       <span
                         className={cn(
-                          "text-[10px] font-semibold px-2 py-0.5 rounded border",
+                          "text-xs font-semibold px-2 py-0.5 rounded border",
                           statusBadge.className
                         )}
                       >
@@ -306,29 +327,29 @@ export function ResolutionInboxManager({
                       </span>
                     </div>
 
-                    <div className="text-xs font-semibold text-[#0F172A] truncate">
+                    <div className="text-xs font-semibold text-op-ink truncate">
                       {c.customer_name}
                     </div>
 
-                    <div className="text-[11px] text-[#64748B] flex items-center justify-between">
+                    <div className="text-xs text-op-muted flex items-center justify-between">
                       <span>{getCategoryLabel(c.issue_category)}</span>
-                      <span className="text-[#94A3B8] font-mono text-[10px]">
-                        Ped: {c.customer_requested_remedy}
+                      <span className="text-op-muted font-mono text-xs">
+                        {({ refund: 'Reembolso', replacement: 'Reemplazo', compensation: 'Compensación', clarification: 'Aclaración' })[c.customer_requested_remedy]}
                       </span>
                     </div>
 
                     {isUrgent && (
-                      <div className="pt-1.5 border-t border-[#E2E8F0] flex items-center justify-between text-[10px] text-rose-700">
+                      <div className="pt-1.5 border-t border-op-border flex items-center justify-between text-xs text-op-danger">
                         <span className="flex items-center gap-1 font-semibold">
-                          <Clock className="h-3 w-3 text-rose-600" />
-                          SLA &lt; 24h
+                          <Clock className="h-3 w-3 text-op-danger" />
+                          Requiere seguimiento
                         </span>
-                        <span className="font-mono text-[#64748B]">
+                        <span className="font-mono text-op-muted">
                           Resp. prom: {c.median_first_response_minutes} min
                         </span>
                       </div>
                     )}
-                  </div>
+                  </button>
                 );
               })
             )}
@@ -338,12 +359,12 @@ export function ResolutionInboxManager({
         {/* Right Column: Case Details, Messages & Remedy Drawer (7 cols) */}
         <div className="lg:col-span-7">
           {selectedCase ? (
-            <div className="p-6 rounded-2xl bg-white border border-[#E2E8F0] shadow-xs space-y-6">
+            <div className="p-6 rounded-2xl bg-white border border-op-border shadow-xs space-y-6">
               {/* Header */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E2E8F0] pb-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-op-border pb-4">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-mono text-lg font-bold text-[#0F172A]">
+                    <span className="font-mono text-lg font-bold text-op-ink">
                       {selectedCase.case_number}
                     </span>
                     <span
@@ -355,7 +376,7 @@ export function ResolutionInboxManager({
                       {getStatusBadge(selectedCase.status).label}
                     </span>
                   </div>
-                  <p className="text-xs text-[#64748B] mt-1">
+                  <p className="text-xs text-op-muted mt-1">
                     Abierto el{' '}
                     {new Date(selectedCase.created_at).toLocaleDateString('es-MX', {
                       year: 'numeric',
@@ -372,7 +393,7 @@ export function ResolutionInboxManager({
                   <button
                     type="button"
                     onClick={() => setShowRemedyModal(true)}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-all active:scale-[0.98]"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-op-green hover:bg-op-green text-white shadow-xs transition-all active:scale-[0.98]"
                   >
                     <Zap className="h-4 w-4" />
                     <span>
@@ -384,28 +405,28 @@ export function ResolutionInboxManager({
 
               {/* Customer Claim & Requested Remedy Summary */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                <div className="p-3.5 rounded-xl bg-[#FAFAF8] border border-[#E2E8F0] space-y-1">
-                  <div className="text-[11px] text-[#64748B] font-medium">
+                <div className="p-3.5 rounded-xl bg-op-canvas border border-op-border space-y-1">
+                  <div className="text-xs text-op-muted font-medium">
                     Datos del Comprador
                   </div>
-                  <div className="font-semibold text-[#0F172A] text-sm">
+                  <div className="font-semibold text-op-ink text-sm">
                     {selectedCase.customer_name}
                   </div>
-                  <div className="text-[#64748B] font-mono text-[11px]">
+                  <div className="text-op-muted font-mono text-xs">
                     {selectedCase.customer_contact}
                   </div>
                 </div>
 
-                <div className="p-3.5 rounded-xl bg-[#FAFAF8] border border-[#E2E8F0] space-y-1">
-                  <div className="text-[11px] text-[#64748B] font-medium">
+                <div className="p-3.5 rounded-xl bg-op-canvas border border-op-border space-y-1">
+                  <div className="text-xs text-op-muted font-medium">
                     Motivo e Indemnización Solicitada
                   </div>
-                  <div className="font-semibold text-emerald-800">
+                  <div className="font-semibold text-op-green-dark">
                     {getCategoryLabel(selectedCase.issue_category)}
                   </div>
-                  <div className="text-[#64748B] text-[11px]">
+                  <div className="text-op-muted text-xs">
                     Remedio deseado:{' '}
-                    <strong className="text-[#0F172A] uppercase">
+                    <strong className="text-op-ink uppercase">
                       {selectedCase.customer_requested_remedy}
                     </strong>
                   </div>
@@ -414,14 +435,14 @@ export function ResolutionInboxManager({
 
               {/* Connected Review context if applicable */}
               {selectedCase.review && (
-                <div className="p-4 rounded-xl bg-[#FAFAF8] border border-[#E2E8F0] text-xs space-y-1.5">
-                  <div className="text-[11px] font-semibold text-[#64748B] flex items-center justify-between">
+                <div className="p-4 rounded-xl bg-op-canvas border border-op-border text-xs space-y-1.5">
+                  <div className="text-xs font-semibold text-op-muted flex items-center justify-between">
                     <span>Opinión Asociada al Caso</span>
-                    <span className="text-amber-500">
+                    <span className="text-op-warning">
                       {'★'.repeat(selectedCase.review.rating)} {selectedCase.review.rating}.0
                     </span>
                   </div>
-                  <p className="text-[#334155] italic">
+                  <p className="text-op-secondary italic">
                     &ldquo;{selectedCase.review.body}&rdquo;
                   </p>
                 </div>
@@ -429,23 +450,23 @@ export function ResolutionInboxManager({
 
               {/* Official Remedy Status Card */}
               {selectedCase.remedy_offered && (
-                <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-xs space-y-2">
+                <div className="p-4 rounded-xl bg-op-green-soft border border-op-green-border text-xs space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-emerald-900 flex items-center gap-1.5">
-                      <ShieldCheck className="h-4 w-4 text-emerald-600" />
+                    <span className="font-bold text-op-green-dark flex items-center gap-1.5">
+                      <ShieldCheck className="h-4 w-4 text-op-green-dark" />
                       Propuesta de Remedio Oficial Registrada
                     </span>
-                    <span className="text-[10px] text-[#64748B] font-mono">
+                    <span className="text-xs text-op-muted font-mono">
                       {selectedCase.is_consumer_confirmed
                         ? 'Confirmado por consumidor ✓'
                         : 'En espera de confirmación del cliente'}
                     </span>
                   </div>
-                  <p className="text-emerald-950 font-medium leading-relaxed">
+                  <p className="text-op-green-dark font-medium leading-relaxed">
                     {selectedCase.remedy_offered}
                   </p>
                   {selectedCase.is_consumer_confirmed && (
-                    <div className="text-[11px] text-emerald-700 flex items-center gap-1 font-semibold pt-1">
+                    <div className="text-xs text-op-green-dark flex items-center gap-1 font-semibold pt-1">
                       <CheckCircle2 className="h-3.5 w-3.5" />
                       Pilar Resuelve: Este caso cuenta formalmente para el 40% de tu Puntaje de Resolución.
                     </div>
@@ -455,13 +476,13 @@ export function ResolutionInboxManager({
 
               {/* Message Timeline */}
               <div className="space-y-3">
-                <h4 className="text-xs font-semibold text-[#64748B] uppercase tracking-wider">
+                <h4 className="text-xs font-semibold text-op-muted uppercase tracking-wider">
                   Historial de Comunicación y Conciliación
                 </h4>
 
                 <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
                   {(!selectedCase.messages || selectedCase.messages.length === 0) ? (
-                    <div className="p-4 rounded-xl bg-[#FAFAF8] border border-[#E2E8F0] text-center text-[#64748B] text-xs">
+                    <div className="p-4 rounded-xl bg-op-canvas border border-op-border text-center text-op-muted text-xs">
                       No hay mensajes en este expediente todavía.
                     </div>
                   ) : (
@@ -475,15 +496,15 @@ export function ResolutionInboxManager({
                           className={cn(
                             "p-3.5 rounded-xl text-xs space-y-1",
                             m.is_private
-                              ? "bg-amber-50 border border-amber-200 text-amber-900"
+                              ? "bg-op-warning-soft border border-op-warning-soft text-op-warning"
                               : isMerchant
-                              ? "bg-emerald-50 border border-emerald-200 text-emerald-950 ml-4"
-                              : "bg-[#F1F5F9] border border-[#E2E8F0] text-[#0F172A] mr-4"
+                              ? "bg-op-green-soft border border-op-green-border text-op-green-dark ml-4"
+                              : "bg-op-shaded border border-op-border text-op-ink mr-4"
                           )}
                         >
-                          <div className="flex items-center justify-between text-[10px] text-[#64748B]">
-                            <span className="font-semibold flex items-center gap-1 text-[#0F172A]">
-                              {m.is_private && <Lock className="h-3 w-3 text-amber-600" />}
+                          <div className="flex items-center justify-between text-xs text-op-muted">
+                            <span className="font-semibold flex items-center gap-1 text-op-ink">
+                              {m.is_private && <Lock className="h-3 w-3 text-op-warning" />}
                               {m.sender_name} ({isMerchant ? 'Comercio' : isConsumer ? 'Comprador' : 'Opinio Mediador'})
                             </span>
                             <span className="font-mono">
@@ -504,20 +525,20 @@ export function ResolutionInboxManager({
               </div>
 
               {/* Add Message Form */}
-              <form onSubmit={handleSendMessage} className="space-y-2 pt-2 border-t border-[#E2E8F0]">
-                <div className="flex items-center justify-between">
-                  <label className="text-[11px] font-medium text-[#64748B]">
+              <form onSubmit={handleSendMessage} className="space-y-2 pt-2 border-t border-op-border">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <label htmlFor="case-message" className="text-xs font-medium text-op-muted">
                     Enviar mensaje o nota interna al expediente:
                   </label>
-                  <label className="flex items-center gap-1.5 text-[11px] text-[#64748B] cursor-pointer">
+                  <label className="flex items-center gap-1.5 text-xs text-op-muted cursor-pointer">
                     <input
                       type="checkbox"
                       checked={isPrivateMessage}
                       onChange={(e) => setIsPrivateMessage(e.target.checked)}
-                      className="rounded border-[#CBD5E1] text-emerald-600 focus:ring-emerald-500"
+                      className="rounded border-op-strong text-op-green-dark focus:ring-op-green-border"
                     />
                     <span className="flex items-center gap-1">
-                      <Lock className="h-3 w-3 text-amber-600" />
+                      <Lock className="h-3 w-3 text-op-warning" />
                       Nota interna (Privada para el equipo)
                     </span>
                   </label>
@@ -532,14 +553,15 @@ export function ResolutionInboxManager({
                         ? 'Escribe una nota interna para tu equipo de atención...'
                         : 'Escribe un mensaje de seguimiento para el comprador...'
                     }
+                    id="case-message"
                     value={newMessageText}
                     onChange={(e) => setNewMessageText(e.target.value)}
-                    className="flex-1 px-3.5 py-2 rounded-xl bg-[#FAFAF8] border border-[#E2E8F0] text-xs text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:border-emerald-500"
+                    className="min-w-0 flex-1 px-3.5 py-2 rounded-xl bg-op-canvas border border-op-border text-base text-op-ink placeholder:text-op-muted focus:outline-none focus:border-op-green-border"
                   />
                   <button
                     type="submit"
                     disabled={submittingMessage}
-                    className="px-4 py-2 rounded-xl text-xs font-semibold bg-[#0F172A] hover:bg-[#1E293B] text-white transition-colors flex items-center gap-1.5"
+                    className="px-4 py-2 rounded-xl text-xs font-semibold bg-op-ink hover:bg-op-secondary text-white transition-colors flex items-center gap-1.5"
                   >
                     <Send className="h-3.5 w-3.5" />
                     <span>Enviar</span>
@@ -548,7 +570,7 @@ export function ResolutionInboxManager({
               </form>
             </div>
           ) : (
-            <div className="p-12 text-center rounded-2xl bg-white border border-[#E2E8F0] shadow-xs text-[#64748B]">
+            <div className="p-12 text-center rounded-2xl bg-white border border-op-border shadow-xs text-op-muted">
               Selecciona un caso del panel izquierdo para ver los detalles.
             </div>
           )}
@@ -556,29 +578,30 @@ export function ResolutionInboxManager({
       </div>
 
       {/* Remedy Proposal Modal Drawer */}
-      {showRemedyModal && selectedCase && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="w-full max-w-lg rounded-2xl bg-white border border-[#E2E8F0] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150 text-left">
-            <div className="p-5 border-b border-[#E2E8F0] flex items-center justify-between bg-[#FAFAF8]">
+      {selectedCase && (
+        <dialog ref={remedyDialog} onCancel={() => setShowRemedyModal(false)} aria-labelledby="remedy-title" className="m-auto max-h-[90dvh] w-[calc(100%_-_2rem)] max-w-lg overflow-y-auto rounded-2xl border border-op-border bg-op-sheet p-0 text-op-ink shadow-2xl backdrop:bg-black/40">
+          <div className="w-full max-w-lg rounded-2xl bg-white border border-op-border shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150 text-left">
+            <div className="p-5 border-b border-op-border flex items-center justify-between bg-op-canvas">
               <div className="flex items-center gap-2">
-                <Zap className="h-4 w-4 text-emerald-600" />
-                <h3 className="text-sm font-bold text-[#0F172A]">
+                <Zap className="h-4 w-4 text-op-green-dark" />
+                <h3 id="remedy-title" className="text-sm font-bold text-op-ink">
                   Proponer Solución Formal — {selectedCase.case_number}
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setShowRemedyModal(false)}
-                className="text-[#64748B] hover:text-[#0F172A] text-xs"
+                className="text-op-muted hover:text-op-ink text-xs"
               >
                 Cerrar
               </button>
             </div>
 
             <form onSubmit={handleProposeRemedy} className="p-5 space-y-4">
+              {actionError && <p role="alert" className="rounded-xl bg-op-danger-soft p-3 text-sm text-op-danger">{actionError}</p>}
               {/* Remedy Type Selector */}
               <div>
-                <label className="block text-xs font-medium text-[#0F172A] mb-2">
+                <label className="block text-xs font-medium text-op-ink mb-2">
                   Tipo de Solución Ofrecida
                 </label>
                 <div className="grid grid-cols-2 gap-2.5">
@@ -591,15 +614,15 @@ export function ResolutionInboxManager({
                     className={cn(
                       "p-3 rounded-xl border text-left text-xs transition-all",
                       selectedRemedyType === 'spei'
-                        ? "bg-emerald-50 text-emerald-900 border-emerald-300 shadow-xs font-semibold"
-                        : "bg-[#FAFAF8] text-[#475569] border-[#E2E8F0] hover:bg-[#F1F5F9]"
+                        ? "bg-op-green-soft text-op-green-dark border-op-green-border shadow-xs font-semibold"
+                        : "bg-op-canvas text-op-secondary border-op-border hover:bg-op-shaded"
                     )}
                   >
                     <div className="font-semibold flex items-center gap-1.5 mb-0.5">
-                      <DollarSign className="h-3.5 w-3.5 text-emerald-600" />
+                      <DollarSign className="h-3.5 w-3.5 text-op-green-dark" />
                       Reembolso SPEI
                     </div>
-                    <div className="text-[10px] text-[#64748B]">Transferencia bancaria directa</div>
+                    <div className="text-xs text-op-muted">Transferencia bancaria directa</div>
                   </button>
 
                   <button
@@ -611,15 +634,15 @@ export function ResolutionInboxManager({
                     className={cn(
                       "p-3 rounded-xl border text-left text-xs transition-all",
                       selectedRemedyType === 'replacement'
-                        ? "bg-emerald-50 text-emerald-900 border-emerald-300 shadow-xs font-semibold"
-                        : "bg-[#FAFAF8] text-[#475569] border-[#E2E8F0] hover:bg-[#F1F5F9]"
+                        ? "bg-op-green-soft text-op-green-dark border-op-green-border shadow-xs font-semibold"
+                        : "bg-op-canvas text-op-secondary border-op-border hover:bg-op-shaded"
                     )}
                   >
                     <div className="font-semibold flex items-center gap-1.5 mb-0.5">
-                      <Package className="h-3.5 w-3.5 text-blue-600" />
+                      <Package className="h-3.5 w-3.5 text-op-secondary" />
                       Reemplazo Urgente
                     </div>
-                    <div className="text-[10px] text-[#64748B]">Envío de producto nuevo</div>
+                    <div className="text-xs text-op-muted">Envío de producto nuevo</div>
                   </button>
 
                   <button
@@ -631,15 +654,15 @@ export function ResolutionInboxManager({
                     className={cn(
                       "p-3 rounded-xl border text-left text-xs transition-all",
                       selectedRemedyType === 'compensation'
-                        ? "bg-emerald-50 text-emerald-900 border-emerald-300 shadow-xs font-semibold"
-                        : "bg-[#FAFAF8] text-[#475569] border-[#E2E8F0] hover:bg-[#F1F5F9]"
+                        ? "bg-op-green-soft text-op-green-dark border-op-green-border shadow-xs font-semibold"
+                        : "bg-op-canvas text-op-secondary border-op-border hover:bg-op-shaded"
                     )}
                   >
                     <div className="font-semibold flex items-center gap-1.5 mb-0.5">
-                      <RotateCcw className="h-3.5 w-3.5 text-purple-600" />
+                      <RotateCcw className="h-3.5 w-3.5 text-op-secondary" />
                       Compensación
                     </div>
-                    <div className="text-[10px] text-[#64748B]">Saldo o cupón compensatorio</div>
+                    <div className="text-xs text-op-muted">Saldo o cupón compensatorio</div>
                   </button>
 
                   <button
@@ -651,51 +674,53 @@ export function ResolutionInboxManager({
                     className={cn(
                       "p-3 rounded-xl border text-left text-xs transition-all",
                       selectedRemedyType === 'clarification'
-                        ? "bg-emerald-50 text-emerald-900 border-emerald-300 shadow-xs font-semibold"
-                        : "bg-[#FAFAF8] text-[#475569] border-[#E2E8F0] hover:bg-[#F1F5F9]"
+                        ? "bg-op-green-soft text-op-green-dark border-op-green-border shadow-xs font-semibold"
+                        : "bg-op-canvas text-op-secondary border-op-border hover:bg-op-shaded"
                     )}
                   >
                     <div className="font-semibold flex items-center gap-1.5 mb-0.5">
-                      <FileText className="h-3.5 w-3.5 text-amber-600" />
+                      <FileText className="h-3.5 w-3.5 text-op-warning" />
                       Aclaración Logística
                     </div>
-                    <div className="text-[10px] text-[#64748B]">Seguimiento con transportista</div>
+                    <div className="text-xs text-op-muted">Seguimiento con transportista</div>
                   </button>
                 </div>
               </div>
 
               {/* Responder title */}
               <div>
-                <label className="block text-xs font-medium text-[#0F172A] mb-1">
+                <label htmlFor="remedy-responder" className="block text-xs font-medium text-op-ink mb-1">
                   Representante o Área
                 </label>
                 <input
                   type="text"
                   required
+                  id="remedy-responder"
                   value={responderName}
                   onChange={(e) => setResponderName(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-[#FAFAF8] border border-[#E2E8F0] text-xs text-[#0F172A]"
+                  className="w-full px-3 py-2 rounded-xl bg-op-canvas border border-op-border text-base text-op-ink"
                 />
               </div>
 
               {/* Remedy description */}
               <div>
-                <label className="block text-xs font-medium text-[#0F172A] mb-1">
+                <label htmlFor="remedy-detail" className="block text-xs font-medium text-op-ink mb-1">
                   Detalle de la Propuesta al Consumidor
                 </label>
                 <textarea
                   required
                   rows={4}
+                  id="remedy-detail"
                   value={remedyText}
                   onChange={(e) => setRemedyText(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAFAF8] border border-[#E2E8F0] text-xs text-[#0F172A] leading-relaxed focus:outline-none focus:border-emerald-500"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-op-canvas border border-op-border text-base text-op-ink leading-relaxed focus:outline-none focus:border-op-green-border"
                   placeholder="Detalla los términos del reembolso o reemplazo..."
                 />
               </div>
 
-              <div className="p-3 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] text-[11px] text-[#64748B] space-y-1">
-                <span className="font-semibold text-[#0F172A] flex items-center gap-1">
-                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
+              <div className="p-3 rounded-xl bg-op-canvas border border-op-border text-xs text-op-muted space-y-1">
+                <span className="font-semibold text-op-ink flex items-center gap-1">
+                  <ShieldCheck className="h-3.5 w-3.5 text-op-green-dark" />
                   Regla de Integridad de Opinio
                 </span>
                 <p>
@@ -707,21 +732,21 @@ export function ResolutionInboxManager({
                 <button
                   type="button"
                   onClick={() => setShowRemedyModal(false)}
-                  className="px-4 py-2 rounded-xl text-xs text-[#64748B] hover:text-[#0F172A]"
+                  className="px-4 py-2 rounded-xl text-xs text-op-muted hover:text-op-ink"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={submittingRemedy}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition-colors"
+                  className="px-4 py-2 rounded-xl text-xs font-semibold bg-op-green hover:bg-op-green text-white transition-colors"
                 >
                   {submittingRemedy ? 'Enviando...' : 'Enviar Propuesta de Solución'}
                 </button>
               </div>
             </form>
           </div>
-        </div>
+        </dialog>
       )}
     </div>
   );

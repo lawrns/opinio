@@ -33,13 +33,20 @@ export function RequestsManager({
   const [loading, setLoading] = React.useState(false);
   const [feedback, setFeedback] = React.useState<{ success: boolean; token?: string; error?: string } | null>(null);
   const [copiedToken, setCopiedToken] = React.useState<string | null>(null);
+  const [copyError, setCopyError] = React.useState('');
+  const [visibleInvitations, setVisibleInvitations] = React.useState(15);
+  const targetRef = React.useRef<HTMLInputElement>(null);
 
   const coveragePercent = Number(business.coverage_percentage) || 0;
   const isTransparent = coveragePercent >= 90;
 
   const handleSendInvite = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!target.trim()) return;
+    if (!target.trim() || loading) return;
+    if (channel === 'whatsapp' && !/^\+?52\d{10}$/.test(target.replace(/[\s()-]/g, ''))) {
+      setFeedback({ success: false, error: 'Escribe +52 seguido de los 10 dígitos del celular.' });
+      return;
+    }
 
     setLoading(true);
     setFeedback(null);
@@ -50,7 +57,7 @@ export function RequestsManager({
     formData.append('recipient_target', target.trim());
     if (orderId) formData.append('order_id', orderId.trim());
 
-    const res = await triggerInvitationAction(formData);
+    const res = await triggerInvitationAction(formData).catch(() => ({ success: false, error: 'No pudimos conectar. Conservamos tus datos para volver a intentarlo.', token: undefined }));
     setLoading(false);
     setFeedback(res);
 
@@ -59,11 +66,11 @@ export function RequestsManager({
         {
           id: Date.now(),
           business_id: business.id,
-          order_id: null,
+          order_id: orderId ? Number(orderId) : null,
           token: res.token,
           channel,
           recipient_target: target.trim(),
-          status: 'delivered',
+          status: 'sent',
           sent_at: new Date().toISOString(),
           completed_at: null,
         },
@@ -74,10 +81,14 @@ export function RequestsManager({
     }
   };
 
-  const copyInviteLink = (token: string) => {
-    navigator.clipboard.writeText(`https://opinio.mx/r/${token}`);
-    setCopiedToken(token);
-    setTimeout(() => setCopiedToken(null), 2500);
+  const copyInviteLink = async (token: string) => {
+    setCopyError('');
+    try {
+      await navigator.clipboard.writeText(`https://opinio.mx/r/${token}`);
+      setCopiedToken(token);
+    } catch {
+      setCopyError('No se pudo copiar el enlace. Selecciona el texto para copiarlo manualmente.');
+    }
   };
 
   const formatCurrency = (val: number) => {
@@ -91,38 +102,38 @@ export function RequestsManager({
   return (
     <div className="space-y-8">
       {/* Top Coverage Denominator Banner */}
-      <div className="p-6 rounded-2xl bg-[#F8FAFC] border border-[#E2E8F0] shadow-xs space-y-6">
+      <div className="p-6 rounded-2xl bg-op-canvas border border-op-border shadow-xs space-y-6">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="space-y-2 max-w-2xl">
             <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <span className="px-2.5 py-0.5 rounded text-xs font-bold uppercase tracking-wider bg-op-green-soft text-op-green-dark border border-op-green-border">
                 Auditoría de Denominador
               </span>
-              <span className="text-xs text-[#64748B] font-mono">
-                Actualizado en tiempo real
+              <span className="text-xs text-op-muted font-mono">
+                Datos registrados
               </span>
             </div>
-            <h2 className="text-lg font-bold text-[#0F172A]">
+            <h2 className="text-lg font-bold text-op-ink">
               Porcentaje de Cobertura de Pedidos: {coveragePercent}%
             </h2>
-            <p className="text-xs text-[#475569] leading-relaxed">
-              El motor de Opinio audita el 100% de tus ventas conectadas. Mantener una tasa de invitación ≥ 90% certifica ante los compradores que no seleccionas únicamente clientes satisfechos (prohibición de cherry-picking).
+            <p className="text-xs text-op-secondary leading-relaxed">
+              La cobertura compara las invitaciones registradas con los pedidos observados. Invita a todos tus clientes, incluidas las personas que tuvieron una experiencia negativa.
             </p>
           </div>
 
-          <div className="flex items-center gap-4 bg-white p-4 rounded-xl border border-[#E2E8F0] shadow-xs shrink-0">
+          <div className="flex items-center gap-4 bg-white p-4 rounded-xl border border-op-border shadow-xs shrink-0">
             <div className="text-right">
-              <div className="text-2xl font-bold font-mono text-emerald-700">
+              <div className="text-2xl font-bold font-mono text-op-green-dark">
                 {coveragePercent}%
               </div>
-              <div className="text-[11px] text-[#64748B]">
+              <div className="text-xs text-op-muted">
                 {isTransparent ? 'Distintivo Activo ✓' : 'Meta: 90.0%'}
               </div>
             </div>
-            <div className="h-10 w-px bg-[#E2E8F0]" />
+            <div className="h-10 w-px bg-op-border" />
             <div className="text-left text-xs">
-              <div className="text-[#64748B]">Estatus Institucional</div>
-              <div className="font-semibold text-[#0F172A]">
+              <div className="text-op-muted">Estatus Institucional</div>
+              <div className="font-semibold text-op-ink">
                 {isTransparent ? 'Cobertura Transparente' : 'Pedidos Conectados'}
               </div>
             </div>
@@ -131,21 +142,21 @@ export function RequestsManager({
 
         {/* Meter */}
         <div className="space-y-2">
-          <div className="h-3 w-full bg-[#E2E8F0] rounded-full overflow-hidden p-0.5 border border-[#CBD5E1]">
+          <div className="h-3 w-full bg-op-border rounded-full overflow-hidden p-0.5 border border-op-strong">
             <div
               className={cn(
                 "h-full rounded-full transition-all duration-500",
                 coveragePercent >= 90
-                  ? "bg-[#059669]"
-                  : "bg-amber-500"
+                  ? "bg-op-green"
+                  : "bg-op-warning"
               )}
-              style={{ width: `${Math.min(100, Math.max(5, coveragePercent))}%` }}
+              style={{ width: `${Math.min(100, Math.max(0, coveragePercent))}%` }}
             />
           </div>
-          <div className="flex justify-between text-[11px] text-[#64748B] font-mono">
+          <div className="flex flex-wrap gap-2 justify-between text-xs text-op-muted font-mono">
             <span>0%</span>
-            <span>Promedio México: 62%</span>
-            <span className="text-emerald-700 font-bold">Umbral Transparente: 90%</span>
+            
+            <span className="text-op-green-dark font-bold">Umbral Transparente: 90%</span>
             <span>100%</span>
           </div>
         </div>
@@ -153,51 +164,51 @@ export function RequestsManager({
 
       {/* 4 Key Statistics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
-        <div className="p-4 rounded-xl bg-white border border-[#E2E8F0] shadow-xs">
-          <div className="text-[#64748B] font-medium">Pedidos Observados (Denominador)</div>
-          <div className="text-2xl font-bold text-[#0F172A] font-mono mt-1">
+        <div className="p-4 rounded-xl bg-white border border-op-border shadow-xs">
+          <div className="text-op-muted font-medium">Pedidos Observados (Denominador)</div>
+          <div className="text-2xl font-bold text-op-ink font-mono mt-1">
             {business.observed_orders_count.toLocaleString('es-MX')}
           </div>
-          <div className="text-[10px] text-[#94A3B8] mt-1">Sincronizados vía Shopify/Tiendanube</div>
+          <div className="text-xs text-op-muted mt-1">Sincronizados vía Shopify/Tiendanube</div>
         </div>
 
-        <div className="p-4 rounded-xl bg-white border border-[#E2E8F0] shadow-xs">
-          <div className="text-[#64748B] font-medium">Invitaciones Disparadas</div>
-          <div className="text-2xl font-bold text-emerald-700 font-mono mt-1">
+        <div className="p-4 rounded-xl bg-white border border-op-border shadow-xs">
+          <div className="text-op-muted font-medium">Invitaciones Disparadas</div>
+          <div className="text-2xl font-bold text-op-green-dark font-mono mt-1">
             {business.invited_orders_count.toLocaleString('es-MX')}
           </div>
-          <div className="text-[10px] text-[#94A3B8] mt-1">Vía WhatsApp Business y Correo</div>
+          <div className="text-xs text-op-muted mt-1">Vía WhatsApp Business y Correo</div>
         </div>
 
-        <div className="p-4 rounded-xl bg-white border border-[#E2E8F0] shadow-xs">
-          <div className="text-[#64748B] font-medium">Tasa de Conversión a Opinión</div>
-          <div className="text-2xl font-bold text-blue-700 font-mono mt-1">
-            14.2%
+        <div className="p-4 rounded-xl bg-white border border-op-border shadow-xs">
+          <div className="text-op-muted font-medium">Invitaciones completadas</div>
+          <div className="text-2xl font-bold text-op-secondary font-mono mt-1">
+            {invitations.filter((invitation) => invitation.status === 'completed').length}
           </div>
-          <div className="text-[10px] text-[#94A3B8] mt-1">WhatsApp supera al email (3.8x)</div>
+          <div className="text-xs text-op-muted mt-1">En el historial registrado</div>
         </div>
 
-        <div className="p-4 rounded-xl bg-white border border-[#E2E8F0] shadow-xs">
-          <div className="text-[#64748B] font-medium">Tasa de Opt-Out (Bajas)</div>
-          <div className="text-2xl font-bold text-[#334155] font-mono mt-1">
-            1.1%
+        <div className="p-4 rounded-xl bg-white border border-op-border shadow-xs">
+          <div className="text-op-muted font-medium">Solicitudes de baja</div>
+          <div className="text-2xl font-bold text-op-secondary font-mono mt-1">
+            {invitations.filter((invitation) => invitation.status === 'opt_out').length}
           </div>
-          <div className="text-[10px] text-[#94A3B8] mt-1">Bajo umbral de spam (&lt;3%)</div>
+          <div className="text-xs text-op-muted mt-1">En el historial registrado</div>
         </div>
       </div>
 
       {/* 2 Columns: Trigger New Invitation & Automated Rules */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left: Dispatch Form (7 cols) */}
-        <div className="lg:col-span-7 p-6 rounded-2xl bg-white border border-[#E2E8F0] shadow-xs space-y-4">
+        <div className="lg:col-span-7 p-6 rounded-2xl bg-white border border-op-border shadow-xs space-y-4">
           <div className="flex items-center gap-2">
-            <Send className="h-4 w-4 text-emerald-600" />
-            <h3 className="font-semibold text-sm text-[#0F172A]">
-              Disparar Nueva Invitación de Opinión
+            <Send className="h-4 w-4 text-op-green-dark" />
+            <h3 className="font-semibold text-sm text-op-ink">
+              Crear una invitación de opinión
             </h3>
           </div>
-          <p className="text-xs text-[#64748B]">
-            Envía una solicitud individual para registrar la transacción en el denominador de confianza.
+          <p className="text-xs text-op-muted">
+            Crea un enlace y compártelo por el canal elegido. El registro no confirma la entrega del mensaje.
           </p>
 
           <form onSubmit={handleSendInvite} className="space-y-4 pt-2">
@@ -205,41 +216,46 @@ export function RequestsManager({
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
-                onClick={() => setChannel('whatsapp')}
+                aria-pressed={channel === 'whatsapp'}
+                onClick={() => { setChannel('whatsapp'); setTarget(''); }}
                 className={cn(
                   "p-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-2 transition-all",
                   channel === 'whatsapp'
-                    ? "bg-emerald-50 text-emerald-900 border-emerald-300 shadow-xs"
-                    : "bg-[#FAFAF8] text-[#64748B] border-[#E2E8F0] hover:bg-[#F1F5F9]"
+                    ? "bg-op-green-soft text-op-green-dark border-op-green-border shadow-xs"
+                    : "bg-op-canvas text-op-muted border-op-border hover:bg-op-shaded"
                 )}
               >
-                <MessageSquare className="h-4 w-4 text-emerald-600" />
+                <MessageSquare className="h-4 w-4 text-op-green-dark" />
                 <span>WhatsApp (+52 México)</span>
               </button>
 
               <button
                 type="button"
-                onClick={() => setChannel('email')}
+                aria-pressed={channel === 'email'}
+                onClick={() => { setChannel('email'); setTarget(''); }}
                 className={cn(
                   "p-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-2 transition-all",
                   channel === 'email'
-                    ? "bg-emerald-50 text-emerald-900 border-emerald-300 shadow-xs"
-                    : "bg-[#FAFAF8] text-[#64748B] border-[#E2E8F0] hover:bg-[#F1F5F9]"
+                    ? "bg-op-green-soft text-op-green-dark border-op-green-border shadow-xs"
+                    : "bg-op-canvas text-op-muted border-op-border hover:bg-op-shaded"
                 )}
               >
-                <Mail className="h-4 w-4 text-blue-600" />
+                <Mail className="h-4 w-4 text-op-secondary" />
                 <span>Correo Transaccional</span>
               </button>
             </div>
 
             {/* Target input */}
             <div>
-              <label className="block text-xs font-medium text-[#0F172A] mb-1">
+              <label htmlFor="request-target" className="block text-xs font-medium text-op-ink mb-1">
                 {channel === 'whatsapp'
                   ? 'Teléfono celular (+52)'
                   : 'Correo del comprador'}
               </label>
               <input
+                id="request-target"
+                ref={targetRef}
+                autoComplete={channel === 'whatsapp' ? 'tel' : 'email'}
                 type={channel === 'whatsapp' ? 'tel' : 'email'}
                 required
                 placeholder={
@@ -249,37 +265,33 @@ export function RequestsManager({
                 }
                 value={target}
                 onChange={(e) => setTarget(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAFAF8] border border-[#E2E8F0] text-xs text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:border-emerald-500"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-op-canvas border border-op-border text-base text-op-ink placeholder:text-op-muted focus:outline-none focus:border-op-green-border"
               />
             </div>
 
-            {/* Order external reference */}
             <div>
-              <label className="block text-xs font-medium text-[#0F172A] mb-1">
-                Referencia de Pedido (Opcional)
-              </label>
-              <input
-                type="text"
-                placeholder="#ORD-2026-9481"
-                value={orderId}
-                onChange={(e) => setOrderId(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAFAF8] border border-[#E2E8F0] text-xs text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:border-emerald-500"
-              />
+              <label htmlFor="request-order" className="mb-1 block text-sm font-medium text-op-ink">Pedido relacionado (opcional)</label>
+              <select id="request-order" value={orderId} onChange={(event) => setOrderId(event.target.value)} className="min-h-12 w-full rounded-xl border border-op-border bg-op-canvas px-3 text-base text-op-ink">
+                <option value="">Sin pedido relacionado</option>
+                {orders.map((order) => <option key={order.id} value={String(order.id)}>{order.external_order_id} · {order.customer_name || 'Comprador'}</option>)}
+              </select>
             </div>
-
+            {feedback?.error && <p role="alert" className="rounded-xl bg-op-danger-soft p-3 text-sm text-op-danger">No se pudo registrar la invitación. {feedback.error.includes('conectar') || feedback.error.includes('dígitos') ? feedback.error : 'Revisa los datos e inténtalo de nuevo.'}</p>}
+            {copyError && <p role="alert" className="text-sm text-op-danger">{copyError}</p>}
             {/* Feedback */}
             {feedback?.success && (
-              <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 space-y-1.5">
+              <div role="status" className="p-3 rounded-xl bg-op-green-soft border border-op-green-border text-xs text-op-green-dark space-y-1.5">
                 <div className="flex items-center gap-1.5 font-bold">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                  <CheckCircle2 className="h-4 w-4 text-op-green-dark" />
                   Invitación registrada correctamente
                 </div>
-                <div className="p-2 rounded bg-white border border-emerald-200 font-mono text-[11px] flex items-center justify-between gap-2 overflow-hidden">
-                  <span className="truncate text-[#0F172A]">https://opinio.mx/r/{feedback.token}</span>
+                <div className="p-2 rounded bg-white border border-op-green-border font-mono text-xs flex items-center justify-between gap-2 overflow-hidden">
+                  <span className="truncate text-op-ink">https://opinio.mx/r/{feedback.token}</span>
                   <button
                     type="button"
+                    aria-label="Copiar enlace de invitación"
                     onClick={() => copyInviteLink(feedback.token!)}
-                    className="p-1 rounded bg-[#F1F5F9] hover:bg-[#E2E8F0] text-[#0F172A] shrink-0"
+                    className="p-1 rounded bg-op-shaded hover:bg-op-border text-op-ink shrink-0"
                   >
                     {copiedToken === feedback.token ? '¡Copiado!' : <Copy className="h-3.5 w-3.5" />}
                   </button>
@@ -290,83 +302,44 @@ export function RequestsManager({
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-all flex items-center justify-center gap-2"
+              className="w-full py-2.5 rounded-xl text-xs font-semibold bg-op-green hover:bg-op-green text-white shadow-xs transition-all flex items-center justify-center gap-2"
             >
               {loading ? (
                 <span>Registrando...</span>
               ) : (
                 <>
                   <Send className="h-3.5 w-3.5" />
-                  <span>Enviar Invitación Verificada</span>
+                  <span>Crear enlace de opinión</span>
                 </>
               )}
             </button>
           </form>
         </div>
 
-        {/* Right: Automation Policy (5 cols) */}
-        <div className="lg:col-span-5 p-6 rounded-2xl bg-white border border-[#E2E8F0] shadow-xs space-y-4">
-          <div className="flex items-center gap-2">
-            <Zap className="h-4 w-4 text-amber-600" />
-            <h3 className="font-semibold text-sm text-[#0F172A]">
-              Reglas de Envío Automático
-            </h3>
-          </div>
-          <p className="text-xs text-[#64748B] leading-relaxed">
-            Configuración recomendada de acuerdo a la Norma Mexicana de Comercio Electrónico.
-          </p>
-
-          <div className="space-y-3 pt-1 text-xs">
-            <div className="p-3.5 rounded-xl bg-[#FAFAF8] border border-[#E2E8F0] space-y-1">
-              <div className="font-semibold text-[#0F172A] flex items-center justify-between">
-                <span>Tiempo de Espera tras Entrega</span>
-                <span className="text-emerald-700 font-mono font-bold">3 Días</span>
-              </div>
-              <p className="text-[#64748B] text-[11px]">
-                Permite que el comprador pruebe el producto antes de recibir la solicitud de calificación.
-              </p>
-            </div>
-
-            <div className="p-3.5 rounded-xl bg-[#FAFAF8] border border-[#E2E8F0] space-y-1">
-              <div className="font-semibold text-[#0F172A] flex items-center justify-between">
-                <span>Recordatorios Máximos</span>
-                <span className="text-emerald-700 font-mono font-bold">1 Recordatorio</span>
-              </div>
-              <p className="text-[#64748B] text-[11px]">
-                Enviado a los 5 días si la invitación original no fue abierta.
-              </p>
-            </div>
-
-            <div className="p-3.5 rounded-xl bg-[#FAFAF8] border border-[#E2E8F0] space-y-1">
-              <div className="font-semibold text-[#0F172A] flex items-center justify-between">
-                <span>Anti-Cherry-Picking Activo</span>
-                <span className="text-emerald-700 font-bold">100% Inclusivo</span>
-              </div>
-              <p className="text-[#64748B] text-[11px]">
-                No se permite filtrar clientes que hayan tenido reportes de entrega o incidencias previas.
-              </p>
-            </div>
-          </div>
-        </div>
+        <aside className="lg:col-span-5 rounded-2xl border border-op-border bg-op-sheet p-6">
+          <h3 className="flex items-center gap-2 text-base font-semibold text-op-ink"><Zap className="h-5 w-5 text-op-green" aria-hidden="true" /> Invitaciones imparciales</h3>
+          <p className="mt-3 text-sm leading-relaxed text-op-secondary">Comparte el enlace después de la entrega y permite que cada cliente cuente su experiencia con libertad.</p>
+          <p className="mt-4 rounded-xl bg-op-canvas p-4 text-sm leading-relaxed text-op-muted">Los envíos automáticos y recordatorios todavía no están configurados desde este panel.</p>
+        </aside>
       </div>
 
       {/* Connected Orders Table */}
-      <div className="p-6 rounded-2xl bg-white border border-[#E2E8F0] shadow-xs space-y-4">
+      <div className="p-6 rounded-2xl bg-white border border-op-border shadow-xs space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Package className="h-4 w-4 text-blue-600" />
-            <h3 className="font-semibold text-sm text-[#0F172A]">
+            <Package className="h-4 w-4 text-op-secondary" />
+            <h3 className="font-semibold text-sm text-op-ink">
               Pedidos Monitoreados Recientes (Feed de Tienda)
             </h3>
           </div>
-          <span className="text-xs text-[#64748B]">
+          <span className="text-xs text-op-muted">
             Mostrando {orders.length} pedidos conectados
           </span>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-[#FAFAF8] border-b border-[#E2E8F0] text-[#64748B] uppercase text-[10px] tracking-wider">
+            <thead className="bg-op-canvas border-b border-op-border text-op-muted uppercase text-xs tracking-wider">
               <tr>
                 <th className="py-2.5 px-3">Pedido</th>
                 <th className="py-2.5 px-3">Plataforma</th>
@@ -376,48 +349,51 @@ export function RequestsManager({
                 <th className="py-2.5 px-3">Invitación</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#E2E8F0]">
+            <tbody className="divide-y divide-op-border">
               {orders.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-6 text-[#94A3B8]">
+                  <td colSpan={6} className="text-center py-6 text-op-muted">
                     No hay pedidos registrados en el feed reciente.
                   </td>
                 </tr>
               ) : (
                 orders.map((o) => (
-                  <tr key={o.id} className="hover:bg-[#F8FAFC] transition-colors">
-                    <td className="py-2.5 px-3 font-mono font-semibold text-[#0F172A]">
+                  <tr key={o.id} className="hover:bg-op-canvas transition-colors">
+                    <td className="py-2.5 px-3 font-mono font-semibold text-op-ink">
                       {o.external_order_id}
                     </td>
                     <td className="py-2.5 px-3">
-                      <span className="px-2 py-0.5 rounded text-[10px] uppercase font-semibold bg-[#F1F5F9] text-[#334155]">
+                      <span className="px-2 py-0.5 rounded text-xs uppercase font-semibold bg-op-shaded text-op-secondary">
                         {o.platform}
                       </span>
                     </td>
-                    <td className="py-2.5 px-3 text-[#334155]">
+                    <td className="py-2.5 px-3 text-op-secondary">
                       {o.customer_name || 'Comprador'}
                     </td>
-                    <td className="py-2.5 px-3 font-mono text-[#0F172A]">
+                    <td className="py-2.5 px-3 font-mono text-op-ink">
                       {o.amount ? formatCurrency(Number(o.amount)) : '$—'}
                     </td>
                     <td className="py-2.5 px-3">
-                      <span className="text-[10px] font-medium text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                      <span className="text-xs font-medium text-op-green-dark bg-op-green-soft px-2 py-0.5 rounded border border-op-green-border">
                         {o.status === 'delivered' ? 'Entregado' : o.status}
                       </span>
                     </td>
                     <td className="py-2.5 px-3">
                       {o.invited ? (
-                        <span className="text-[10px] font-semibold text-emerald-700 flex items-center gap-1">
+                        <span className="text-xs font-semibold text-op-green-dark flex items-center gap-1">
                           <CheckCircle2 className="h-3 w-3" /> Invitado
                         </span>
                       ) : (
                         <button
                           type="button"
                           onClick={() => {
+                            setChannel(o.customer_email ? 'email' : 'whatsapp');
                             setTarget(o.customer_email || o.customer_phone || '');
-                            setOrderId(o.external_order_id);
+                            setOrderId(String(o.id));
+                            targetRef.current?.focus();
+                            targetRef.current?.scrollIntoView({ block: 'center' });
                           }}
-                          className="text-[10px] text-emerald-700 hover:underline font-semibold"
+                          className="text-xs text-op-green-dark hover:underline font-semibold"
                         >
                           Invitar ahora
                         </button>
@@ -432,53 +408,53 @@ export function RequestsManager({
       </div>
 
       {/* Invitations History Table */}
-      <div className="p-6 rounded-2xl bg-white border border-[#E2E8F0] shadow-xs space-y-4">
+      <div className="p-6 rounded-2xl bg-white border border-op-border shadow-xs space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Layers className="h-4 w-4 text-emerald-600" />
-            <h3 className="font-semibold text-sm text-[#0F172A]">
-              Historial de Invitaciones Despachadas
+            <Layers className="h-4 w-4 text-op-green-dark" />
+            <h3 className="font-semibold text-sm text-op-ink">
+              Historial de invitaciones
             </h3>
           </div>
-          <span className="text-xs text-[#64748B]">
+          <span className="text-xs text-op-muted">
             {invitations.length} invitaciones registradas
           </span>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-[#FAFAF8] border-b border-[#E2E8F0] text-[#64748B] uppercase text-[10px] tracking-wider">
+            <thead className="bg-op-canvas border-b border-op-border text-op-muted uppercase text-xs tracking-wider">
               <tr>
                 <th className="py-2.5 px-3">Token</th>
                 <th className="py-2.5 px-3">Canal</th>
                 <th className="py-2.5 px-3">Destinatario</th>
-                <th className="py-2.5 px-3">Fecha de Envío</th>
+                <th className="py-2.5 px-3">Fecha de registro</th>
                 <th className="py-2.5 px-3">Estado</th>
                 <th className="py-2.5 px-3">Enlace</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#E2E8F0]">
+            <tbody className="divide-y divide-op-border">
               {invitations.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-6 text-[#94A3B8]">
-                    No hay invitaciones enviadas todavía.
+                  <td colSpan={6} className="text-center py-6 text-op-muted">
+                    No hay invitaciones registradas todavía.
                   </td>
                 </tr>
               ) : (
-                invitations.slice(0, 15).map((inv) => (
-                  <tr key={inv.id} className="hover:bg-[#F8FAFC] transition-colors">
-                    <td className="py-2.5 px-3 font-mono text-[#64748B] text-[11px]">
+                invitations.slice(0, visibleInvitations).map((inv) => (
+                  <tr key={inv.id} className="hover:bg-op-canvas transition-colors">
+                    <td className="py-2.5 px-3 font-mono text-op-muted text-xs">
                       {inv.token.substring(0, 12)}...
                     </td>
                     <td className="py-2.5 px-3">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-[#F1F5F9] text-[#334155]">
+                      <span className="px-2 py-0.5 rounded text-xs font-semibold bg-op-shaded text-op-secondary">
                         {inv.channel.toUpperCase()}
                       </span>
                     </td>
-                    <td className="py-2.5 px-3 font-mono text-[#0F172A] text-[11px]">
+                    <td className="py-2.5 px-3 font-mono text-op-ink text-xs">
                       {inv.recipient_target}
                     </td>
-                    <td className="py-2.5 px-3 text-[#64748B] text-[11px]">
+                    <td className="py-2.5 px-3 text-op-muted text-xs">
                       {new Date(inv.sent_at).toLocaleDateString('es-MX', {
                         month: 'short',
                         day: 'numeric',
@@ -488,25 +464,25 @@ export function RequestsManager({
                     </td>
                     <td className="py-2.5 px-3">
                       <span className={cn(
-                        "text-[10px] font-semibold px-2 py-0.5 rounded border",
+                        "text-xs font-semibold px-2 py-0.5 rounded border",
                         inv.status === 'completed'
-                          ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                          ? "bg-op-green-soft text-op-green-dark border-op-green-border"
                           : inv.status === 'opened'
-                          ? "bg-blue-50 text-blue-800 border-blue-200"
-                          : "bg-[#F1F5F9] text-[#64748B] border-[#E2E8F0]"
+                          ? "bg-op-shaded text-op-secondary border-op-border"
+                          : "bg-op-shaded text-op-muted border-op-border"
                       )}>
                         {inv.status === 'completed'
                           ? 'Completada'
                           : inv.status === 'opened'
                           ? 'Abierta'
-                          : 'Entregada'}
+                          : inv.status === 'delivered' ? 'Entregada' : inv.status === 'opt_out' ? 'Baja solicitada' : 'Registrada'}
                       </span>
                     </td>
                     <td className="py-2.5 px-3">
                       <button
                         type="button"
                         onClick={() => copyInviteLink(inv.token)}
-                        className="text-[#64748B] hover:text-[#0F172A] text-[11px] flex items-center gap-1 font-mono"
+                        className="text-op-muted hover:text-op-ink text-xs flex items-center gap-1 font-mono"
                       >
                         <Copy className="h-3 w-3" />
                         <span>{copiedToken === inv.token ? '¡Copiado!' : 'Copiar'}</span>
@@ -518,6 +494,7 @@ export function RequestsManager({
             </tbody>
           </table>
         </div>
+        {visibleInvitations < invitations.length && <button type="button" onClick={() => setVisibleInvitations((count) => count + 15)} className="min-h-11 rounded-xl border border-op-border px-4 text-sm font-semibold text-op-green-dark">Mostrar más invitaciones ({invitations.length - visibleInvitations} restantes)</button>}
       </div>
     </div>
   );

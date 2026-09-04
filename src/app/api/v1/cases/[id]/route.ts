@@ -161,7 +161,7 @@ export async function PATCH(
 
     let resolvedAtClause = '';
     const updateParams: unknown[] = [newStatus, isConfirmed, remedyOffered, resolutionSummary];
-    let paramIndex = 5;
+    const paramIndex = 5;
 
     if (isConfirmed && !currentCase.resolved_at) {
       resolvedAtClause = ', resolved_at = NOW(), total_resolution_hours = GREATEST(1.0, ROUND(EXTRACT(EPOCH FROM (NOW() - created_at)) / 3600.0, 1))';

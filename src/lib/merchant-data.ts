@@ -277,37 +277,6 @@ export async function getWidgetDataByToken(token: string): Promise<WidgetWithBus
     };
   }
 
-  // Fallback by parsing slug from token e.g. wgt_luuna_badge_2026
-  const parts = token.split('_');
-  if (parts.length >= 2) {
-    const slugCandidate = parts[1];
-    const bRes = await query<Business>(`SELECT * FROM businesses WHERE slug = $1 LIMIT 1`, [slugCandidate]);
-    if (bRes.rows.length > 0) {
-      const b = bRes.rows[0];
-      return {
-        ...b,
-        b_slug: b.slug,
-        widget_token: token,
-        widget_type: parts[2] || 'badge',
-        theme: 'light',
-        config: {},
-      };
-    }
-  }
-
-  // Default fallback
-  const def = await query<Business>(`SELECT * FROM businesses ORDER BY id ASC LIMIT 1`);
-  if (def.rows.length > 0) {
-    const b = def.rows[0];
-    return {
-      ...b,
-      b_slug: b.slug,
-      widget_token: token,
-      widget_type: 'badge',
-      theme: 'light',
-      config: {},
-    };
-  }
   return null;
 }
 

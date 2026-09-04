@@ -86,8 +86,9 @@ export async function GET(request: NextRequest) {
     }
 
     // Clean search token (strip URL protocols, clean phones, rfc)
-    const cleanDomain = q.replace(/^https?:\/\//i, '').replace(/\/.*$/, '').toLowerCase();
-    const cleanPhone = q.replace(/[^0-9+]/g, '');
+    const cleanDomain = q.replace(/^https?:\/\//i, '').replace(/^www\./i, '').replace(/\/.*$/, '').toLowerCase();
+    const phoneDigits = q.replace(/\D/g, '');
+    const cleanPhone = phoneDigits.length >= 7 ? phoneDigits.replace(/^52(?=\d{10}$)/, '') : '';
     const cleanQuery = `%${q}%`;
     const cleanDomainQuery = `%${cleanDomain}%`;
 
@@ -100,13 +101,15 @@ export async function GET(request: NextRequest) {
              b.effective_reviews_count
       FROM businesses b
       LEFT JOIN identities i ON i.business_id = b.id
-      WHERE 
+      WHERE (
         b.brand_name ILIKE $1
+        OR b.slug ILIKE $1
         OR b.legal_name ILIKE $1
         OR b.domain ILIKE $2
         OR b.rfc ILIKE $1
-        OR ($3 != '' AND (b.phone ILIKE $4 OR b.whatsapp ILIKE $4))
+        OR ($3 != '' AND (regexp_replace(b.phone, '[^0-9]', '', 'g') LIKE $4 OR regexp_replace(b.whatsapp, '[^0-9]', '', 'g') LIKE $4))
         OR (i.identifier ILIKE $1)
+      ) AND ($5::text IS NULL OR b.category ILIKE $5)
       ORDER BY b.trust_score DESC, b.observed_orders_count DESC
       LIMIT 20
     `;
@@ -116,6 +119,7 @@ export async function GET(request: NextRequest) {
       cleanDomainQuery,
       cleanPhone,
       `%${cleanPhone}%`,
+      category && category !== 'Todos' ? `%${category}%` : null,
     ]);
 
     if (res.rows.length === 0) {

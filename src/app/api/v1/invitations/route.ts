@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     }
 
     let businessId = body.business_id;
-    let orderId = body.order_id || null;
+    const orderId = body.order_id || null;
 
     // If order_id provided, look up order to get business_id and mark invited
     if (orderId) {

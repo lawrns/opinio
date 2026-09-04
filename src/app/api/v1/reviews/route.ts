@@ -300,7 +300,7 @@ export async function GET(request: NextRequest) {
 
     // Fetch responses for these reviews if any
     const reviewIds = reviewsRes.rows.map((r) => r.id);
-    let responsesByReviewId: Record<number, Array<{ id: number; responder_name: string; response_text: string; created_at: string }>> = {};
+    const responsesByReviewId: Record<number, Array<{ id: number; responder_name: string; response_text: string; created_at: string }>> = {};
 
     if (reviewIds.length > 0) {
       const respRes = await query<{

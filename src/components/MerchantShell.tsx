@@ -33,7 +33,7 @@ export function MerchantShell({
 
   if (!currentBusiness) {
     return (
-      <div className="min-h-screen bg-[#FAFAF8] flex items-center justify-center text-[#0F172A]">
+      <div className="min-h-screen bg-op-canvas flex items-center justify-center text-op-ink">
         <p>No se encontraron negocios registrados en Opinio.mx.</p>
       </div>
     );
@@ -45,7 +45,7 @@ export function MerchantShell({
   ).length;
 
   return (
-    <div className="min-h-screen bg-[#FAFAF8] text-[#0F172A] flex antialiased">
+    <div className="min-h-screen bg-op-canvas text-op-ink flex flex-col lg:flex-row antialiased">
       {/* Fixed Left Navigation */}
       <MerchantSidebar
         currentBusiness={currentBusiness}
@@ -59,7 +59,7 @@ export function MerchantShell({
           currentBusiness={currentBusiness}
           pendingCases={businessCases}
         />
-        <main className="flex-1 p-6 md:p-8 overflow-y-auto bg-[#FAFAF8]">
+        <main id="contenido" tabIndex={-1} className="flex-1 min-w-0 p-4 md:p-8 bg-op-canvas">
           {children}
         </main>
       </div>

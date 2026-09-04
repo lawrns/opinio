@@ -8,6 +8,7 @@ import {
 import { RequestsManager } from '@/components/RequestsManager';
 
 export const dynamic = 'force-dynamic';
+export const metadata = { title: 'Invitaciones del negocio · Opinio.mx' };
 
 interface PageProps {
   searchParams: Promise<{ business?: string }>;
@@ -22,7 +23,7 @@ export default async function MerchantRequestsPage({ searchParams }: PageProps) 
 
   if (!currentBusiness) {
     return (
-      <div className="text-center py-16 text-zinc-400">
+      <div className="text-center py-16 text-op-muted">
         No se encontró información del comercio.
       </div>
     );
@@ -34,13 +35,13 @@ export default async function MerchantRequestsPage({ searchParams }: PageProps) 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12">
       {/* Header */}
-      <div className="border-b border-[#E2E8F0] pb-5">
-        <h1 className="text-2xl font-bold tracking-tight text-[#0F172A]">
+      <div className="border-b border-op-border pb-5">
+        <h1 className="text-2xl font-bold tracking-tight text-op-ink">
           Solicitudes y Cobertura de Pedidos
         </h1>
-        <p className="text-xs text-[#64748B] mt-1">
+        <p className="text-sm text-op-muted mt-2">
           Administra el motor de invitaciones y la representatividad estadística del Pasaporte de Confianza de{' '}
-          <strong className="text-[#0F172A]">{currentBusiness.brand_name}</strong>.
+          <strong className="text-op-ink">{currentBusiness.brand_name}</strong>.
         </p>
       </div>
 

@@ -1,208 +1,103 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { 
-  Search, 
-  ArrowRight, 
-  ShieldCheck, 
-  Loader2,
-  CheckCircle2
-} from 'lucide-react';
+import { ArrowRight, Search, Loader2 } from 'lucide-react';
 
-interface SearchResultItem {
+interface SearchResult {
   id: number;
   slug: string;
   brand_name: string;
-  legal_name: string | null;
   category: string;
-  trust_score: number | string;
-  coverage_percentage: number | string;
-  verified_level: string;
   domain: string | null;
-  whatsapp: string | null;
+  trust_score: number | string;
+  effective_reviews_count: number;
 }
 
 export function HomeSearch() {
   const router = useRouter();
+  const id = useId();
+  const wrapper = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [results, setResults] = useState<SearchResultItem[]>([]);
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [response, setResponse] = useState<{ query: string; results: SearchResult[]; error: boolean } | null>(null);
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(-1);
+  const trimmed = query.trim();
+  const current = response?.query === trimmed ? response : null;
+  const loading = trimmed.length >= 2 && !current;
+  const results = current?.results ?? [];
+  const expanded = open && trimmed.length >= 2;
+  const searchHref = `/verificar?q=${encodeURIComponent(trimmed)}`;
 
-  // Live search debounced
   useEffect(() => {
-    if (!query.trim() || query.length < 2) {
-      setResults([]);
-      setIsOpen(false);
-      return;
-    }
-
+    if (trimmed.length < 2) return;
+    const controller = new AbortController();
     const timer = setTimeout(async () => {
-      setLoading(true);
       try {
-        const res = await fetch(`/api/v1/search?q=${encodeURIComponent(query.trim())}`);
+        const res = await fetch(`/api/v1/search?q=${encodeURIComponent(trimmed)}`, { signal: controller.signal });
+        if (!res.ok) throw new Error('Search unavailable');
         const data = await res.json();
-        if (data.success && data.results) {
-          setResults(data.results.slice(0, 5));
-          setIsOpen(true);
-        }
-      } catch (err) {
-        console.error('Search error:', err);
-      } finally {
-        setLoading(false);
+        if (!data.success) throw new Error('Search unavailable');
+        if (!controller.signal.aborted) setResponse({ query: trimmed, results: data.results.slice(0, 5), error: false });
+      } catch {
+        if (!controller.signal.aborted) setResponse({ query: trimmed, results: [], error: true });
       }
-    }, 200);
+    }, 250);
+    return () => { clearTimeout(timer); controller.abort(); };
+  }, [trimmed]);
 
-    return () => clearTimeout(timer);
-  }, [query]);
-
-  // Click outside to close
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!query.trim()) return;
-
-    if (results.length > 0) {
-      router.push(`/b/${results[0].slug}`);
-    } else {
-      router.push(`/verificar?q=${encodeURIComponent(query.trim())}`);
-    }
-  };
-
-  const handleSelectBusiness = (slug: string) => {
-    setIsOpen(false);
-    router.push(`/b/${slug}`);
-  };
+  function submit(event: React.FormEvent) {
+    event.preventDefault();
+    if (!trimmed) return;
+    setOpen(false);
+    router.push(active >= 0 && results[active] ? `/b/${results[active].slug}` : searchHref);
+  }
 
   return (
-    <div className="w-full max-w-3xl mx-auto relative" ref={dropdownRef}>
-      {/* Big Trustpilot-style Floating Search Capsule */}
-      <form
-        onSubmit={handleSubmit}
-        className="relative flex items-center bg-white rounded-full p-2 border border-gray-200 shadow-[0_12px_35px_-8px_rgba(0,0,0,0.08)] hover:border-gray-300 focus-within:border-[#00B67A] focus-within:shadow-[0_16px_40px_-8px_rgba(0,182,122,0.18)] transition-all"
-      >
-        <div className="pl-4 text-gray-400">
-          {loading ? (
-            <Loader2 className="w-5 h-5 animate-spin text-[#00B67A]" />
-          ) : (
-            <Search className="w-5 h-5 text-gray-400" />
-          )}
-        </div>
-
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onFocus={() => {
-            if (results.length > 0) setIsOpen(true);
-          }}
-          placeholder="Busca una empresa, categoría, RFC o número de WhatsApp (+52)..."
-          className="w-full bg-transparent px-4 py-3 text-sm sm:text-base text-[#121511] placeholder:text-gray-400 focus:outline-none font-medium"
-        />
-
-        {/* Circular Blue Action Button */}
-        <button
-          type="submit"
-          className="w-12 h-12 rounded-full bg-[#2050E6] hover:bg-[#1A42C2] text-white flex items-center justify-center shrink-0 transition-transform active:scale-95 shadow-sm"
-          title="Buscar en Opinio"
-        >
-          <Search className="w-5 h-5" />
-        </button>
-      </form>
-
-      {/* Quick Search Chips below Capsule */}
-      <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-xs text-gray-600">
-        <span className="font-medium text-gray-400 text-[11px]">Sugerencias:</span>
-        {[
-          { label: 'Luuna Colchones', query: 'Luuna' },
-          { label: 'doto.com.mx', query: 'doto' },
-          { label: 'Ahal BioCosmética', query: 'Ahal' },
-          { label: 'Xaman Joyería', query: 'Xaman' },
-          { label: 'Möbel Studio GDL', query: 'Möbel' },
-        ].map((tag) => (
-          <button
-            key={tag.label}
-            type="button"
-            onClick={() => {
-              setQuery(tag.query);
-              router.push(`/verificar?q=${encodeURIComponent(tag.query)}`);
+    <div ref={wrapper} className="relative w-full" onBlur={(event) => {
+      if (!event.currentTarget.contains(event.relatedTarget as Node)) setOpen(false);
+    }}>
+      <form role="search" onSubmit={submit} className="relative">
+        <label htmlFor={id} className="mb-2.5 block text-sm font-semibold text-op-ink">¿Qué comercio quieres conocer?</label>
+        <div className="flex items-center gap-2 rounded-op-card border border-op-strong bg-op-sheet p-2 shadow-flat transition-colors focus-within:border-op-green">
+          <Search aria-hidden="true" className="ml-2 hidden size-5 shrink-0 text-op-muted sm:block" />
+          <input id={id} name="q" value={query} autoComplete="off" spellCheck={false} maxLength={200}
+            role="combobox" aria-autocomplete="list" aria-expanded={expanded} aria-controls={`${id}-results`} aria-activedescendant={active >= 0 && expanded && results[active] ? `${id}-option-${active}` : undefined}
+            aria-describedby={`${id}-hint`} placeholder="Nombre, sitio web o WhatsApp"
+            onChange={(event) => { setQuery(event.target.value); setOpen(true); setActive(-1); }}
+            onFocus={() => setOpen(true)}
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') { setOpen(false); setActive(-1); }
+              if (event.key === 'ArrowDown' && results.length) { event.preventDefault(); setOpen(true); setActive((index) => (index + 1) % results.length); }
+              if (event.key === 'ArrowUp' && results.length) { event.preventDefault(); setOpen(true); setActive((index) => index <= 0 ? results.length - 1 : index - 1); }
             }}
-            className="px-3 py-1 rounded-full bg-white/80 hover:bg-white text-gray-700 hover:text-[#121511] border border-gray-200/80 shadow-2xs transition-all hover:border-gray-300 font-medium"
-          >
-            {tag.label}
+            className="min-w-0 flex-1 bg-transparent px-2 py-3 text-base text-op-ink placeholder:text-op-muted focus:outline-none" />
+          <button type="submit" aria-label="Buscar comercios" disabled={!trimmed} className="op-button min-w-12 shrink-0 disabled:opacity-50">
+            {loading ? <Loader2 aria-hidden="true" className="size-5 animate-spin" /> : <Search aria-hidden="true" className="size-5 sm:hidden" />}
+            <span className="hidden sm:inline">Buscar</span>
           </button>
-        ))}
-      </div>
-
-      {/* Autocomplete Dropdown */}
-      {isOpen && results.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl border border-gray-200 shadow-2xl overflow-hidden z-40 animate-in fade-in duration-100">
-          <div className="p-2 border-b border-gray-100 bg-[#FCFBF3] flex items-center justify-between text-[11px] text-gray-500 font-semibold px-3">
-            <span>Resultados en tiempo real</span>
-            <span className="text-[#00B67A] font-bold">Pasaportes Verificados</span>
-          </div>
-
-          <div className="divide-y divide-gray-100 max-h-80 overflow-y-auto">
-            {results.map((b) => (
-              <button
-                key={b.id}
-                type="button"
-                onClick={() => handleSelectBusiness(b.slug)}
-                className="w-full text-left p-3.5 hover:bg-[#F9F9F6] flex items-center justify-between gap-4 transition-colors group"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-center font-bold text-gray-700 text-xs shrink-0">
-                    {b.brand_name.slice(0, 2).toUpperCase()}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-sm font-bold text-[#121511] group-hover:text-[#00B67A] transition-colors flex items-center gap-1.5">
-                      <span className="truncate">{b.brand_name}</span>
-                      <CheckCircle2 className="w-3.5 h-3.5 text-[#00B67A] shrink-0" />
-                    </div>
-                    <p className="text-xs text-gray-500 truncate mt-0.5">
-                      {b.legal_name || b.category} • {b.domain || 'WhatsApp Oficial'}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="text-right shrink-0">
-                  <div className="flex items-center gap-1 justify-end text-xs font-bold text-[#121511]">
-                    <div className="flex items-center text-[#00B67A]">
-                      {'★'.repeat(5)}
-                    </div>
-                    <span className="font-mono text-sm">{b.trust_score}</span>
-                  </div>
-                  <div className="text-[10px] text-gray-500 font-medium mt-0.5">
-                    {b.coverage_percentage}% Cobertura
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
-
-          <div className="p-2.5 bg-gray-50 border-t border-gray-100 text-center">
-            <button
-              type="button"
-              onClick={() => router.push(`/verificar?q=${encodeURIComponent(query)}`)}
-              className="text-xs font-bold text-[#2050E6] hover:underline inline-flex items-center gap-1"
-            >
-              <span>Ver todos los resultados para &ldquo;{query}&rdquo;</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
         </div>
-      )}
+        <div className="sr-only" role="status">{expanded ? loading ? 'Buscando comercios' : current?.error ? 'Búsqueda no disponible' : `${results.length} sugerencias disponibles` : ''}</div>
+        {expanded && <div className="absolute left-0 right-0 top-full z-40 mt-2 overflow-hidden rounded-op-card border border-op-border bg-op-sheet text-left shadow-elevated">
+          <ul id={`${id}-results`} role="listbox" aria-label="Sugerencias de comercios" className="max-h-72 overflow-y-auto">
+            {results.map((business, index) => <li key={business.id} id={`${id}-option-${index}`} role="option" aria-selected={active === index}
+              onPointerDown={(event) => event.preventDefault()} onMouseMove={() => setActive(index)} onClick={() => { setOpen(false); router.push(`/b/${business.slug}`); }}
+              className={`flex cursor-pointer items-center justify-between gap-3 border-b border-op-border px-4 py-4 ${active === index ? 'bg-op-green-soft' : 'hover:bg-op-shaded'}`}>
+              <div className="min-w-0"><p className="truncate text-sm font-semibold">{business.brand_name}</p><p className="mt-1 truncate text-xs text-op-muted">{business.domain || business.category}</p></div>
+              <ArrowRight aria-hidden="true" className="size-4 shrink-0 text-op-green" />
+            </li>)}
+          </ul>
+          {loading && <p className="p-5 text-sm text-op-muted">Buscando en el directorio…</p>}
+          {!loading && !results.length && <p className="p-5 text-sm leading-relaxed text-op-secondary">{current?.error ? 'No pudimos cargar las sugerencias. Abre el directorio para volver a intentar.' : 'No encontramos coincidencias. Prueba con el nombre comercial o su sitio web.'}</p>}
+          {!loading && <Link href={searchHref} onClick={() => setOpen(false)} className="flex min-h-12 items-center justify-between gap-3 bg-op-shaded px-4 py-3 text-sm font-semibold text-op-green-dark">Ver resultados en el directorio <ArrowRight aria-hidden="true" className="size-4 shrink-0" /></Link>}
+        </div>}
+      </form>
+      <p id={`${id}-hint`} className="mt-3 text-xs leading-relaxed text-op-muted">También puedes buscar por RFC. La información disponible cambia según cada comercio.</p>
+      <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-op-muted">
+        <span>Prueba con</span>
+        {['Luuna', 'doto', 'Ahal'].map((name) => <Link href={`/verificar?q=${encodeURIComponent(name)}`} className="inline-flex min-h-9 items-center gap-1 font-medium text-op-secondary underline decoration-op-strong underline-offset-4 hover:text-op-green" key={name}>{name}<ArrowRight aria-hidden="true" className="size-3" /></Link>)}
+      </div>
     </div>
   );
 }

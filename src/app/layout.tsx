@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   description: "Antes de pagar, comprueba quién vende, cómo cumple y cómo responde. El estándar de confianza independiente para compras en línea, WhatsApp y transferencias en México.",
   keywords: ["Opinio", "Confianza comercial", "PROFECO", "DENUE", "Comercio electrónico México", "Verificar tienda", "Compras WhatsApp"],
   icons: {
-    icon: "/favicon.ico",
+    icon: "/opinio.svg",
   },
   openGraph: {
     title: "Opinio.mx — La confianza se demuestra",
@@ -39,7 +39,11 @@ export default function RootLayout({
       lang="es-MX"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <a href="#contenido" className="skip-link">Saltar al contenido</a>
+        {process.env.OPINIO_QA_FIXTURES === '1' && <aside aria-label="Entorno de prueba" className="border-b border-op-border bg-op-warning-soft px-4 py-2 text-center text-xs font-medium text-op-warning">Vista previa con datos de prueba. Las opiniones y los comercios son ejemplos del entorno de desarrollo.</aside>}
+        {children}
+      </body>
     </html>
   );
 }

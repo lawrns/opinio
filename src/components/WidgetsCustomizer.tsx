@@ -1,474 +1,65 @@
 'use client';
 
 import React from 'react';
-import {
-  Code2,
-  Copy,
-  CheckCircle2,
-  ShieldCheck,
-  ExternalLink,
-  Sliders,
-  Check,
-  Plus,
-  Eye,
-} from 'lucide-react';
+import Link from 'next/link';
+import { Code2, Copy, ExternalLink, Plus, Eye } from 'lucide-react';
 import { Business, Widget } from '@/lib/types';
 import { createOrUpdateWidgetAction } from '@/lib/merchant-actions';
 import { cn } from '@/lib/utils';
-import Link from 'next/link';
 
-interface WidgetsCustomizerProps {
-  business: Business;
-  existingWidgets: Widget[];
-}
+interface WidgetsCustomizerProps { business: Business; existingWidgets: Widget[] }
+const formats = [
+  { id: 'badge', name: 'Sello compacto', description: 'Para el encabezado o pie de tu tienda.', height: 180 },
+  { id: 'reassurance', name: 'Resumen de confianza', description: 'Junto a la información de compra.', height: 320 },
+  { id: 'card', name: 'Tarjeta completa', description: 'Para presentar el perfil de tu negocio.', height: 500 },
+] as const;
 
-export function WidgetsCustomizer({
-  business,
-  existingWidgets,
-}: WidgetsCustomizerProps) {
-  const [widgets, setWidgets] = React.useState<Widget[]>(existingWidgets);
-  const [selectedStyle, setSelectedStyle] = React.useState<'badge' | 'floating' | 'reassurance' | 'card'>('badge');
+export function WidgetsCustomizer({ business, existingWidgets }: WidgetsCustomizerProps) {
+  const [widgets, setWidgets] = React.useState(existingWidgets);
+  const [selectedStyle, setSelectedStyle] = React.useState<'badge' | 'reassurance' | 'card'>('badge');
   const [selectedTheme, setSelectedTheme] = React.useState<'light' | 'dark'>('light');
-  const [showScore, setShowScore] = React.useState(true);
-  const [showCoverage, setShowCoverage] = React.useState(true);
-  const [activeTab, setActiveTab] = React.useState<'script' | 'react' | 'iframe'>('script');
-  const [copied, setCopied] = React.useState(false);
   const [creating, setCreating] = React.useState(false);
+  const [feedback, setFeedback] = React.useState('');
+  const [error, setError] = React.useState('');
+  const currentWidget = widgets.find((widget) => widget.widget_type === selectedStyle && widget.is_active);
+  const format = formats.find((item) => item.id === selectedStyle)!;
+  const previewPath = currentWidget ? `/widget/${selectedStyle}/${encodeURIComponent(currentWidget.token)}?theme=${selectedTheme}` : '';
+  const embedCode = currentWidget ? `<iframe\n  src="https://opinio.mx${previewPath}"\n  title="Perfil de confianza en Opinio.mx"\n  width="100%"\n  height="${format.height}"\n  loading="lazy"\n  style="border:0;max-width:480px;"\n></iframe>` : '';
 
-  // Active token for preview & embed
-  const currentWidget = widgets.find((w) => w.widget_type === selectedStyle) || widgets[0];
-  const token = currentWidget ? currentWidget.token : `wgt_${business.slug}_${selectedStyle}_2026`;
-
-  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://opinio.mx';
-
-  const embedScript = `<script 
-  src="${baseUrl}/widget.js" 
-  data-token="${token}" 
-  data-style="${selectedStyle}" 
-  data-theme="${selectedTheme}" 
-  async>
-</script>`;
-
-  const embedReact = `import { OpinioWidget } from '@opinio/react';
-
-export default function CheckoutPage() {
-  return (
-    <OpinioWidget
-      token="${token}"
-      style="${selectedStyle}"
-      theme="${selectedTheme}"
-      showScore={${showScore}}
-      showCoverage={${showCoverage}}
-    />
-  );
-}`;
-
-  const embedIframe = `<iframe 
-  src="${baseUrl}/widget/${selectedStyle === 'floating' ? 'badge' : selectedStyle}/${token}?theme=${selectedTheme}" 
-  width="${selectedStyle === 'badge' ? '280' : selectedStyle === 'reassurance' ? '420' : '360'}" 
-  height="${selectedStyle === 'badge' ? '64' : selectedStyle === 'reassurance' ? '120' : '220'}" 
-  frameborder="0" 
-  scrolling="no" 
-  style="border:none; overflow:hidden;"
-></iframe>`;
-
-  const copyCode = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
-  };
-
-  const handleCreateWidget = async () => {
+  async function createWidget() {
+    if (creating) return;
     setCreating(true);
-    const newToken = `wgt_${business.slug}_${selectedStyle}_${Date.now().toString().slice(-4)}`;
-    const res = await createOrUpdateWidgetAction({
-      businessId: business.id,
-      token: newToken,
-      widgetType: selectedStyle,
-      theme: selectedTheme,
-      config: { showScore, showCoverage },
-    });
+    setError('');
+    setFeedback('');
+    try {
+      const result = await createOrUpdateWidgetAction({ businessId: business.id, widgetType: selectedStyle, theme: selectedTheme, config: {} });
+      if (result.success && result.widget) {
+        setWidgets((previous) => [result.widget!, ...previous]);
+        setFeedback('Widget creado. El código de inserción está listo para copiar.');
+      } else setError('No se pudo crear el widget. Inténtalo de nuevo.');
+    } catch { setError('No pudimos conectar. Vuelve a intentar crear el widget.'); }
+    finally { setCreating(false); }
+  }
 
-    if (res.success && res.widget) {
-      setWidgets([res.widget, ...widgets]);
-    }
-    setCreating(false);
-  };
+  async function copyCode() {
+    try { await navigator.clipboard.writeText(embedCode); setFeedback('Código copiado. Pégalo en un bloque HTML de tu tienda.'); }
+    catch { setError('No se pudo copiar. Selecciona el código y cópialo manualmente.'); }
+  }
 
-  const isTransparent = Number(business.coverage_percentage) >= 90;
-
-  return (
-    <div className="space-y-8">
-      {/* 2-Column Customizer & Live Preview */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Left Column: Customization Controls (5 cols) */}
-        <div className="lg:col-span-5 p-6 rounded-2xl bg-white border border-[#E2E8F0] shadow-xs space-y-6">
-          <div>
-            <h3 className="text-sm font-bold text-[#0F172A] flex items-center gap-2">
-              <Sliders className="h-4 w-4 text-emerald-600" />
-              <span>Personalizar Apariencia</span>
-            </h3>
-            <p className="text-xs text-[#64748B] mt-1">
-              Selecciona el formato que mejor se integre a tu tienda en línea o pasarela de pago.
-            </p>
-          </div>
-
-          {/* 1. Style Selector */}
-          <div className="space-y-2">
-            <label className="text-xs font-semibold text-[#0F172A]">
-              Estilo del Componente
-            </label>
-            <div className="grid grid-cols-2 gap-2.5">
-              {[
-                { id: 'badge', name: 'Badge Compacto', desc: 'Para navbar o footer' },
-                { id: 'floating', name: 'Sello Flotante', desc: 'Esquina fija en pantalla' },
-                { id: 'reassurance', name: 'Tarjeta Checkout', desc: 'Junto al botón de pagar' },
-                { id: 'card', name: 'Tarjeta Amplia', desc: 'Con 3 Pilares y reseñas' },
-              ].map((style) => (
-                <button
-                  key={style.id}
-                  type="button"
-                  onClick={() => setSelectedStyle(style.id as 'badge' | 'floating' | 'reassurance' | 'card')}
-                  className={cn(
-                    "p-3 rounded-xl border text-left text-xs transition-all",
-                    selectedStyle === style.id
-                      ? "bg-emerald-50 text-emerald-900 border-emerald-300 shadow-xs font-semibold"
-                      : "bg-[#FAFAF8] text-[#475569] border-[#E2E8F0] hover:bg-[#F1F5F9] hover:text-[#0F172A]"
-                  )}
-                >
-                  <div className="font-semibold">{style.name}</div>
-                  <div className="text-[10px] text-[#64748B] mt-0.5">{style.desc}</div>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* 2. Theme Selector */}
-          <div className="space-y-2">
-            <label className="text-xs font-semibold text-[#0F172A]">
-              Tema Visual
-            </label>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => setSelectedTheme('light')}
-                className={cn(
-                  "p-2.5 rounded-xl border text-xs font-semibold flex items-center justify-center gap-2 transition-all",
-                  selectedTheme === 'light'
-                    ? "bg-emerald-50 text-emerald-900 border-emerald-300 shadow-xs"
-                    : "bg-[#FAFAF8] text-[#64748B] border-[#E2E8F0] hover:bg-[#F1F5F9]"
-                )}
-              >
-                <span>Tema Claro</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setSelectedTheme('dark')}
-                className={cn(
-                  "p-2.5 rounded-xl border text-xs font-semibold flex items-center justify-center gap-2 transition-all",
-                  selectedTheme === 'dark'
-                    ? "bg-[#0F172A] text-white border-[#0F172A] shadow-xs"
-                    : "bg-[#FAFAF8] text-[#64748B] border-[#E2E8F0] hover:bg-[#F1F5F9]"
-                )}
-              >
-                <span>Tema Oscuro</span>
-              </button>
-            </div>
-          </div>
-
-          {/* 3. Toggles */}
-          <div className="space-y-3 pt-2 border-t border-[#E2E8F0]">
-            <label className="flex items-center justify-between text-xs text-[#334155] cursor-pointer">
-              <span>Mostrar Opinio Score ({business.trust_score})</span>
-              <input
-                type="checkbox"
-                checked={showScore}
-                onChange={(e) => setShowScore(e.target.checked)}
-                className="rounded border-[#CBD5E1] text-emerald-600 focus:ring-emerald-500 h-4 w-4"
-              />
-            </label>
-
-            <label className="flex items-center justify-between text-xs text-[#334155] cursor-pointer">
-              <span>Mostrar Distintivo de Cobertura Transparente</span>
-              <input
-                type="checkbox"
-                checked={showCoverage}
-                onChange={(e) => setShowCoverage(e.target.checked)}
-                className="rounded border-[#CBD5E1] text-emerald-600 focus:ring-emerald-500 h-4 w-4"
-              />
-            </label>
-          </div>
-
-          {/* Generate Token Action */}
-          <div className="pt-2">
-            <button
-              type="button"
-              onClick={handleCreateWidget}
-              disabled={creating}
-              className="w-full py-2.5 rounded-xl text-xs font-semibold bg-[#0F172A] hover:bg-[#1E293B] text-white shadow-xs transition-all flex items-center justify-center gap-2"
-            >
-              {creating ? (
-                <span>Creando nuevo token...</span>
-              ) : (
-                <>
-                  <Plus className="h-4 w-4" />
-                  <span>Generar Nuevo Token Criptográfico</span>
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* Right Column: Live Visual Preview & Embed Snippet (7 cols) */}
-        <div className="lg:col-span-7 space-y-6">
-          {/* Live Preview Canvas */}
-          <div className="p-6 rounded-2xl bg-white border border-[#E2E8F0] shadow-xs space-y-4">
-            <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-3">
-              <div className="flex items-center gap-2">
-                <Eye className="h-4 w-4 text-emerald-600" />
-                <h4 className="font-bold text-xs uppercase tracking-wider text-[#64748B] font-mono">
-                  Vista Previa en Vivo
-                </h4>
-              </div>
-
-              <div className="text-[11px] text-[#64748B] font-mono flex items-center gap-2">
-                <span>Fondo: {selectedTheme === 'light' ? 'Claro' : 'Oscuro'}</span>
-                <span>•</span>
-                <span className="truncate max-w-[150px]">Token: {token}</span>
-              </div>
-            </div>
-
-            {/* Simulated Store Mock Surface */}
-            <div
-              className={cn(
-                "p-8 rounded-xl border flex items-center justify-center min-h-[220px] transition-colors relative overflow-hidden",
-                selectedTheme === 'light'
-                  ? "bg-[#FAFAF8] border-[#E2E8F0]"
-                  : "bg-slate-900 border-slate-800"
-              )}
-            >
-              {/* 1. Badge Compacto Preview */}
-              {selectedStyle === 'badge' && (
-                <div
-                  className={cn(
-                    "inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full border shadow-sm transition-all select-none",
-                    selectedTheme === 'light'
-                      ? "bg-white text-[#0F172A] border-[#E2E8F0]"
-                      : "bg-slate-950 text-white border-slate-700"
-                  )}
-                >
-                  <div className="h-5 w-5 rounded-full bg-emerald-500/20 text-emerald-600 flex items-center justify-center">
-                    <ShieldCheck className="h-3.5 w-3.5" />
-                  </div>
-                  <span className="text-xs font-semibold">
-                    Opinio<span className="text-emerald-600">.mx</span>
-                  </span>
-                  {showScore && (
-                    <span className="font-mono text-xs font-bold text-emerald-600">
-                      {business.trust_score}
-                    </span>
-                  )}
-                  {showCoverage && isTransparent && (
-                    <span className="text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.5 rounded-full">
-                      Cobertura {business.coverage_percentage}%
-                    </span>
-                  )}
-                </div>
-              )}
-
-              {/* 2. Floating Seal Preview */}
-              {selectedStyle === 'floating' && (
-                <div
-                  className={cn(
-                    "p-3.5 rounded-2xl border flex items-center gap-3 shadow-lg max-w-xs select-none",
-                    selectedTheme === 'light'
-                      ? "bg-white text-[#0F172A] border-[#E2E8F0]"
-                      : "bg-slate-950 text-white border-slate-700"
-                  )}
-                >
-                  <div className="h-9 w-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-200">
-                    <ShieldCheck className="h-5 w-5" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-xs font-bold truncate flex items-center gap-1">
-                      <span>{business.brand_name}</span>
-                      <CheckCircle2 className="h-3 w-3 text-emerald-600" />
-                    </div>
-                    <div className="text-[10px] text-[#64748B] flex items-center gap-1.5 mt-0.5">
-                      <span className="font-bold text-emerald-600 font-mono">Score {business.trust_score}</span>
-                      <span>•</span>
-                      <span>{business.coverage_percentage}% Auditado</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* 3. Reassurance Card Preview */}
-              {selectedStyle === 'reassurance' && (
-                <div
-                  className={cn(
-                    "w-full max-w-md p-4 rounded-xl border space-y-2 select-none",
-                    selectedTheme === 'light'
-                      ? "bg-white text-[#0F172A] border-[#E2E8F0]"
-                      : "bg-slate-950 text-white border-slate-700"
-                  )}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <ShieldCheck className="h-4 w-4 text-emerald-600" />
-                      <span className="text-xs font-bold">Compra respaldada por Opinio.mx</span>
-                    </div>
-                    <span className="text-[10px] font-mono text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                      Score {business.trust_score}/100
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-[#64748B] leading-relaxed">
-                    Comercio con identidad jurídica verificada y garantía de resolución confirmada por el comprador.
-                  </p>
-                </div>
-              )}
-
-              {/* 4. Card Preview */}
-              {selectedStyle === 'card' && (
-                <div
-                  className={cn(
-                    "w-full max-w-sm p-4 rounded-2xl border space-y-3 select-none",
-                    selectedTheme === 'light'
-                      ? "bg-white text-[#0F172A] border-[#E2E8F0]"
-                      : "bg-slate-950 text-white border-slate-700"
-                  )}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="h-7 w-7 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center font-bold text-xs">
-                        {business.brand_name.slice(0, 2).toUpperCase()}
-                      </div>
-                      <div className="text-xs font-bold">{business.brand_name}</div>
-                    </div>
-                    <span className="font-mono text-xs font-bold text-emerald-600">
-                      {business.trust_score} / 100
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-1.5 text-center text-[10px] p-2 rounded-xl bg-[#FAFAF8] border border-[#E2E8F0]">
-                    <div>
-                      <div className="text-[#64748B]">Existe</div>
-                      <div className="font-semibold text-emerald-700">SAT / CLEE</div>
-                    </div>
-                    <div>
-                      <div className="text-[#64748B]">Cumple</div>
-                      <div className="font-semibold text-emerald-700">{business.coverage_percentage}% Cobertura</div>
-                    </div>
-                    <div>
-                      <div className="text-[#64748B]">Resuelve</div>
-                      <div className="font-semibold text-emerald-700">{business.resolution_rate}% Confirmado</div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="text-right">
-              <Link
-                href={`/widget/${selectedStyle === 'floating' ? 'badge' : selectedStyle}/${token}`}
-                target="_blank"
-                className="text-xs text-emerald-600 hover:text-emerald-700 font-medium inline-flex items-center gap-1"
-              >
-                <span>Endpoint directo del iframe: /widget/{selectedStyle === 'floating' ? 'badge' : selectedStyle}/{token}</span>
-                <ExternalLink className="h-3 w-3" />
-              </Link>
-            </div>
-          </div>
-
-          {/* Copyable Embed Code Snippets */}
-          <div className="p-6 rounded-2xl bg-white border border-[#E2E8F0] shadow-xs space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Code2 className="h-4 w-4 text-emerald-600" />
-                <h4 className="font-bold text-xs uppercase tracking-wider text-[#0F172A] font-mono">
-                  Código de Inserción
-                </h4>
-              </div>
-
-              {/* Code Tab Switcher */}
-              <div className="flex items-center gap-1 bg-[#F1F5F9] p-1 rounded-xl border border-[#E2E8F0] text-xs">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('script')}
-                  className={cn(
-                    "px-2.5 py-1 rounded-lg font-medium transition-all",
-                    activeTab === 'script'
-                      ? "bg-white text-[#0F172A] shadow-xs"
-                      : "text-[#64748B] hover:text-[#0F172A]"
-                  )}
-                >
-                  HTML / Script
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('react')}
-                  className={cn(
-                    "px-2.5 py-1 rounded-lg font-medium transition-all",
-                    activeTab === 'react'
-                      ? "bg-white text-[#0F172A] shadow-xs"
-                      : "text-[#64748B] hover:text-[#0F172A]"
-                  )}
-                >
-                  React / Next.js
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('iframe')}
-                  className={cn(
-                    "px-2.5 py-1 rounded-lg font-medium transition-all",
-                    activeTab === 'iframe'
-                      ? "bg-white text-[#0F172A] shadow-xs"
-                      : "text-[#64748B] hover:text-[#0F172A]"
-                  )}
-                >
-                  Iframe
-                </button>
-              </div>
-            </div>
-
-            {/* Code Box */}
-            <div className="relative">
-              <pre className="p-4 rounded-xl bg-[#FAFAF8] border border-[#E2E8F0] font-mono text-xs text-[#0F172A] overflow-x-auto leading-relaxed">
-                {activeTab === 'script' && embedScript}
-                {activeTab === 'react' && embedReact}
-                {activeTab === 'iframe' && embedIframe}
-              </pre>
-
-              <button
-                type="button"
-                onClick={() =>
-                  copyCode(
-                    activeTab === 'script'
-                      ? embedScript
-                      : activeTab === 'react'
-                      ? embedReact
-                      : embedIframe
-                  )
-                }
-                className="absolute top-3 right-3 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-white hover:bg-[#F1F5F9] text-[#0F172A] border border-[#CBD5E1] shadow-xs transition-colors flex items-center gap-1.5"
-              >
-                {copied ? (
-                  <>
-                    <Check className="h-3.5 w-3.5 text-emerald-600" />
-                    <span className="text-emerald-700 font-semibold">¡Copiado!</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy className="h-3.5 w-3.5 text-[#64748B]" />
-                    <span>Copiar</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
+  return <div className="space-y-6">
+    {feedback && <p role="status" className="rounded-xl border border-op-green-border bg-op-green-soft p-4 text-sm text-op-green-dark">{feedback}</p>}
+    {error && <p role="alert" className="rounded-xl bg-op-danger-soft p-4 text-sm text-op-danger">{error}</p>}
+    <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
+      <section className="space-y-6 rounded-2xl border border-op-border bg-op-sheet p-5 md:p-7">
+        <div><h2 className="text-xl font-semibold text-op-ink">Un perfil que acompaña cada compra</h2><p className="mt-2 text-sm leading-relaxed text-op-muted">Muestra los datos registrados de {business.brand_name} con un enlace a su perfil público.</p></div>
+        <fieldset><legend className="mb-3 text-sm font-semibold text-op-ink">1. Elige un formato</legend><div className="space-y-2">{formats.map((item) => <label key={item.id} className={cn('flex cursor-pointer items-start gap-3 rounded-xl border p-4', selectedStyle === item.id ? 'border-op-green bg-op-green-soft' : 'border-op-border hover:bg-op-canvas')}><input type="radio" name="widget-format" value={item.id} checked={selectedStyle === item.id} onChange={() => { setSelectedStyle(item.id); setFeedback(''); setError(''); }} className="mt-1" /><span><span className="block text-sm font-semibold text-op-ink">{item.name}</span><span className="mt-1 block text-sm text-op-muted">{item.description}</span></span></label>)}</div></fieldset>
+        <fieldset><legend className="mb-3 text-sm font-semibold text-op-ink">2. Elige el tema</legend><div className="grid grid-cols-2 gap-3">{(['light', 'dark'] as const).map((theme) => <label key={theme} className="flex min-h-12 cursor-pointer items-center gap-2 rounded-xl border border-op-border px-4 text-sm text-op-secondary"><input type="radio" name="widget-theme" value={theme} checked={selectedTheme === theme} onChange={() => setSelectedTheme(theme)} />{theme === 'light' ? 'Claro' : 'Oscuro'}</label>)}</div></fieldset>
+        <div className="border-t border-op-border pt-5"><button type="button" onClick={createWidget} disabled={creating} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-op-green px-4 text-sm font-semibold text-white hover:bg-op-green-dark disabled:opacity-60"><Plus className="h-4 w-4" aria-hidden="true" />{creating ? 'Creando widget…' : currentWidget ? 'Crear otro widget de este formato' : 'Crear widget'}</button><p className="mt-3 text-xs leading-relaxed text-op-muted">El widget enlaza al perfil de tu negocio. Su información puede cambiar cuando se actualizan los registros.</p></div>
+      </section>
+      <div className="min-w-0 space-y-6">
+        <section className="overflow-hidden rounded-2xl border border-op-border bg-op-sheet p-5 md:p-7"><h2 className="mb-4 flex items-center gap-2 text-base font-semibold text-op-ink"><Eye className="h-5 w-5 text-op-green" aria-hidden="true" /> Vista previa</h2>{currentWidget ? <><div className="overflow-hidden rounded-xl border border-op-border bg-op-canvas"><iframe key={previewPath} src={previewPath} title={`Vista previa del widget de ${business.brand_name}`} className="w-full border-0" height={format.height} /></div><Link href={previewPath} target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-op-green-dark">Abrir vista previa <ExternalLink className="h-4 w-4" aria-hidden="true" /><span className="sr-only">(nueva pestaña)</span></Link></> : <div className="rounded-xl border border-dashed border-op-strong bg-op-canvas px-5 py-12 text-center"><Code2 className="mx-auto mb-3 h-8 w-8 text-op-muted" aria-hidden="true" /><h3 className="text-base font-semibold text-op-ink">Tu primer {format.name.toLowerCase()}</h3><p className="mt-2 text-sm leading-relaxed text-op-muted">Crea este formato para ver el widget con los datos de tu negocio y obtener su código.</p></div>}</section>
+        {currentWidget && <section className="rounded-2xl border border-op-border bg-op-sheet p-5 md:p-7"><div className="mb-4 flex flex-wrap items-center justify-between gap-3"><h2 className="text-base font-semibold text-op-ink">3. Inserta el widget en tu tienda</h2><button type="button" onClick={copyCode} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-op-border px-3 text-sm font-semibold text-op-green-dark hover:bg-op-green-soft"><Copy className="h-4 w-4" aria-hidden="true" /> Copiar código</button></div><p className="mb-4 text-sm leading-relaxed text-op-muted">Pega este iframe en un bloque HTML. También puedes usarlo en React o Next.js cambiando <code>style</code> por un objeto de estilos.</p><textarea aria-label="Código HTML para insertar el widget" readOnly value={embedCode} onFocus={(event) => event.target.select()} rows={10} className="w-full resize-y rounded-xl border border-op-border bg-op-canvas p-4 font-mono text-base leading-relaxed text-op-ink" /></section>}
       </div>
     </div>
-  );
+  </div>;
 }

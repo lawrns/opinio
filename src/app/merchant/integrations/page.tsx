@@ -6,6 +6,7 @@ import {
 import { IntegrationsManager } from '@/components/IntegrationsManager';
 
 export const dynamic = 'force-dynamic';
+export const metadata = { title: 'Integraciones del negocio · Opinio.mx' };
 
 interface PageProps {
   searchParams: Promise<{ business?: string }>;
@@ -20,7 +21,7 @@ export default async function MerchantIntegrationsPage({ searchParams }: PagePro
 
   if (!currentBusiness) {
     return (
-      <div className="text-center py-16 text-[#64748B]">
+      <div className="text-center py-16 text-op-muted">
         No se encontró información del comercio.
       </div>
     );
@@ -29,13 +30,13 @@ export default async function MerchantIntegrationsPage({ searchParams }: PagePro
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12">
       {/* Header */}
-      <div className="border-b border-[#E2E8F0] pb-5">
-        <h1 className="text-2xl font-bold tracking-tight text-[#0F172A]">
+      <div className="border-b border-op-border pb-5">
+        <h1 className="text-2xl font-bold tracking-tight text-op-ink">
           Integraciones y Feed de Pedidos
         </h1>
-        <p className="text-xs text-[#64748B] mt-1">
-          Conecta plataformas de comercio electrónico, APIs de pago SPEI y webhooks para auditar el 100% de los pedidos de{' '}
-          <strong className="text-[#0F172A]">{currentBusiness.brand_name}</strong>.
+        <p className="text-sm text-op-muted mt-2">
+          Consulta las opciones disponibles para registrar los pedidos de{' '}
+          <strong className="text-op-ink">{currentBusiness.brand_name}</strong>.
         </p>
       </div>
 

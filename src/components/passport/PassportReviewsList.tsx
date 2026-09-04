@@ -1,13 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { 
-  CheckCircle2, 
-  ThumbsUp, 
-  CornerDownRight, 
-  Calendar, 
-  Filter
-} from 'lucide-react';
+import { useState } from 'react';
+import { CornerDownRight, Star } from 'lucide-react';
 
 export interface ReviewItem {
   id: number;
@@ -25,234 +19,27 @@ export interface ReviewItem {
   response_created_at?: string | null;
 }
 
-interface Props {
-  reviews: ReviewItem[];
-  brandName: string;
-}
-
-const VERIFICATION_LABELS: Record<string, { label: string; badgeClass: string; weight: string }> = {
-  confirmed_payment: {
-    label: 'Pago SPEI Confirmado',
-    badgeClass: 'bg-emerald-50 text-emerald-800 border-emerald-200',
-    weight: 'Peso: 1.00',
-  },
-  confirmed_store_order: {
-    label: 'Pedido en Tienda Conectado',
-    badgeClass: 'bg-blue-50 text-blue-800 border-blue-200',
-    weight: 'Peso: 0.90',
-  },
-  reviewed_proof: {
-    label: 'Comprobante Subido',
-    badgeClass: 'bg-purple-50 text-purple-800 border-purple-200',
-    weight: 'Peso: 0.75',
-  },
-  unverified_experience: {
-    label: 'Sin Comprobante de Compra',
-    badgeClass: 'bg-gray-100 text-gray-700 border-gray-200',
-    weight: 'Peso: 0.35',
-  },
+const VERIFICATION_LABELS: Record<string, string> = { confirmed_payment: 'Pago confirmado', confirmed_store_order: 'Pedido conectado', reviewed_proof: 'Comprobante revisado', unverified_experience: 'Sin comprobante verificado' };
+const formatDate = (dateString: string) => {
+  const date = new Date(dateString);
+  return Number.isNaN(date.getTime()) ? 'Fecha no disponible' : date.toLocaleDateString('es-MX', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'America/Mexico_City' });
 };
 
-export function PassportReviewsList({ reviews, brandName }: Props) {
-  const [selectedFilter, setSelectedFilter] = useState<string>('all');
-  const [helpfulMap, setHelpfulMap] = useState<Record<number, boolean>>({});
-
-  const filteredReviews = reviews.filter((r) => {
-    if (selectedFilter === 'all') return true;
-    return r.verification_level === selectedFilter;
-  });
-
-  const toggleHelpful = (id: number) => {
-    setHelpfulMap((prev) => ({ ...prev, [id]: !prev[id] }));
-  };
-
-  const formatDate = (dateStr: string) => {
-    try {
-      const d = new Date(dateStr);
-      return d.toLocaleDateString('es-MX', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-      });
-    } catch {
-      return dateStr;
-    }
-  };
-
-  return (
-    <div className="space-y-6">
-      {/* Verification Filter Tabs */}
-      <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-2xl bg-white border border-gray-200 text-xs shadow-2xs">
-        <span className="text-gray-500 font-semibold px-2 flex items-center gap-1 text-[11px]">
-          <Filter className="h-3.5 w-3.5" /> Filtrar por comprobante:
-        </span>
-        <button
-          type="button"
-          onClick={() => setSelectedFilter('all')}
-          className={`px-3 py-1.5 rounded-full font-semibold transition-all ${
-            selectedFilter === 'all'
-              ? 'bg-[#121511] text-white shadow-xs'
-              : 'text-gray-600 hover:text-[#121511] hover:bg-gray-100'
-          }`}
-        >
-          Todas ({reviews.length})
-        </button>
-        <button
-          type="button"
-          onClick={() => setSelectedFilter('confirmed_payment')}
-          className={`px-3 py-1.5 rounded-full font-semibold transition-all ${
-            selectedFilter === 'confirmed_payment'
-              ? 'bg-emerald-50 text-emerald-900 border border-emerald-300 shadow-xs'
-              : 'text-gray-600 hover:text-[#121511] hover:bg-gray-100'
-          }`}
-        >
-          Pago SPEI Confirmado (1.00)
-        </button>
-        <button
-          type="button"
-          onClick={() => setSelectedFilter('confirmed_store_order')}
-          className={`px-3 py-1.5 rounded-full font-semibold transition-all ${
-            selectedFilter === 'confirmed_store_order'
-              ? 'bg-blue-50 text-blue-900 border border-blue-300 shadow-xs'
-              : 'text-gray-600 hover:text-[#121511] hover:bg-gray-100'
-          }`}
-        >
-          Pedido en Tienda (0.90)
-        </button>
-        <button
-          type="button"
-          onClick={() => setSelectedFilter('reviewed_proof')}
-          className={`px-3 py-1.5 rounded-full font-semibold transition-all ${
-            selectedFilter === 'reviewed_proof'
-              ? 'bg-purple-50 text-purple-900 border border-purple-300 shadow-xs'
-              : 'text-gray-600 hover:text-[#121511] hover:bg-gray-100'
-          }`}
-        >
-          Comprobante Subido (0.75)
-        </button>
-      </div>
-
-      {/* Reviews List */}
-      {filteredReviews.length > 0 ? (
-        <div className="space-y-4">
-          {filteredReviews.map((review) => {
-            const vInfo = VERIFICATION_LABELS[review.verification_level] || {
-              label: review.verification_level,
-              badgeClass: 'bg-gray-100 text-gray-700 border-gray-200',
-              weight: '0.50',
-            };
-            const isHelpful = helpfulMap[review.id];
-
-            return (
-              <div
-                key={review.id}
-                className="tp-card p-6 space-y-4"
-              >
-                {/* Review Header: Stars, Author, Verification Badge */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-gray-100">
-                  <div className="flex items-center gap-3">
-                    {/* Stars */}
-                    <div className="flex items-center gap-0.5">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <span
-                          key={star}
-                          className={star <= review.rating ? "tp-star-box text-xs w-4.5 h-4.5" : "tp-star-box-empty text-xs w-4.5 h-4.5"}
-                        >
-                          ★
-                        </span>
-                      ))}
-                    </div>
-
-                    <div className="flex items-center gap-1.5 text-xs text-[#121511] font-bold">
-                      <span>{review.author_name}</span>
-                      {review.author_masked_contact && (
-                        <span className="text-gray-400 font-mono text-[11px] font-normal">
-                          ({review.author_masked_contact})
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Verification Level Badge */}
-                  <div className="flex items-center gap-2">
-                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${vInfo.badgeClass}`}>
-                      <CheckCircle2 className="h-3 w-3" />
-                      {vInfo.label}
-                    </span>
-                    <span className="text-[10px] text-gray-400 font-mono">
-                      {vInfo.weight}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Review Content */}
-                <div>
-                  {review.title && (
-                    <h4 className="text-sm font-bold text-[#121511] mb-1.5">
-                      {review.title}
-                    </h4>
-                  )}
-                  <p className="text-sm text-gray-700 leading-relaxed">
-                    {review.body}
-                  </p>
-                </div>
-
-                {/* Metadata & Actions */}
-                <div className="flex flex-wrap items-center justify-between gap-2 pt-2 text-xs text-gray-500">
-                  <div className="flex items-center gap-4">
-                    <span className="flex items-center gap-1">
-                      <Calendar className="h-3.5 w-3.5 text-gray-400" />
-                      Fecha de experiencia: {formatDate(review.created_at)}
-                    </span>
-                    {review.product_name && (
-                      <span className="text-gray-600">
-                        Producto: <strong className="text-[#121511]">{review.product_name}</strong>
-                      </span>
-                    )}
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => toggleHelpful(review.id)}
-                    className={`inline-flex items-center gap-1.5 text-xs font-semibold transition-colors px-2.5 py-1 rounded-full border ${
-                      isHelpful
-                        ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
-                        : 'bg-gray-50 text-gray-600 hover:text-[#121511] border-gray-200 hover:bg-gray-100'
-                    }`}
-                  >
-                    <ThumbsUp className="h-3 w-3" />
-                    <span>Útil {isHelpful ? '(1)' : ''}</span>
-                  </button>
-                </div>
-
-                {/* Official Response */}
-                {review.response_text && (
-                  <div className="mt-3 p-4 rounded-xl bg-emerald-50/70 border-l-2 border-emerald-600 border-y border-r border-emerald-200 text-xs space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-emerald-900 flex items-center gap-1.5">
-                        <CornerDownRight className="h-3.5 w-3.5 text-emerald-600" />
-                        Respuesta Oficial de {review.responder_name || brandName}
-                      </span>
-                      {review.response_created_at && (
-                        <span className="text-[10px] text-gray-400 font-mono">
-                          {formatDate(review.response_created_at)}
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-emerald-950 italic leading-relaxed">
-                      &ldquo;{review.response_text}&rdquo;
-                    </p>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="p-8 text-center rounded-2xl bg-white border border-gray-200 text-gray-500 text-xs">
-          No hay opiniones con el nivel de comprobante seleccionado.
-        </div>
-      )}
+export function PassportReviewsList({ reviews, brandName }: { reviews: ReviewItem[]; brandName: string }) {
+  const [filter, setFilter] = useState('all');
+  const [sort, setSort] = useState('recent');
+  const filtered = reviews.filter((review) => filter === 'all' || review.verification_level === filter).sort((a, b) => sort === 'lowest' ? a.rating - b.rating : sort === 'highest' ? b.rating - a.rating : new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  return <div className="space-y-5">
+    <div className="flex flex-col gap-4 rounded-xl border border-[var(--op-border-hairline)] bg-[var(--op-sheet)] p-4 sm:flex-row sm:items-end">
+      <div className="min-w-0 flex-1"><label htmlFor="review-filter" className="mb-2 block text-sm font-semibold">Tipo de comprobante</label><select id="review-filter" value={filter} onChange={(event) => setFilter(event.target.value)} className="min-h-12 w-full rounded-lg border border-[var(--op-border-strong)] bg-[var(--op-canvas)] px-3 text-base"><option value="all">Todas las opiniones ({reviews.length})</option>{Object.entries(VERIFICATION_LABELS).map(([value, label]) => <option key={value} value={value}>{label} ({reviews.filter((review) => review.verification_level === value).length})</option>)}</select></div>
+      <div className="min-w-0 sm:w-48"><label htmlFor="review-sort" className="mb-2 block text-sm font-semibold">Ordenar por</label><select id="review-sort" value={sort} onChange={(event) => setSort(event.target.value)} className="min-h-12 w-full rounded-lg border border-[var(--op-border-strong)] bg-[var(--op-canvas)] px-3 text-base"><option value="recent">Más recientes</option><option value="lowest">Menor calificación</option><option value="highest">Mayor calificación</option></select></div>
     </div>
-  );
+    <p role="status" className="text-sm text-[var(--op-ink-muted)]">{filtered.length} {filtered.length === 1 ? 'opinión' : 'opiniones'}</p>
+    {filtered.length ? filtered.map((review) => <article key={review.id} className="rounded-2xl border border-[var(--op-border-hairline)] bg-[var(--op-sheet)] p-5 sm:p-6">
+      <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="break-words text-sm font-semibold">{review.author_name}</p><p className="mt-1 text-xs text-[var(--op-ink-muted)]">Publicado el {formatDate(review.created_at)}</p></div><span className="rounded-full bg-[var(--op-shaded)] px-3 py-1 text-xs text-[var(--op-ink-secondary)]">{VERIFICATION_LABELS[review.verification_level] || 'Comprobante no especificado'}</span></div>
+      <div className="my-4 flex items-center gap-1" role="img" aria-label={`${review.rating} de 5 estrellas`}>{[1, 2, 3, 4, 5].map((star) => <Star key={star} aria-hidden="true" size={18} className={star <= review.rating ? 'fill-[var(--op-verified-ink)] text-[var(--op-verified-ink)]' : 'text-[var(--op-border-strong)]'} />)}</div>
+      {review.title && <h3 className="mb-2 break-words text-base font-semibold">{review.title}</h3>}<p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-[var(--op-ink-secondary)]">{review.body}</p>{review.product_name && <p className="mt-4 break-words text-xs text-[var(--op-ink-muted)]">Producto o servicio: {review.product_name}</p>}
+      {review.response_text && <div className="mt-5 rounded-xl border-l-2 border-[var(--op-verified-border)] bg-[var(--op-verified-tint)] p-4"><p className="flex items-center gap-2 text-sm font-semibold text-[var(--op-verified-ink)]"><CornerDownRight size={16} aria-hidden="true" />Respuesta de {review.responder_name || brandName}</p>{review.response_created_at && <p className="mt-1 text-xs text-[var(--op-ink-muted)]">{formatDate(review.response_created_at)}</p>}<p className="mt-3 whitespace-pre-wrap break-words text-sm leading-relaxed text-[var(--op-ink-secondary)]">{review.response_text}</p></div>}
+    </article>) : <div className="rounded-xl border border-[var(--op-border-hairline)] bg-[var(--op-sheet)] p-8 text-center"><h3 className="font-semibold">{reviews.length ? 'No hay opiniones con este comprobante' : 'Este negocio todavía no tiene opiniones'}</h3><p className="mt-2 text-sm text-[var(--op-ink-secondary)]">{reviews.length ? 'Selecciona otro tipo para seguir leyendo.' : 'Tu experiencia puede ayudar a la próxima persona que compre aquí.'}</p>{filter !== 'all' && <button onClick={() => setFilter('all')} className="mt-4 min-h-11 text-sm font-semibold text-[var(--op-link)] underline">Ver todas las opiniones</button>}</div>}
+  </div>;
 }

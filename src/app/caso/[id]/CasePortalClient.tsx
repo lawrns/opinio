@@ -2,17 +2,16 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { 
-  ShieldCheck, 
-  AlertCircle, 
-  Clock, 
-  Send, 
-  Check, 
-  Scale, 
-  MessageSquare, 
-  CheckCircle2, 
-  ArrowLeft, 
-  Lock, 
+import {
+  ShieldCheck,
+  AlertCircle,
+  Clock,
+  Send,
+  Check,
+  Scale,
+  MessageSquare,
+  CheckCircle2,
+  ArrowLeft,
   Sparkles,
   Loader2
 } from 'lucide-react';
@@ -55,37 +54,37 @@ interface Props {
 const STATUS_DETAILS: Record<string, { label: string; badgeClass: string; description: string }> = {
   opened: {
     label: 'Caso Abierto',
-    badgeClass: 'bg-amber-50 text-amber-800 border-amber-300',
-    description: 'El caso ha sido registrado y notificado al comercio para su primera respuesta formal.',
+    badgeClass: 'bg-[var(--op-warning-tint)] text-[var(--op-warning-ink)] border-[var(--op-warning-border)]',
+    description: 'El caso está registrado y espera una respuesta del comercio.',
   },
   acknowledged: {
     label: 'En Revisión por Comercio',
-    badgeClass: 'bg-blue-50 text-blue-800 border-blue-200',
+    badgeClass: 'bg-[var(--op-shaded)] text-[var(--op-link)] border-[var(--op-border-strong)]',
     description: 'El comercio ha tomado el caso y se encuentra investigando la guía o transacción.',
   },
   remedy_offered: {
     label: 'Solución Propuesta',
-    badgeClass: 'bg-emerald-50 text-emerald-800 border-emerald-300',
+    badgeClass: 'bg-[var(--op-verified-tint)] text-[var(--op-verified-ink)] border-[var(--op-verified-border)]',
     description: 'El comercio ha emitido una propuesta formal de solución para tu revisión y aceptación.',
   },
   resolved_consumer_confirmed: {
     label: 'Resuelto de Conformidad',
-    badgeClass: 'bg-emerald-100 text-emerald-900 border-emerald-400 font-bold',
+    badgeClass: 'bg-[var(--op-verified-tint)] text-[var(--op-verified-ink)] border-[var(--op-verified-border)] font-bold',
     description: 'El comprador ha confirmado formalmente que la solución fue recibida y el caso queda cerrado satisfactoriamente.',
   },
   resolved_merchant_asserted: {
     label: 'Cerrado por Comercio (Pendiente)',
-    badgeClass: 'bg-amber-50 text-amber-800 border-amber-300',
+    badgeClass: 'bg-[var(--op-warning-tint)] text-[var(--op-warning-ink)] border-[var(--op-warning-border)]',
     description: 'El comercio indicó haber cumplido; a la espera de la confirmación expresa del comprador.',
   },
   unresolved: {
     label: 'Sin Acuerdo',
-    badgeClass: 'bg-rose-50 text-rose-800 border-rose-200',
-    description: 'No se logró un acuerdo voluntario entre las partes. Disponible canal de arbitraje PROFECO.',
+    badgeClass: 'bg-[var(--op-danger-tint)] text-[var(--op-danger-ink)] border-[var(--op-danger-border)]',
+    description: 'No se registró un acuerdo entre las partes. Puedes conservar el historial para dar seguimiento por otros canales.',
   },
   reopened: {
     label: 'Reabierto por Comprador',
-    badgeClass: 'bg-purple-50 text-purple-800 border-purple-200',
+    badgeClass: 'bg-[var(--op-shaded)] text-[var(--op-link)] border-[var(--op-border-strong)]',
     description: 'El caso fue reabierto tras detectarse incumplimiento en la solución acordada.',
   },
 };
@@ -112,6 +111,7 @@ export function CasePortalClient({ initialCase, initialMessages }: Props) {
   const [senderName] = useState(initialCase.customer_name);
   const [sending, setSending] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [resolutionReceived, setResolutionReceived] = useState(false);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -119,7 +119,7 @@ export function CasePortalClient({ initialCase, initialMessages }: Props) {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim()) return;
+    if (sending || !newMessage.trim()) return;
 
     setSending(true);
     setErrorMsg(null);
@@ -151,7 +151,7 @@ export function CasePortalClient({ initialCase, initialMessages }: Props) {
   };
 
   const handleConfirmResolution = async () => {
-    if (caseData.is_consumer_confirmed) return;
+    if (confirming || !resolutionReceived || caseData.is_consumer_confirmed) return;
 
     setConfirming(true);
     setErrorMsg(null);
@@ -171,26 +171,9 @@ export function CasePortalClient({ initialCase, initialMessages }: Props) {
         throw new Error('Error al confirmar la resolución.');
       }
 
-      setCaseData((prev) => ({
-        ...prev,
-        is_consumer_confirmed: true,
-        status: 'resolved_consumer_confirmed',
-        resolved_at: new Date().toISOString(),
-      }));
-
-      // Add audit system message to chat
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now(),
-          case_id: caseData.id,
-          sender_type: 'consumer',
-          sender_name: caseData.customer_name,
-          message: '✓ He verificado y confirmo de conformidad que el problema fue resuelto satisfactoriamente.',
-          is_private: false,
-          created_at: new Date().toISOString(),
-        },
-      ]);
+      const data = await res.json();
+      setCaseData((previous) => ({ ...previous, ...data.case }));
+      if (Array.isArray(data.case.messages)) setMessages(data.case.messages);
 
       setActionSuccess('¡Resolución confirmada con éxito! Tu confirmación ha quedado registrada en el Pasaporte de Confianza del comercio.');
     } catch (err) {
@@ -204,7 +187,9 @@ export function CasePortalClient({ initialCase, initialMessages }: Props) {
   const formatDate = (dateStr: string) => {
     try {
       const d = new Date(dateStr);
+      if (Number.isNaN(d.getTime())) return 'Fecha no disponible';
       return d.toLocaleDateString('es-MX', {
+        timeZone: 'America/Mexico_City',
         year: 'numeric',
         month: 'short',
         day: 'numeric',
@@ -222,7 +207,7 @@ export function CasePortalClient({ initialCase, initialMessages }: Props) {
       <div>
         <Link
           href={`/b/${caseData.business_slug}`}
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-[#008B5D] hover:underline transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs font-bold text-[var(--op-verified-ink)] hover:underline transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
           <span>Volver al Pasaporte de {caseData.brand_name}</span>
@@ -230,89 +215,89 @@ export function CasePortalClient({ initialCase, initialMessages }: Props) {
       </div>
 
       {/* Main Header & Status Banner */}
-      <div className="rounded-3xl border border-gray-200 bg-white p-6 sm:p-8 shadow-xs space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-gray-200">
+      <div className="rounded-3xl border border-[var(--op-border-hairline)] bg-[var(--op-sheet)] p-6 sm:p-8 shadow-xs space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[var(--op-border-hairline)]">
           <div>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="font-mono text-xs font-bold text-[#121511] bg-[#FAFAF8] px-2.5 py-1 rounded-md border border-gray-200">
+            <div className="flex flex-wrap items-center gap-2 mb-2">
+              <span className="font-mono text-xs font-bold text-[var(--op-ink-primary)] bg-[var(--op-canvas)] px-2.5 py-1 rounded-md border border-[var(--op-border-hairline)]">
                 {caseData.case_number}
               </span>
               <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border ${statusInfo.badgeClass}`}>
                 {statusInfo.label}
               </span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black text-[#121511]">
-              Portal de Mediación y Resolución
+            <h1 className="text-2xl sm:text-3xl font-black text-[var(--op-ink-primary)]">
+              Seguimiento de tu caso
             </h1>
-            <p className="text-xs sm:text-sm text-gray-600 mt-1">
-              Incidencia registrada entre <strong className="text-[#121511]">{caseData.customer_name}</strong> y <strong className="text-[#121511]">{caseData.brand_name}</strong>.
+            <p className="text-sm text-[var(--op-ink-secondary)] mt-1">
+              Incidencia registrada entre <strong className="text-[var(--op-ink-primary)]">{caseData.customer_name}</strong> y <strong className="text-[var(--op-ink-primary)]">{caseData.brand_name}</strong>.
             </p>
           </div>
 
           <div className="text-left sm:text-right shrink-0">
-            <div className="text-xs text-gray-500">Fecha de apertura</div>
-            <div className="text-xs font-mono text-[#121511] font-bold mt-0.5">
+            <div className="text-xs text-[var(--op-ink-muted)]">Fecha de apertura</div>
+            <div className="text-xs font-mono text-[var(--op-ink-primary)] font-bold mt-0.5">
               {formatDate(caseData.created_at)}
             </div>
-            <div className="text-[11px] text-[#008B5D] font-mono mt-1 font-semibold">
-              SLA medido por Opinio
+            <div className="text-xs text-[var(--op-verified-ink)] font-mono mt-1 font-semibold">
+              Estado del caso registrado
             </div>
           </div>
         </div>
 
         {/* Status Description Banner */}
-        <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200 flex items-start gap-3 text-xs text-emerald-950">
-          <Scale className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+        <div className="p-4 rounded-2xl bg-[var(--op-verified-tint)]/70 border border-[var(--op-verified-border)] flex items-start gap-3 text-xs text-[var(--op-verified-ink)]">
+          <Scale className="h-4 w-4 text-[var(--op-verified-ink)] shrink-0 mt-0.5" />
           <p className="leading-relaxed">
-            {statusInfo.description} En Opinio, una reclamación solo cuenta como resuelta para el score del comercio cuando <strong className="text-emerald-950">tú como comprador confirmas de conformidad</strong>.
+            {statusInfo.description} En Opinio, una reclamación solo cuenta como resuelta para el score del comercio cuando <strong className="text-[var(--op-verified-ink)]">tú como comprador confirmas de conformidad</strong>.
           </p>
         </div>
 
         {/* SLA Timeline */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-          <div className="p-4 rounded-2xl bg-[#FCFBF3] border border-gray-200">
-            <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+          <div className="p-4 rounded-2xl bg-[var(--op-canvas)] border border-[var(--op-border-hairline)]">
+            <div className="flex items-center justify-between text-xs text-[var(--op-ink-muted)] mb-1">
               <span>1. Apertura de Caso</span>
-              <Check className="h-3.5 w-3.5 text-[#00B67A]" />
+              <Check className="h-3.5 w-3.5 text-[var(--op-verified-ink)]" />
             </div>
-            <div className="text-xs font-bold text-[#121511]">
+            <div className="text-xs font-bold text-[var(--op-ink-primary)]">
               Registrado
             </div>
-            <p className="text-[11px] text-gray-500 mt-0.5">
+            <p className="text-xs text-[var(--op-ink-muted)] mt-0.5">
               {formatDate(caseData.created_at)}
             </p>
           </div>
 
-          <div className="p-4 rounded-2xl bg-[#FCFBF3] border border-gray-200">
-            <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+          <div className="p-4 rounded-2xl bg-[var(--op-canvas)] border border-[var(--op-border-hairline)]">
+            <div className="flex items-center justify-between text-xs text-[var(--op-ink-muted)] mb-1">
               <span>2. Respuesta Comercio</span>
               {caseData.status !== 'opened' ? (
-                <Check className="h-3.5 w-3.5 text-[#00B67A]" />
+                <Check className="h-3.5 w-3.5 text-[var(--op-verified-ink)]" />
               ) : (
-                <Clock className="h-3.5 w-3.5 text-amber-600" />
+                <Clock className="h-3.5 w-3.5 text-[var(--op-warning-ink)]" />
               )}
             </div>
-            <div className="text-xs font-bold text-[#121511]">
+            <div className="text-xs font-bold text-[var(--op-ink-primary)]">
               {caseData.median_first_response_minutes > 0 ? `${caseData.median_first_response_minutes} min` : 'En espera'}
             </div>
-            <p className="text-[11px] text-gray-500 mt-0.5">
-              SLA oficial de atención: 24 horas
+            <p className="text-xs text-[var(--op-ink-muted)] mt-0.5">
+              Tiempo transcurrido hasta la primera respuesta
             </p>
           </div>
 
-          <div className="p-4 rounded-2xl bg-[#FCFBF3] border border-gray-200">
-            <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+          <div className="p-4 rounded-2xl bg-[var(--op-canvas)] border border-[var(--op-border-hairline)]">
+            <div className="flex items-center justify-between text-xs text-[var(--op-ink-muted)] mb-1">
               <span>3. Cierre Conforme</span>
               {caseData.is_consumer_confirmed ? (
-                <Check className="h-3.5 w-3.5 text-[#00B67A]" />
+                <Check className="h-3.5 w-3.5 text-[var(--op-verified-ink)]" />
               ) : (
-                <span className="text-[10px] text-amber-700 font-bold">Pendiente</span>
+                <span className="text-xs text-[var(--op-warning-ink)] font-bold">Pendiente</span>
               )}
             </div>
-            <div className="text-xs font-bold text-[#121511]">
+            <div className="text-xs font-bold text-[var(--op-ink-primary)]">
               {caseData.is_consumer_confirmed ? 'Conformidad confirmada' : 'A la espera de confirmación'}
             </div>
-            <p className="text-[11px] text-gray-500 mt-0.5">
+            <p className="text-xs text-[var(--op-ink-muted)] mt-0.5">
               {caseData.resolved_at ? formatDate(caseData.resolved_at) : 'Requiere acción del comprador'}
             </p>
           </div>
@@ -321,15 +306,15 @@ export function CasePortalClient({ initialCase, initialMessages }: Props) {
 
       {/* Action Notification Alert */}
       {actionSuccess && (
-        <div className="rounded-2xl bg-emerald-50 border border-emerald-200 p-4 text-xs text-emerald-900 font-semibold flex items-start gap-2.5">
-          <CheckCircle2 className="h-4 w-4 text-[#00B67A] shrink-0 mt-0.5" />
+        <div role="status" className="rounded-2xl bg-[var(--op-verified-tint)] border border-[var(--op-verified-border)] p-4 text-sm text-[var(--op-verified-ink)] font-semibold flex items-start gap-2.5">
+          <CheckCircle2 className="h-4 w-4 text-[var(--op-verified-ink)] shrink-0 mt-0.5" />
           <span>{actionSuccess}</span>
         </div>
       )}
 
       {errorMsg && (
-        <div className="rounded-2xl bg-rose-50 border border-rose-200 p-4 text-xs text-rose-800 font-semibold flex items-start gap-2.5">
-          <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-rose-600" />
+        <div role="alert" className="rounded-2xl bg-[var(--op-danger-tint)] border border-[var(--op-danger-border)] p-4 text-sm text-[var(--op-danger-ink)] font-semibold flex items-start gap-2.5">
+          <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-[var(--op-danger-ink)]" />
           <span>{errorMsg}</span>
         </div>
       )}
@@ -339,31 +324,31 @@ export function CasePortalClient({ initialCase, initialMessages }: Props) {
         {/* Left Column: Remedy & Confirmation Action */}
         <div className="space-y-6">
           {/* Remedy Summary Card */}
-          <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-xs space-y-4">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[#121511] flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-[#00B67A]" />
+          <div className="rounded-3xl border border-[var(--op-border-hairline)] bg-[var(--op-sheet)] p-6 shadow-xs space-y-4">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--op-ink-primary)] flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-[var(--op-verified-ink)]" />
               <span>Remedio y Solución</span>
             </h3>
 
             <div className="space-y-3 text-xs">
-              <div className="p-3.5 rounded-2xl bg-[#FCFBF3] border border-gray-200 space-y-0.5">
-                <span className="text-[11px] font-semibold text-gray-500">Motivo del reporte:</span>
-                <p className="text-[#121511] font-bold">
+              <div className="p-3.5 rounded-2xl bg-[var(--op-canvas)] border border-[var(--op-border-hairline)] space-y-0.5">
+                <span className="text-xs font-semibold text-[var(--op-ink-muted)]">Motivo del reporte:</span>
+                <p className="text-[var(--op-ink-primary)] font-bold">
                   {ISSUE_LABELS[caseData.issue_category] || caseData.issue_category}
                 </p>
               </div>
 
-              <div className="p-3.5 rounded-2xl bg-[#FCFBF3] border border-gray-200 space-y-0.5">
-                <span className="text-[11px] font-semibold text-gray-500">Solución solicitada por ti:</span>
-                <p className="text-[#121511] font-bold">
+              <div className="p-3.5 rounded-2xl bg-[var(--op-canvas)] border border-[var(--op-border-hairline)] space-y-0.5">
+                <span className="text-xs font-semibold text-[var(--op-ink-muted)]">Solución solicitada por ti:</span>
+                <p className="text-[var(--op-ink-primary)] font-bold">
                   {REMEDY_LABELS[caseData.customer_requested_remedy] || caseData.customer_requested_remedy}
                 </p>
               </div>
 
               {caseData.remedy_offered && (
-                <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 space-y-0.5">
-                  <span className="text-[11px] font-semibold text-emerald-800">Oferta formal del comercio:</span>
-                  <p className="text-emerald-950 font-medium leading-relaxed">
+                <div className="p-3.5 rounded-2xl bg-[var(--op-verified-tint)] border border-[var(--op-verified-border)] space-y-0.5">
+                  <span className="text-xs font-semibold text-[var(--op-verified-ink)]">Oferta formal del comercio:</span>
+                  <p className="text-[var(--op-verified-ink)] font-medium leading-relaxed">
                     {caseData.remedy_offered}
                   </p>
                 </div>
@@ -373,22 +358,23 @@ export function CasePortalClient({ initialCase, initialMessages }: Props) {
             {/* Confirmation Action Button */}
             <div className="pt-2">
               {caseData.is_consumer_confirmed ? (
-                <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-center space-y-2">
-                  <ShieldCheck className="h-8 w-8 text-[#00B67A] mx-auto" />
-                  <div className="text-xs font-bold text-emerald-900">
+                <div className="p-4 rounded-2xl bg-[var(--op-verified-tint)] border border-[var(--op-verified-border)] text-center space-y-2">
+                  <ShieldCheck className="h-8 w-8 text-[var(--op-verified-ink)] mx-auto" />
+                  <div className="text-xs font-bold text-[var(--op-verified-ink)]">
                     Resolución Confirmada de Conformidad
                   </div>
-                  <p className="text-[11px] text-emerald-800">
+                  <p className="text-xs text-[var(--op-verified-ink)]">
                     Has validado satisfactoriamente el remedio ofrecido por {caseData.brand_name}.
                   </p>
                 </div>
               ) : (
                 <div className="space-y-3">
+                  <label className="flex cursor-pointer items-start gap-2 text-sm leading-relaxed"><input type="checkbox" checked={resolutionReceived} onChange={(event) => setResolutionReceived(event.target.checked)} className="mt-1 size-5 shrink-0 accent-[var(--op-verified-ink)]" /><span>Ya recibí la solución acordada y quiero cerrar el caso.</span></label>
                   <button
                     type="button"
                     onClick={handleConfirmResolution}
-                    disabled={confirming}
-                    className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-[#00B67A] px-5 py-3.5 text-xs font-bold text-white hover:bg-[#008B5D] transition-all shadow-xs disabled:opacity-50 active:scale-95"
+                    disabled={confirming || !resolutionReceived}
+                    className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-[var(--op-verified-ink)] px-5 py-3.5 text-xs font-bold text-[var(--op-sheet)] hover:bg-[var(--op-verified-ink)] transition-all shadow-xs disabled:opacity-50 active:scale-95"
                   >
                     {confirming ? (
                       <>
@@ -402,7 +388,7 @@ export function CasePortalClient({ initialCase, initialMessages }: Props) {
                       </>
                     )}
                   </button>
-                  <p className="text-[11px] text-gray-500 text-center leading-relaxed">
+                  <p className="text-xs text-[var(--op-ink-muted)] text-center leading-relaxed">
                     Al hacer clic, declaras que el comercio entregó la compensación, reemplazo o reembolso acordado.
                   </p>
                 </div>
@@ -411,32 +397,31 @@ export function CasePortalClient({ initialCase, initialMessages }: Props) {
           </div>
 
           {/* Guarantee & PROFECO Notice */}
-          <div className="rounded-2xl border border-gray-200 bg-white p-5 text-xs text-gray-600 space-y-2 shadow-xs">
-            <div className="flex items-center gap-1.5 text-[#121511] font-bold">
-              <Scale className="h-4 w-4 text-[#00B67A]" />
-              <span>Garantía de Arbitraje</span>
+          <div className="rounded-2xl border border-[var(--op-border-hairline)] bg-[var(--op-sheet)] p-5 text-xs text-[var(--op-ink-secondary)] space-y-2 shadow-xs">
+            <div className="flex items-center gap-1.5 text-[var(--op-ink-primary)] font-bold">
+              <Scale className="h-4 w-4 text-[var(--op-verified-ink)]" />
+              <span>Conserva el seguimiento</span>
             </div>
-            <p className="text-[11px] leading-relaxed">
-              Si el comercio no cumple con lo ofrecido en este hilo privado dentro de 48 horas, Opinio habilitará la exportación certificada del expediente con sello criptográfico para presentar reclamación directa ante Concilianet de PROFECO.
+            <p className="text-xs leading-relaxed">
+              Guarda el enlace del caso y los comprobantes de tu compra. El seguimiento en Opinio no garantiza una solución ni sustituye otros canales de atención al consumidor.
             </p>
           </div>
         </div>
 
         {/* Right Column: Private Chat Thread */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-xs flex flex-col h-[650px]">
-            <div className="flex items-center justify-between pb-4 border-b border-gray-200">
-              <div className="flex items-center gap-2 text-xs font-bold text-[#121511]">
-                <MessageSquare className="h-4 w-4 text-[#00B67A]" />
-                <span>Hilo Privado de Conciliación ({messages.length} mensajes)</span>
+          <div className="rounded-3xl border border-[var(--op-border-hairline)] bg-[var(--op-sheet)] p-6 shadow-xs flex min-w-0 flex-col h-[min(750px,85dvh)] min-h-[500px]">
+            <div className="flex items-center justify-between pb-4 border-b border-[var(--op-border-hairline)]">
+              <div className="flex items-center gap-2 text-xs font-bold text-[var(--op-ink-primary)]">
+                <MessageSquare className="h-4 w-4 text-[var(--op-verified-ink)]" />
+                <span>Conversación del caso ({messages.length} mensajes)</span>
               </div>
-              <span className="text-[11px] text-gray-500 flex items-center gap-1">
-                <Lock className="h-3 w-3" /> Cifrado punto a punto
-              </span>
+
             </div>
 
             {/* Messages Scroll Area */}
-            <div className="flex-1 overflow-y-auto py-4 space-y-4 pr-1">
+            <div role="log" aria-label="Mensajes del caso" aria-live="polite" tabIndex={0} className="flex-1 overflow-y-auto py-4 space-y-4 pr-1">
+              {messages.length === 0 && <p className="py-8 text-center text-sm text-[var(--op-ink-muted)]">Todavía no hay mensajes. Describe lo que necesitas para iniciar la conversación.</p>}
               {messages.map((msg) => {
                 const isConsumer = msg.sender_type === 'consumer';
                 const isMerchant = msg.sender_type === 'merchant';
@@ -446,27 +431,27 @@ export function CasePortalClient({ initialCase, initialMessages }: Props) {
                     key={msg.id}
                     className={`flex flex-col ${isConsumer ? 'items-end' : 'items-start'}`}
                   >
-                    <div className="flex items-center gap-2 mb-1 text-[11px]">
+                    <div className="flex flex-wrap items-center gap-2 mb-1 text-xs">
                       <span className={`font-bold ${
-                        isConsumer ? 'text-[#008B5D]' : isMerchant ? 'text-blue-700' : 'text-purple-700'
+                        isConsumer ? 'text-[var(--op-verified-ink)]' : isMerchant ? 'text-[var(--op-link)]' : 'text-[var(--op-link)]'
                       }`}>
                         {msg.sender_name}
                       </span>
-                      <span className="text-[10px] text-gray-400">
+                      <span className="text-xs text-[var(--op-ink-muted)]">
                         {isConsumer ? '(Comprador)' : isMerchant ? `(${caseData.brand_name} Oficial)` : '(Mediador Opinio)'}
                       </span>
-                      <span className="text-[10px] text-gray-400">
+                      <span className="text-xs text-[var(--op-ink-muted)]">
                         • {formatDate(msg.created_at)}
                       </span>
                     </div>
 
                     <div
-                      className={`max-w-md p-4 rounded-2xl text-xs leading-relaxed shadow-2xs ${
+                      className={`max-w-full break-words whitespace-pre-wrap p-4 rounded-2xl text-sm leading-relaxed shadow-2xs ${
                         isConsumer
-                          ? 'bg-emerald-50 border border-emerald-200 text-emerald-950 rounded-tr-none'
+                          ? 'bg-[var(--op-verified-tint)] border border-[var(--op-verified-border)] text-[var(--op-verified-ink)] rounded-tr-none'
                           : isMerchant
-                          ? 'bg-[#F4F2EB] border border-gray-200 text-[#121511] rounded-tl-none'
-                          : 'bg-purple-50 border border-purple-200 text-purple-950'
+                          ? 'bg-[var(--op-shaded)] border border-[var(--op-border-hairline)] text-[var(--op-ink-primary)] rounded-tl-none'
+                          : 'bg-[var(--op-shaded)] border border-[var(--op-border-strong)] text-[var(--op-link)]'
                       }`}
                     >
                       {msg.message}
@@ -477,19 +462,23 @@ export function CasePortalClient({ initialCase, initialMessages }: Props) {
             </div>
 
             {/* Message Input Form */}
-            <form onSubmit={handleSendMessage} className="pt-3 border-t border-gray-200 space-y-2">
-              <div className="flex gap-2">
+            <form onSubmit={handleSendMessage} className="pt-3 border-t border-[var(--op-border-hairline)] space-y-2">
+              <label htmlFor="case-message" className="block text-sm font-semibold">Tu mensaje</label>
+              <div className="flex flex-col gap-2 sm:flex-row">
                 <input
+                  id="case-message"
+                  maxLength={5000}
+                  required
                   type="text"
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
                   placeholder="Escribe un mensaje para el comercio o mediador..."
-                  className="flex-1 rounded-2xl bg-[#FAFAF8] border border-gray-200 px-4 py-2.5 text-xs text-[#121511] placeholder-gray-400 focus:outline-none focus:border-[#00B67A]"
+                  className="min-w-0 min-h-12 flex-1 rounded-2xl bg-[var(--op-canvas)] border border-[var(--op-border-hairline)] px-4 py-2.5 text-base text-[var(--op-ink-primary)] placeholder-[var(--op-ink-muted)] focus:outline-none focus:border-[var(--op-verified-accent)]"
                 />
                 <button
                   type="submit"
                   disabled={sending || !newMessage.trim()}
-                  className="inline-flex items-center justify-center gap-1.5 rounded-full bg-[#121511] hover:bg-black px-5 py-2.5 text-xs font-bold text-white transition-colors disabled:opacity-40 shrink-0 shadow-xs"
+                  className="inline-flex items-center justify-center gap-1.5 rounded-full bg-[var(--op-ink-primary)] hover:bg-[var(--op-ink-secondary)] px-5 py-2.5 text-xs font-bold text-[var(--op-sheet)] transition-colors disabled:opacity-40 shrink-0 shadow-xs"
                 >
                   {sending ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -499,7 +488,7 @@ export function CasePortalClient({ initialCase, initialMessages }: Props) {
                   <span>Enviar</span>
                 </button>
               </div>
-              <div className="flex items-center justify-between text-[11px] text-gray-400 px-1">
+              <div className="flex items-center justify-between text-xs text-[var(--op-ink-muted)] px-1">
                 <span>Tu comunicación queda registrada para fines de auditoría del caso.</span>
               </div>
             </form>
