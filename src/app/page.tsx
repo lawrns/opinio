@@ -18,6 +18,9 @@ import { CategoryBar } from '@/components/home/CategoryBar';
 import { BusinessCard } from '@/components/home/BusinessCard';
 import { SpeiValidatorCard } from '@/components/home/SpeiValidatorCard';
 import { query } from '@/lib/db';
+import { TrustMarquee } from '@/components/home/TrustMarquee';
+import { MetricsStrip } from '@/components/home/NumberTicker';
+import { ProofBentoGrid } from '@/components/home/ProofBentoGrid';
 
 interface BusinessItem {
   id: number;
@@ -132,7 +135,20 @@ export default async function HomePage() {
               </Link>
             </div>
           </div>
+
+          {/* Live 21st.dev Trust Marquee */}
+          <div className="mt-8 pt-4 border-t border-gray-200/60 max-w-7xl mx-auto">
+            <div className="text-center mb-1.5">
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-500">
+                Auditoría en Vivo • Transacciones Reales en México
+              </span>
+            </div>
+            <TrustMarquee />
+          </div>
         </section>
+
+        {/* Live Real-Time Number Ticker Metrics Strip */}
+        <MetricsStrip />
 
         {/* ========================================================================= */}
         {/* 2. CENTER DIVIDER PILL (REVIEW INVITATION TRIGGER)                        */}
@@ -309,84 +325,7 @@ export default async function HomePage() {
           </div>
         </section>
 
-        {/* ========================================================================= */}
-        {/* 8. WHY OPINIO: THE MEXICAN COMMERCIAL TRUST PILLARS                       */}
-        {/* ========================================================================= */}
-        <section id="metodologia" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <div className="text-center max-w-3xl mx-auto space-y-3 mb-12">
-            <span className="text-xs font-bold font-mono uppercase tracking-widest text-[#008B5D]">
-              La Confianza Se Demuestra
-            </span>
-            <h2 className="text-3xl sm:text-4xl font-black text-[#121511] tracking-tight">
-              ¿Por qué Opinio no es otro directorio de opiniones?
-            </h2>
-            <p className="text-sm text-gray-600 leading-relaxed font-medium">
-              En México, cualquier tienda fraudulenta puede inventar 10 reseñas de 5 estrellas en redes sociales. Opinio audita el denominador real y conecta tres pilares inseparables:
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Pilar 1: Existe */}
-            <div className="p-8 rounded-3xl bg-white border border-gray-200 shadow-xs space-y-4">
-              <div className="w-12 h-12 rounded-2xl bg-[#E6F8F2] text-[#008B5D] flex items-center justify-center font-bold">
-                <Buildings weight="bold" className="w-6 h-6" />
-              </div>
-              <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#008B5D]">
-                Pilar 01 • Identidad
-              </span>
-              <h3 className="text-xl font-bold text-[#121511]">
-                Existe
-              </h3>
-              <p className="text-xs text-gray-600 leading-relaxed">
-                Verificamos la persona moral o física ante la <strong>Cédula Fiscal del SAT</strong>, la localización física del establecimiento en el <strong>Directorio INEGI DENUE</strong> y el número oficial de WhatsApp Business.
-              </p>
-              <div className="pt-2 text-[11px] font-mono text-gray-600 flex items-center gap-1.5 font-medium">
-                <Check weight="bold" className="w-3.5 h-3.5 text-[#00B67A]" />
-                <span>Cero empresas fantasma</span>
-              </div>
-            </div>
-
-            {/* Pilar 2: Cumple */}
-            <div className="p-8 rounded-3xl bg-white border border-gray-200 shadow-xs space-y-4">
-              <div className="w-12 h-12 rounded-2xl bg-[#E6F8F2] text-[#008B5D] flex items-center justify-center font-bold">
-                <ChartBar weight="bold" className="w-6 h-6" />
-              </div>
-              <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#008B5D]">
-                Pilar 02 • El Denominador
-              </span>
-              <h3 className="text-xl font-bold text-[#121511]">
-                Cumple
-              </h3>
-              <p className="text-xs text-gray-600 leading-relaxed">
-                Audita el <strong>volumen real de ventas conectadas</strong>. Prohíbe el cherry-picking exigiendo invitar a más del 90% de los clientes reales y mide las incidencias por cada 1,000 pedidos observados.
-              </p>
-              <div className="pt-2 text-[11px] font-mono text-gray-600 flex items-center gap-1.5 font-medium">
-                <Check weight="bold" className="w-3.5 h-3.5 text-[#00B67A]" />
-                <span>Reputación representativa, no filtrada</span>
-              </div>
-            </div>
-
-            {/* Pilar 3: Resuelve */}
-            <div className="p-8 rounded-3xl bg-white border border-gray-200 shadow-xs space-y-4">
-              <div className="w-12 h-12 rounded-2xl bg-[#E6F8F2] text-[#008B5D] flex items-center justify-center font-bold">
-                <Scales weight="bold" className="w-6 h-6" />
-              </div>
-              <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#008B5D]">
-                Pilar 03 • Mediación
-              </span>
-              <h3 className="text-xl font-bold text-[#121511]">
-                Resuelve
-              </h3>
-              <p className="text-xs text-gray-600 leading-relaxed">
-                Cuando algo sale mal, medimos el tiempo de respuesta SLA y registramos la solución. Un caso <strong>solo se marca resuelto cuando el comprador lo confirma formalmente</strong>.
-              </p>
-              <div className="pt-2 text-[11px] font-mono text-gray-600 flex items-center gap-1.5 font-medium">
-                <Check weight="bold" className="w-3.5 h-3.5 text-[#00B67A]" />
-                <span>Confirmación bilateral por el consumidor</span>
-              </div>
-            </div>
-          </div>
-        </section>
+        <ProofBentoGrid />
       </main>
 
       <Footer />

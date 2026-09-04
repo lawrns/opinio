@@ -86,3 +86,19 @@ html, body {
   border-color: #00B67A;
   box-shadow: 0 16px 40px -8px rgba(0, 182, 122, 0.18);
 }
+
+/* Infinite Ticker Marquee (21st.dev componentry style) */
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 35s linear infinite;
+}
