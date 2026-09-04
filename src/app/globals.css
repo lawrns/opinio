@@ -2,22 +2,22 @@
 
 :root {
   color-scheme: light;
-  --background: #faf9f5;
-  --foreground: #14251d;
-  --op-canvas: #faf9f5;
+  --background: #f7f7f5;
+  --foreground: #121511;
+  --op-canvas: #f7f7f5;
   --op-sheet: #ffffff;
-  --op-shaded: #f0f2ec;
-  --op-inset: #e7ebe2;
-  --op-ink-primary: #14251d;
-  --op-ink-secondary: #415147;
-  --op-ink-muted: #657168;
-  --op-ink-faint: #79847c;
-  --op-verified-ink: #07563d;
-  --op-verified-accent: #087b54;
-  --op-verified-tint: #edf6ef;
-  --op-verified-border: #bedac7;
-  --op-border-hairline: #dce2d9;
-  --op-border-strong: #b9c5b9;
+  --op-shaded: #f0f1ef;
+  --op-inset: #e5e7e4;
+  --op-ink-primary: #121511;
+  --op-ink-secondary: #45483f;
+  --op-ink-muted: #64675f;
+  --op-ink-faint: #777a73;
+  --op-verified-ink: #005128;
+  --op-verified-accent: #00a86b;
+  --op-verified-tint: #e8f7f0;
+  --op-verified-border: #afe1ca;
+  --op-border-hairline: #dedfdd;
+  --op-border-strong: #b7bab7;
   --op-caution-ink: #854b12;
   --op-caution-tint: #fff6e5;
   --op-caution-border: #e8cf9f;
@@ -30,16 +30,16 @@
   --op-danger-ink: var(--op-critical-ink);
   --op-danger-tint: var(--op-critical-tint);
   --op-danger-border: var(--op-critical-border);
-  --op-action-ink: #244bc7;
-  --op-action-accent: #315fd8;
-  --op-action-tint: #edf2ff;
-  --op-action-border: #c9d6fa;
-  --op-lavender-ink: #68419a;
-  --op-lavender-tint: #f2edfa;
-  --op-lavender-border: #ded0f1;
-  --op-peach-ink: #a04424;
-  --op-peach-tint: #fff0e7;
-  --op-peach-border: #f0d0be;
+  --op-action-ink: #293d94;
+  --op-action-accent: #3c57bc;
+  --op-action-tint: #eef1ff;
+  --op-action-border: #c9d1f7;
+  --op-lavender-ink: #493291;
+  --op-lavender-tint: #f0ecff;
+  --op-lavender-border: #d6ccfa;
+  --op-peach-ink: #8a3d27;
+  --op-peach-tint: #fff0e9;
+  --op-peach-border: #efc7b8;
   --op-link: var(--op-action-ink);
   --op-radius-card: 1rem;
   --op-radius-control: 0.625rem;
@@ -48,8 +48,8 @@
 }
 
 @theme inline {
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-brand-sans);
+  --font-mono: var(--font-data-mono);
   --color-op-canvas: var(--op-canvas);
   --color-op-sheet: var(--op-sheet);
   --color-op-shaded: var(--op-shaded);
@@ -82,20 +82,20 @@
 }
 
 html { scroll-behavior: smooth; scroll-padding-top: 6rem; }
-body { background: var(--op-canvas); color: var(--op-ink-primary); font-family: var(--font-geist-sans), sans-serif; font-feature-settings: "cv02", "cv03", "cv04", "cv11"; -webkit-font-smoothing: antialiased; }
+body { background: var(--op-canvas); color: var(--op-ink-primary); font-family: var(--font-brand-sans), Arial, sans-serif; font-optical-sizing: auto; -webkit-font-smoothing: antialiased; }
 ::selection { background: var(--op-verified-border); color: var(--op-ink-primary); }
 :focus-visible { outline: 3px solid var(--op-verified-accent); outline-offset: 4px; }
 input, textarea, select { font: inherit; }
 button:not(:disabled), summary { cursor: pointer; }
 button:disabled { cursor: not-allowed; }
 input, textarea, select { scroll-margin-top: 7rem; }
-.font-data { font-family: var(--font-geist-mono), monospace; font-variant-numeric: tabular-nums; }
+.font-data { font-family: var(--font-data-mono), monospace; font-variant-numeric: tabular-nums; }
 .shadow-flat { box-shadow: var(--op-shadow-flat); }
 .shadow-elevated { box-shadow: var(--op-shadow-elevated); }
 .shadow-inset { box-shadow: inset 0 1px 0 var(--op-sheet); }
 .op-container { width: 100%; max-width: 1280px; margin-inline: auto; padding-inline: clamp(1rem, 4vw, 2rem); }
 .op-section { padding-block: clamp(2.5rem, 6vw, 5rem); }
-.op-eyebrow { font-size: 0.6875rem; font-weight: 650; letter-spacing: 0.14em; text-transform: uppercase; color: var(--op-verified-ink); }
+.op-eyebrow { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--op-verified-ink); }
 .op-button { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; min-height: 44px; padding: 0.75rem 1.125rem; border-radius: var(--op-radius-control); background: var(--op-action-accent); color: var(--op-sheet); font-size: 0.875rem; font-weight: 600; transition: background 160ms, transform 160ms; }
 .op-button:hover { background: var(--op-action-ink); }
 .op-button:active { transform: translateY(1px); }

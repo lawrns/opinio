@@ -36,7 +36,7 @@ export function Navbar() {
       <div className="op-container flex h-[76px] items-center justify-between gap-5">
         <Brand />
         <nav aria-label="Navegación principal" className="hidden items-center gap-7 lg:flex">
-          {links.map(({ href, label }) => <Link key={href} href={href} aria-current={pathname === href ? 'page' : undefined} className="flex min-h-11 items-center text-sm font-medium text-op-secondary transition-colors hover:text-op-green aria-[current=page]:text-op-green">{label}</Link>)}
+          {links.map(({ href, label }) => <Link key={href} href={href} aria-current={pathname === href ? 'page' : undefined} className="flex min-h-11 items-center text-sm font-medium text-op-secondary transition-colors hover:text-op-green-dark aria-[current=page]:text-op-green-dark">{label}</Link>)}
         </nav>
         <div className="hidden items-center gap-6 lg:flex">
           <Link href="/verificar?accion=opinar" className="op-link">Escribir opinión</Link>
