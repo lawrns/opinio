@@ -1,0 +1,5 @@
+<svg width="200" height="60" viewBox="0 0 200 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="8" y="10" width="40" height="40" rx="10" fill="#FF5B00"/>
+  <path d="M22 28V23C22 19.6863 24.6863 17 28 17C31.3137 17 34 19.6863 34 23V35C34 39.4183 30.4183 43 26 43C21.5817 43 18 39.4183 18 35V25" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="60" y="38" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-weight="800" font-size="28" fill="#111827" letter-spacing="-0.5">clip</text>
+</svg>

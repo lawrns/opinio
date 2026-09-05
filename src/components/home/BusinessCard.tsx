@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { ArrowUpRight, ShieldCheck } from 'lucide-react';
+import { BrandLogo } from '@/components/BrandLogo';
 import { StarRating } from '@/components/StarRating';
-import { categoryStyle } from '@/lib/category-style';
 import type { Business } from '@/lib/types';
 
 export interface BusinessCardProps { business: Business }
@@ -19,11 +19,10 @@ export function BusinessCard({ business }: BusinessCardProps) {
   const hasScore = Number(business.effective_reviews_count) > 0 && business.trust_score !== null;
   const count = Number(business.review_count || 0);
   const hasIdentity = ['identity_verified', 'connected_orders', 'transparent_coverage'].includes(business.verified_level);
-  const accent = categoryStyle(business.category);
   return (
     <Link href={`/b/${business.slug}`} className="group flex h-full flex-col rounded-op-card border border-op-border bg-op-sheet p-5 shadow-flat transition-colors hover:border-op-blue sm:p-6">
       <div className="flex items-start gap-3">
-        <span aria-hidden="true" className={`flex size-12 shrink-0 items-center justify-center rounded-op-control border text-sm font-semibold ${accent.tile}`}>{business.brand_name.slice(0, 2).toUpperCase()}</span>
+        <BrandLogo name={business.brand_name} src={business.logo_url} category={business.category} />
         <div className="min-w-0 flex-1"><h3 className="text-lg font-semibold tracking-tight group-hover:text-op-blue-dark">{business.brand_name}</h3><p className="mt-1 truncate text-xs text-op-muted">{business.domain || business.category}</p></div>
         <ArrowUpRight aria-hidden="true" className="mt-1 size-4 shrink-0 text-op-muted" />
       </div>

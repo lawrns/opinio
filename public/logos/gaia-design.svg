@@ -1,0 +1,6 @@
+<svg width="200" height="60" viewBox="0 0 200 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="8" y="10" width="40" height="40" rx="8" fill="#C45D3E"/>
+  <path d="M22 22V32C22 34 24 36 28 36C32 36 34 34 34 32V22" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M20 38H36M24 38V42M32 38V42" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
+  <text x="56" y="37" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-weight="800" font-size="24" fill="#292524" letter-spacing="2">GAIA</text>
+</svg>

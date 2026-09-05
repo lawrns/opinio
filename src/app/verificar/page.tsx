@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { ArrowRight, Search, RefreshCw, ShieldCheck, AlertCircle, X, SlidersHorizontal } from 'lucide-react';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
+import { BrandLogo } from '@/components/BrandLogo';
 import { StarRating } from '@/components/StarRating';
 import { categoryStyle } from '@/lib/category-style';
 
@@ -16,6 +17,7 @@ interface BusinessItem {
   legal_name: string | null;
   category: string;
   domain: string | null;
+  logo_url: string | null;
   operating_area: string | null;
   claimed: boolean;
   verified_level: string;
@@ -167,7 +169,7 @@ function VerificarContent() {
           const profileUrl = `/b/${encodeURIComponent(business.slug)}`;
           return <article key={business.id} className={`flex flex-col rounded-2xl border border-t-4 border-op-border bg-op-sheet p-5 shadow-flat sm:p-6 ${category.edge}`}>
             <div className="flex items-start gap-3">
-              <span aria-hidden="true" className={`flex size-12 shrink-0 items-center justify-center rounded-xl border text-lg font-semibold ${category.tile}`}>{business.brand_name.slice(0, 2).toUpperCase()}</span>
+              <BrandLogo name={business.brand_name} src={business.logo_url} category={business.category} />
               <div className="min-w-0 flex-1"><p className="mb-1 text-xs text-op-muted">{business.category}</p><h2 className="text-xl font-semibold tracking-tight"><Link href={profileUrl} className="break-words hover:text-op-blue-dark hover:underline">{business.brand_name}</Link></h2><p className="mt-1 break-words text-sm text-op-secondary">{business.domain || business.legal_name || 'Identidad comercial por completar'}</p></div>
             </div>
             <div className="mt-6">

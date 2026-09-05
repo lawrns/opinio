@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Building, Receipt, Phone, Globe, SealCheck, CheckCircle } from '@phosphor-icons/react/dist/ssr';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
+import { BrandLogo } from '@/components/BrandLogo';
 import { PassportReviewsList, ReviewItem } from '@/components/passport/PassportReviewsList';
 import { StarRating } from '@/components/StarRating';
 import { PassportActionButtons } from '@/components/passport/PassportActionButtons';
@@ -187,6 +188,7 @@ export default async function BusinessPassportPage({ params }: PageProps) {
                 {/* Main Heading & Legal Identity */}
                 <div>
                   <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-[var(--op-ink-primary)] flex items-center gap-3">
+                    <BrandLogo name={business.brand_name} src={business.logo_url} category={business.category} sizeClass="size-14 sm:size-16" />
                     <span>{business.brand_name}</span>
                   </h1>
                   {business.legal_name && (
