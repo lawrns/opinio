@@ -421,8 +421,8 @@ export default async function BusinessPassportPage({ params }: PageProps) {
 
               <div className="p-6 rounded-2xl bg-[var(--op-sheet)] border border-[var(--op-border-hairline)] shadow-flat space-y-1">
                 <div className="text-xs text-[var(--op-ink-muted)] font-mono uppercase">Tiempo Medio de Respuesta</div>
-                <div className="text-2xl font-black font-mono text-[var(--op-ink-primary)]">
-                  {business.median_response_hours} hrs
+                <div className="break-words text-2xl font-black font-mono text-[var(--op-ink-primary)]">
+                  {Number(business.median_response_hours) > 0 ? `${Number(business.median_response_hours)} hrs` : 'Sin datos'}
                 </div>
                 <p className="text-xs text-[var(--op-ink-secondary)] pt-1">
                   Tiempo de respuesta registrado; no constituye una garantía.
