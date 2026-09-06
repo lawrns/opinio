@@ -1,17 +1,17 @@
 import Link from 'next/link';
-import { Armchair, Bed, DeviceMobile, Sparkle, Diamond, TShirt, Storefront, Coffee, ArrowRight } from '@phosphor-icons/react/dist/ssr';
+import { Armchair, Bed, DeviceMobile, Sparkle, Diamond, ForkKnife, FirstAidKit, Barbell, ArrowRight } from '@phosphor-icons/react/dist/ssr';
 import { categoryStyle } from '@/lib/category-style';
 
 export interface CategoryCount { category: string; businesses_count: number }
 const categories = [
+  { name: 'Restaurantes', icon: ForkKnife, query: 'Restaurantes' },
+  { name: 'Salud', icon: FirstAidKit, query: 'Salud' },
+  { name: 'Fitness', icon: Barbell, query: 'Fitness' },
   { name: 'Hogar', icon: Bed, query: 'Hogar' },
-  { name: 'Muebles', icon: Armchair, query: 'Muebles' },
   { name: 'Tecnología', icon: DeviceMobile, query: 'Electrónica' },
   { name: 'Belleza', icon: Sparkle, query: 'Belleza' },
   { name: 'Joyería', icon: Diamond, query: 'Joyería' },
-  { name: 'Moda', icon: TShirt, query: 'Moda' },
-  { name: 'Servicios', icon: Storefront, query: 'Servicios' },
-  { name: 'Café', icon: Coffee, query: 'Café' },
+  { name: 'Muebles', icon: Armchair, query: 'Muebles' },
 ];
 
 export function CategoryBar({ counts }: { counts?: CategoryCount[] }) {

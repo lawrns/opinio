@@ -31,7 +31,18 @@ interface BusinessItem {
 
 type SortOrder = 'score' | 'rating' | 'reviews';
 interface DirectoryFilters { query: string; category: string; rating: number; connected: boolean; sort: SortOrder }
-const CATEGORIES = ['Todos', 'Hogar', 'Electrónica', 'Belleza', 'Joyería', 'Muebles'];
+const CATEGORIES = [
+  'Todos',
+  'Restaurantes & Delivery',
+  'Salud & Telemedicina',
+  'Software & IA',
+  'Fitness & Gimnasios',
+  'Hogar',
+  'Electrónica',
+  'Belleza',
+  'Joyería',
+  'Muebles',
+];
 const RATINGS = [0, 1, 2, 3, 4, 4.5, 5];
 const numberFormat = new Intl.NumberFormat('es-MX', { maximumFractionDigits: 1 });
 

@@ -37,7 +37,7 @@ export default async function HomePage() {
     query<Business>(`SELECT b.*, stats.review_count, stats.average_rating FROM businesses b
       CROSS JOIN LATERAL (SELECT COUNT(*)::int AS review_count, ROUND(AVG(r.rating), 1) AS average_rating
         FROM reviews r WHERE r.business_id = b.id AND r.status = 'published') stats
-      ORDER BY b.trust_score DESC, b.id ASC LIMIT 6`),
+      ORDER BY b.trust_score DESC, b.id ASC LIMIT 12`),
     query<RecentReview>(`SELECT * FROM (SELECT DISTINCT ON (r.business_id)
       r.id, r.rating, r.title, r.body, r.author_name, r.verification_level, r.created_at,
       b.brand_name, b.slug, b.category FROM reviews r JOIN businesses b ON r.business_id = b.id

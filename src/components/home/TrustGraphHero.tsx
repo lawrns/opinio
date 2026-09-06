@@ -23,8 +23,18 @@ export function TrustGraphHero({ business }: { business?: Business }) {
             <div className="p-6 sm:p-8">
               {business ? <>
                 <div className="flex items-start justify-between gap-5">
-                  <div className="flex min-w-0 items-start gap-3"><BrandLogo name={business.brand_name} src={business.logo_url} category={business.category} /><div className="min-w-0"><p className="text-xs text-op-muted">Un comercio del directorio</p><h2 className="mt-2 text-2xl font-semibold tracking-tight">{business.brand_name}</h2><p className="mt-1 break-words text-sm text-op-muted">{business.domain || business.category}</p></div></div>
-                  <div className="text-right"><p className="font-mono text-4xl font-medium tracking-tight text-op-green-dark">{score}</p><p className="mt-1 text-xs text-op-muted">Puntaje Opinio / 100</p></div>
+                  <div className="flex min-w-0 items-start gap-3">
+                    <BrandLogo name={business.brand_name} src={business.logo_url} category={business.category} />
+                    <div className="min-w-0">
+                      <p className="text-xs text-op-muted">Un comercio del directorio</p>
+                      <h2 className="mt-2 text-2xl font-semibold tracking-tight">{business.brand_name}</h2>
+                      <p className="mt-1 break-words text-sm text-op-muted">{business.domain || business.category}</p>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="font-mono text-4xl font-medium tracking-tight text-op-green-dark">{score}</p>
+                    <p className="mt-1 text-xs text-op-muted">Puntaje Opinio / 100</p>
+                  </div>
                 </div>
                 {Number(business.review_count) > 0 && business.average_rating != null && <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2"><StarRating rating={Number(business.average_rating)} size="sm" /><span className="text-sm font-semibold">{Number(business.average_rating).toLocaleString('es-MX', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} / 5</span><span className="text-xs text-op-secondary">{Number(business.review_count).toLocaleString('es-MX')} opiniones</span></div>}
                 <div className="my-6 h-1.5 overflow-hidden rounded-full bg-op-shaded" aria-hidden="true"><div className="h-full rounded-full bg-op-green" style={{ width: `${Number(business.effective_reviews_count) > 0 ? Math.min(100, Math.max(0, Number(business.trust_score) || 0)) : 0}%` }} /></div>

@@ -113,8 +113,18 @@ export default async function BusinessPassportPage({ params }: PageProps) {
       `SELECT
         r.id, r.rating, r.title, r.body, r.author_name, r.author_masked_contact,
         r.verification_level, r.score_weight, r.product_name, r.created_at,
+        COALESCE(ac.author_review_count, 1)::int as author_review_count,
         rr.responder_name, rr.response_text, rr.created_at as response_created_at
        FROM reviews r
+       LEFT JOIN LATERAL (
+         SELECT COUNT(*)::int AS author_review_count
+         FROM reviews r2
+         WHERE (
+           (r.author_masked_contact IS NOT NULL AND r2.author_masked_contact = r.author_masked_contact)
+           OR (r.author_masked_contact IS NULL AND r2.author_name = r.author_name)
+         )
+         AND r2.status = 'published'
+       ) ac ON true
        LEFT JOIN LATERAL (
          SELECT responder_name, response_text, created_at
          FROM review_responses
