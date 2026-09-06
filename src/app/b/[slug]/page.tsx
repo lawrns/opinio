@@ -86,8 +86,8 @@ interface PageProps {
 export const revalidate = 60; // Refresh every minute
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { slug } = await params;
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://opinio.mx';
+  const envUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  const baseUrl = envUrl && !envUrl.includes('fertilitylistings') ? envUrl : 'https://opinio.mx';
 
   try {
     const res = await query<BusinessDbRow>(
@@ -234,8 +234,8 @@ export default async function BusinessPassportPage({ params }: PageProps) {
   };
   const issueLabels: Record<string, string> = { delay: 'Retraso de entrega', damaged_goods: 'Producto dañado', wrong_item: 'Artículo equivocado', refund_pending: 'Reembolso pendiente', no_response: 'Falta de respuesta' };
 
-  const folioCode = `OPN-MX-${new Date().getFullYear()}-${business.id.toString().padStart(5, '0')}`;
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://opinio.mx';
+  const envPageUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  const baseUrl = envPageUrl && !envPageUrl.includes('fertilitylistings') ? envPageUrl : 'https://opinio.mx';
   const canonicalUrl = `${baseUrl}/b/${business.slug}`;
   const logoAbsoluteUrl = business.logo_url ? `${baseUrl}${business.logo_url}` : undefined;
   const hasResolution = business.resolution_rate !== null && business.resolution_rate !== undefined && Number(business.resolution_rate) > 0;

@@ -11,7 +11,8 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 3600; // Refresh sitemap every hour
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://opinio.mx';
+  const envUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  const baseUrl = envUrl && !envUrl.includes('fertilitylistings') ? envUrl : 'https://opinio.mx';
   const now = new Date();
 
   const staticEntries: MetadataRoute.Sitemap = [
