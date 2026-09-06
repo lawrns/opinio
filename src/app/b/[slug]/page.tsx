@@ -86,6 +86,7 @@ interface PageProps {
 export const revalidate = 60; // Refresh every minute
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { slug } = await params;
   const envUrl = process.env.NEXT_PUBLIC_SITE_URL;
   const baseUrl = envUrl && !envUrl.includes('fertilitylistings') ? envUrl : 'https://opinio.mx';
 
@@ -219,6 +220,7 @@ export default async function BusinessPassportPage({ params }: PageProps) {
   const averageRating = reviews.length ? reviews.reduce((sum, review) => sum + Number(review.rating), 0) / reviews.length : null;
 
   const score = Number(business.trust_score) || 0;
+  const folioCode = `OP-${business.id.toString().padStart(6, '0')}`;
   const confidenceLevel = business.confidence_level;
   const effectiveSampleSize = Number(business.effective_reviews_count) || 0;
   const hasScore = effectiveSampleSize > 0;
@@ -244,7 +246,7 @@ export default async function BusinessPassportPage({ params }: PageProps) {
     '@context': 'https://schema.org',
     '@graph': [
       {
-        '@type': 'Organization',
+        '@type': ['Organization', 'OnlineStore'],
         '@id': `${canonicalUrl}#organization`,
         name: business.brand_name,
         legalName: business.legal_name || business.brand_name,
@@ -252,7 +254,11 @@ export default async function BusinessPassportPage({ params }: PageProps) {
         logo: logoAbsoluteUrl,
         taxID: business.rfc || undefined,
         telephone: business.phone || undefined,
-        description: business.description || `Ficha de reputación e identidad comercial de ${business.brand_name} en Opinio México.`,
+        description: business.description || `Pasaporte de identidad y confianza comercial de ${business.brand_name} en Opinio México.`,
+        areaServed: {
+          '@type': 'Country',
+          name: 'Mexico',
+        },
         ...(averageRating !== null && reviews.length > 0 ? {
           aggregateRating: {
             '@type': 'AggregateRating',
@@ -260,8 +266,44 @@ export default async function BusinessPassportPage({ params }: PageProps) {
             reviewCount: reviews.length,
             bestRating: '5',
             worstRating: '1',
-          }
+          },
+          review: reviews.slice(0, 10).map((r) => ({
+            '@type': 'Review',
+            author: {
+              '@type': 'Person',
+              name: r.author_name || 'Comprador verificado',
+            },
+            datePublished: r.created_at ? new Date(r.created_at).toISOString().split('T')[0] : undefined,
+            reviewRating: {
+              '@type': 'Rating',
+              ratingValue: r.rating,
+              bestRating: '5',
+              worstRating: '1',
+            },
+            reviewBody: r.body,
+          })),
         } : {}),
+      },
+      {
+        '@type': 'WebPage',
+        '@id': canonicalUrl,
+        url: canonicalUrl,
+        name: `¿Es confiable ${business.brand_name}? Pasaporte de Confianza | Opinio México`,
+        description: `Consulta si es seguro comprar en ${business.brand_name}. RFC ${business.rfc || 'validado'}, opiniones y estatus PROFECO.`,
+        inLanguage: 'es-MX',
+        isPartOf: {
+          '@type': 'WebSite',
+          '@id': `${baseUrl}#website`,
+          name: 'Opinio México',
+          url: baseUrl,
+        },
+        about: {
+          '@id': `${canonicalUrl}#organization`,
+        },
+        speakable: {
+          '@type': 'SpeakableSpecification',
+          cssSelector: ['#resumen-confianza', '#folio-code'],
+        },
       },
       {
         '@type': 'BreadcrumbList',

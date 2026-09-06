@@ -7,7 +7,8 @@ import { Menu, X, ArrowUpRight } from 'lucide-react';
 import { Brand } from './Brand';
 
 const links = [
-  { href: '/verificar', label: 'Explorar comercios' },
+  { href: '/directorio', label: 'Directorio' },
+  { href: '/verificar', label: 'Buscar tienda' },
   { href: '/#metodologia', label: 'Cómo funciona' },
   { href: '/caso/nuevo', label: 'Resolver un problema' },
 ];

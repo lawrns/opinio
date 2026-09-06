@@ -14,7 +14,7 @@ export function Footer() {
           <nav aria-label="Enlaces para consumidores">
             <h2 className="text-sm font-semibold">Para quien compra</h2>
             <ul className="mt-3 text-sm text-op-secondary">
-              {[['/verificar', 'Explorar comercios'], ['/verificar?accion=opinar', 'Compartir una opinión'], ['/caso/nuevo', 'Abrir un caso']].map(([href, label]) => <li key={href}><Link className="inline-flex min-h-11 items-center hover:underline" href={href}>{label}</Link></li>)}
+              {[['/directorio', 'Directorio de tiendas'], ['/verificar', 'Explorar comercios'], ['/verificar?accion=opinar', 'Compartir una opinión'], ['/caso/nuevo', 'Abrir un caso']].map(([href, label]) => <li key={href}><Link className="inline-flex min-h-11 items-center hover:underline" href={href}>{label}</Link></li>)}
             </ul>
           </nav>
           <nav aria-label="Enlaces de Opinio">

@@ -47,8 +47,49 @@ export default async function HomePage() {
   ]);
   const businesses = businessResult.status === 'fulfilled' ? businessResult.value.rows : [];
   const reviews = reviewResult.status === 'fulfilled' ? reviewResult.value.rows : [];
+  const envSiteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  const baseUrl = envSiteUrl && !envSiteUrl.includes('fertilitylistings') ? envSiteUrl : 'https://opinio.mx';
+
+  const homeJsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'WebSite',
+        '@id': `${baseUrl}#website`,
+        url: baseUrl,
+        name: 'Opinio México',
+        description: 'Pasaporte de confianza comercial, opiniones verificadas y estatus PROFECO de comercios en México.',
+        inLanguage: 'es-MX',
+        potentialAction: {
+          '@type': 'SearchAction',
+          target: {
+            '@type': 'EntryPoint',
+            urlTemplate: `${baseUrl}/verificar?q={search_term_string}`,
+          },
+          'query-input': 'required name=search_term_string',
+        },
+      },
+      {
+        '@type': 'Organization',
+        '@id': `${baseUrl}#organization`,
+        name: 'Opinio México',
+        url: baseUrl,
+        logo: `${baseUrl}/opinio.svg`,
+        description: 'Directorio independiente de reputación e identidad comercial de tiendas en línea en México.',
+        areaServed: {
+          '@type': 'Country',
+          name: 'Mexico',
+        },
+      },
+    ],
+  };
+
   return (
     <div className="flex min-h-screen flex-col bg-op-canvas text-op-ink">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(homeJsonLd) }}
+      />
       <Navbar />
       <main id="contenido" tabIndex={-1} className="flex-1 focus:outline-none">
         <TrustGraphHero business={businesses[0]} />

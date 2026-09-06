@@ -1,63 +1,64 @@
-/**
- * scripts/submit-indexnow.ts
- *
- * Submits all 135+ Opinio business pages and directory routes to IndexNow
- * for instant indexing across Bing, Yandex, Naver, and Seznam.
- */
-
 import { query } from '../src/lib/db';
 
-const INDEXNOW_KEY = '4b9f2c8d1e3a4567890abcdef1234567';
-const HOST = process.env.NEXT_PUBLIC_SITE_HOST || 'opinio.mx';
-const BASE_URL = `https://${HOST}`;
+const INDEXNOW_KEY = 'e89f5c4b31a24d5e89a0b1c2d3e4f5a6';
+const HOST = 'opinio.mx';
+const KEY_LOCATION = `https://${HOST}/${INDEXNOW_KEY}.txt`;
 
-interface BusinessSlugRow {
+interface BusinessRow {
   slug: string;
 }
 
-export async function submitToIndexNow(): Promise<void> {
-  console.log(`[IndexNow] Preparing submission for host: ${HOST}...`);
+async function main() {
+  console.log(`[IndexNow] Starting IndexNow submission for ${HOST}...`);
 
-  try {
-    const res = await query<BusinessSlugRow>(
-      `SELECT slug FROM businesses WHERE slug IS NOT NULL ORDER BY id ASC`
-    );
+  const res = await query<BusinessRow>(
+    `SELECT slug FROM businesses WHERE slug IS NOT NULL ORDER BY id ASC`
+  );
 
-    const urls: string[] = [
-      `${BASE_URL}/`,
-      `${BASE_URL}/verificar`,
-      ...res.rows.map((b) => `${BASE_URL}/b/${b.slug}`),
-    ];
+  const urlList: string[] = [
+    `https://${HOST}`,
+    `https://${HOST}/verificar`,
+    `https://${HOST}/directorio`,
+    ...res.rows.map((b) => `https://${HOST}/b/${b.slug}`),
+  ];
 
-    console.log(`[IndexNow] Collected ${urls.length} URLs to submit.`);
+  console.log(`[IndexNow] Prepared ${urlList.length} URLs for submission.`);
 
-    const payload = {
-      host: HOST,
-      key: INDEXNOW_KEY,
-      keyLocation: `${BASE_URL}/${INDEXNOW_KEY}.txt`,
-      urlList: urls,
-    };
+  const payload = {
+    host: HOST,
+    key: INDEXNOW_KEY,
+    keyLocation: KEY_LOCATION,
+    urlList,
+  };
 
-    const response = await fetch('https://api.indexnow.org/indexnow', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json; charset=utf-8',
-      },
-      body: JSON.stringify(payload),
-    });
+  const endpoints = [
+    'https://api.indexnow.org/indexnow',
+    'https://www.bing.com/indexnow',
+  ];
 
-    console.log(`[IndexNow] Response status: ${response.status} ${response.statusText}`);
-    if (response.status === 200 || response.status === 202) {
-      console.log(`[IndexNow] ✅ Successfully submitted ${urls.length} URLs for instant indexing!`);
-    } else {
-      const text = await response.text();
-      console.warn(`[IndexNow] Response body:`, text);
+  for (const endpoint of endpoints) {
+    try {
+      console.log(`[IndexNow] Submitting to ${endpoint}...`);
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const responseText = await response.text();
+      console.log(`[IndexNow] ${endpoint} response: HTTP ${response.status} ${response.statusText} — ${responseText || '(empty body = success)'}`);
+    } catch (err) {
+      console.error(`[IndexNow] Failed to submit to ${endpoint}:`, err);
     }
-  } catch (error) {
-    console.error('[IndexNow] Error submitting to IndexNow:', error);
   }
+
+  console.log('[IndexNow] Submission completed.');
+  process.exit(0);
 }
 
-if (typeof process !== 'undefined' && process.argv[1]?.includes('submit-indexnow')) {
-  submitToIndexNow().then(() => process.exit(0));
-}
+main().catch((err) => {
+  console.error('[IndexNow] Fatal error:', err);
+  process.exit(1);
+});
