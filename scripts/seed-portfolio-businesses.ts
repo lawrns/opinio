@@ -1463,6 +1463,12 @@ async function run() {
          VALUES ($1, $2, 'reassurance', $3::jsonb)`,
         [businessId, `wgt_${b.slug}_reassurance_2026`, JSON.stringify({ placement: 'checkout' })]
       );
+      await client.query(
+        `INSERT INTO widgets (business_id, token, widget_type, config)
+         VALUES ($1, $2, 'ribbon', $3::jsonb)
+         ON CONFLICT (token) DO UPDATE SET is_active = true`,
+        [businessId, `wgt_${b.slug}_ribbon_2026`, JSON.stringify({ style: 'ribbon' })]
+      );
     }
 
     await client.query('COMMIT');

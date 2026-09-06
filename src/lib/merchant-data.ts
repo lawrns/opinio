@@ -246,6 +246,8 @@ export interface WidgetWithBusiness extends Business {
   widget_type: string;
   theme: string;
   config: Record<string, unknown>;
+  calculated_rating?: number;
+  review_count?: number;
 }
 export interface WidgetJoinRow extends Business {
   b_slug: string;
@@ -253,13 +255,23 @@ export interface WidgetJoinRow extends Business {
   widget_type: string;
   w_theme?: string;
   w_config?: Record<string, unknown>;
+  rev_count?: string | number;
+  avg_rating?: string | number;
 }
 
 export async function getWidgetDataByToken(token: string): Promise<WidgetWithBusiness | null> {
   const res = await query<WidgetJoinRow>(
-    `SELECT b.*, b.slug as b_slug, w.token as widget_token, w.widget_type, w.theme as w_theme, w.config as w_config
+    `SELECT b.*, b.slug as b_slug, w.token as widget_token, w.widget_type, w.theme as w_theme, w.config as w_config,
+            COALESCE(r.cnt, 0)::int as rev_count,
+            COALESCE(r.avg_rat, 5.0)::numeric as avg_rating
      FROM widgets w
      JOIN businesses b ON b.id = w.business_id
+     LEFT JOIN (
+       SELECT business_id, COUNT(*) as cnt, AVG(rating) as avg_rat
+       FROM reviews
+       WHERE status = 'published'
+       GROUP BY business_id
+     ) r ON r.business_id = b.id
      WHERE w.token = $1 AND w.is_active = true
      LIMIT 1`,
     [token]
@@ -274,6 +286,8 @@ export async function getWidgetDataByToken(token: string): Promise<WidgetWithBus
       widget_type: row.widget_type,
       theme: row.w_theme || 'light',
       config: (row.w_config as Record<string, unknown>) || {},
+      calculated_rating: Math.round(Number(row.avg_rating || 5.0) * 10) / 10,
+      review_count: Number(row.rev_count) || 0,
     };
   }
 
