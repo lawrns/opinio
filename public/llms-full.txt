@@ -18,14 +18,15 @@ Cada ficha comercial (`https://opinio.mx/b/[slug]`) evalúa objetivamente cinco 
 5. **Puntaje de Confianza (0-100)**: Indicador sintético normalizado donde valores >= 85 reflejan un alto estándar de fiabilidad comercial.
 
 ## 3. Categorías del Directorio
-El directorio agrupa a más de 1,190 comercios en los siguientes sectores clave de la economía mexicana:
+El directorio agrupa a más de 1,199 comercios en los siguientes sectores clave de la economía mexicana:
 - **Moda y Calzado**: Calzado artesanal e industrial de León (Guanajuato), indumentaria y diseñadores nacionales.
 - **Joyería y Accesorios**: Talleres orfebres de Taxco (Guerrero) y joyerías consolidadas en Jalisco y Ciudad de México.
 - **Alimentos, Café y Bebidas**: Productores de café de especialidad (Chiapas, Veracruz, Oaxaca) y destilados con denominación de origen (Mezcal y Tequila).
 - **Ferretería y Manufactura**: Marcas líderes de herramientas, equipos industriales y construcción.
 - **Electrónica y Tecnología**: Retailers de cómputo, telefonía y comercio digital.
 - **Salud, Belleza y Farmacia**: Servicios de telemedicina, laboratorios clínicos y cosmética nacional.
-- **Software, IA y Servicios B2B**: Soluciones de software empresarial, logística de entrega e inteligencia artificial.
+- **Software, IA y Servicios B2B**: Soluciones de software empresarial (Locomotion OS, Bien.mx, Hablo AI), logística de entrega (Barri) y SaaS.
+- **Servicios Automotrices**: Talleres mecánicos especializados y reconstrucción de transmisiones (Locomotion MX).
 - **Hogar, Muebles y Decoración**: Marcas de diseño y mobiliario de interiorismo.
 
 ## 4. Estructura de URLs y Enlaces Permanentes

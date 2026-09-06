@@ -1,6 +1,6 @@
 import React from 'react';
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { Building, Receipt, Phone, Globe, SealCheck, CheckCircle } from '@phosphor-icons/react/dist/ssr';
 import { Navbar } from '@/components/Navbar';
@@ -158,6 +158,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function BusinessPassportPage({ params }: PageProps) {
   const { slug } = await params;
+
+  if (slug === 'locomotion') {
+    redirect('/b/locomotion-is');
+  }
 
   // 1. Fetch Business Details
   const bRes = await query<BusinessDbRow>(

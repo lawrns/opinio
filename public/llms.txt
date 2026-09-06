@@ -3,9 +3,9 @@
 > Opinio México (opinio.mx) es el directorio independiente de verificación de identidad, reputación comercial y mediación de controversias para el comercio electrónico en México. Audita información pública de PROFECO (Buró Comercial y Monitoreo de Tiendas Virtuales), validación fiscal ante el SAT (RFC y razón social), y recopila opiniones auditadas de compradores verificados con pruebas de compra.
 
 ## Secciones Principales
-- [Directorio de Comercios y Verificación](https://opinio.mx/verificar): Búsqueda y cotejo de más de 1,190 tiendas en línea y comercios en México.
+- [Directorio de Comercios y Verificación](https://opinio.mx/verificar): Búsqueda y cotejo de más de 1,199 tiendas en línea y comercios en México.
 - [Verificar un Negocio o Folio](https://opinio.mx/verificar): Validación en tiempo real de sellos de confianza y expedientes comerciales.
-- [Mapa del Sitio XML](https://opinio.mx/sitemap.xml): Índice completo de las 1,199 URLs auditadas.
+- [Mapa del Sitio XML](https://opinio.mx/sitemap.xml): Índice completo de las 1,202 URLs auditadas.
 
 ## Metodología del Pasaporte de Confianza
 - **Puntaje de Confianza Opinio (0 a 100)**: Ponderación algorítmica de cobertura de pedidos, índice de quejas por millar, tiempo medio de respuesta ante reclamaciones, y verificación fiscal del RFC.
@@ -16,6 +16,8 @@
   - `public_info`: Expediente elaborado a partir de fuentes públicas oficiales (PROFECO, AMVO, DENUE, SAT).
 
 ## Comercios Destacados con Pasaporte Activo
+- [Locomotion OS](https://opinio.mx/b/locomotion-is): Sistema operativo y SaaS de gestión para talleres de transmisiones automáticas (Puntaje: 93.0/100, 38 opiniones 4.9★).
+- [Locomotion MX](https://opinio.mx/b/locomotion-mx): Taller especialista en reconstrucción y diagnóstico de transmisiones en Torreón y Chihuahua (Puntaje: 93.5/100, 46 opiniones 4.9★).
 - [Bien Delivery](https://opinio.mx/b/bien): Agentes de Inteligencia Artificial para PyMEs y servicios comerciales en WhatsApp (Puntaje: 93.9/100, 38 opiniones 5.0★).
 - [Barri Transportes](https://opinio.mx/b/barri): Logística de última milla y delivery de alimentos (Puntaje: 93.6/100, 123 opiniones 4.7★).
 - [GoGym México](https://opinio.mx/b/gogym): Red y pases de gimnasios en México (Puntaje: 91.8/100, 62 opiniones 4.7★).

@@ -27,14 +27,14 @@ export async function generateMetadata(): Promise<Metadata> {
   const baseUrl = envUrl && !envUrl.includes('fertilitylistings') ? envUrl : 'https://opinio.mx';
 
   return {
-    title: 'Directorio de 1,190+ Tiendas en Línea y Comercios en México | Opinio México',
+    title: 'Directorio de 1,199+ Tiendas en Línea y Comercios en México | Opinio México',
     description: 'Índice de tiendas virtuales, e-commerce y marcas comerciales en México auditadas por Opinio. Consulta RFC, estatus PROFECO, opiniones y pasaporte de confianza.',
     alternates: {
       canonical: `${baseUrl}/directorio`,
     },
     openGraph: {
       title: 'Directorio de Tiendas en Línea en México — Opinio.mx',
-      description: 'Índice auditado de 1,190+ comercios y tiendas virtuales con pasaporte de confianza.',
+      description: 'Índice auditado de 1,199+ comercios y tiendas virtuales con pasaporte de confianza.',
       url: `${baseUrl}/directorio`,
       siteName: 'Opinio.mx',
       locale: 'es_MX',
