@@ -13,7 +13,7 @@ export function OpinioPrestigeRibbon({
   slug,
   brandName,
   rating = 4.8,
-  reviewCount = 55,
+  reviewCount,
   theme = 'dark',
   className = '',
 }: OpinioPrestigeRibbonProps) {
@@ -81,14 +81,16 @@ export function OpinioPrestigeRibbon({
         <span className={`font-mono ${ratingColor}`}>{rating.toFixed(1)}/5</span>
       </span>
 
-      <span className="opacity-30 font-light hidden sm:inline shrink-0" aria-hidden="true">
-        |
-      </span>
-
-      {/* Review volume */}
-      <span className="opacity-80 hidden sm:inline truncate shrink-0">
-        {reviewCount}+ opiniones verificadas
-      </span>
+      {reviewCount !== undefined && (
+        <>
+          <span className="opacity-30 font-light hidden sm:inline shrink-0" aria-hidden="true">
+            |
+          </span>
+          <span className="opacity-80 hidden sm:inline truncate shrink-0">
+            {reviewCount}+ opiniones verificadas
+          </span>
+        </>
+      )}
 
       {/* External link micro glyph */}
       <svg
