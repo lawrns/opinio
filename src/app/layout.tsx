@@ -16,6 +16,7 @@ const dataMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://opinio.mx'),
   title: "Opinio.mx | Pasaporte de Confianza Comercial en México",
   description: "Antes de pagar, comprueba quién vende, cómo cumple y cómo responde. El estándar de confianza independiente para compras en línea, WhatsApp y transferencias en México.",
   keywords: ["Opinio", "Confianza comercial", "PROFECO", "DENUE", "Comercio electrónico México", "Verificar tienda", "Compras WhatsApp"],

@@ -73,14 +73,15 @@ export default async function Image({
             right: '-10%',
             width: '600px',
             height: '600px',
-            borderRadius: '50%',
+            borderRadius: '300px',
             background: 'radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, rgba(9, 9, 11, 0) 70%)',
+            display: 'flex',
           }}
         />
 
         {/* Top Bar: Brand & Standard */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
             <div
               style={{
                 width: '36px',
@@ -93,12 +94,14 @@ export default async function Image({
                 fontWeight: '900',
                 fontSize: '22px',
                 color: '#09090b',
+                marginRight: '12px',
               }}
             >
               O
             </div>
-            <div style={{ fontSize: '20px', fontWeight: '800', letterSpacing: '-0.5px' }}>
-              Opinio<span style={{ color: '#10b981' }}>.mx</span>
+            <div style={{ display: 'flex', fontSize: '20px', fontWeight: '800', letterSpacing: '-0.5px' }}>
+              <span>Opinio</span>
+              <span style={{ color: '#10b981' }}>.mx</span>
             </div>
           </div>
 
@@ -123,11 +126,12 @@ export default async function Image({
         {/* Middle Hero: Business Identity & Score */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '20px 0' }}>
           <div style={{ display: 'flex', flexDirection: 'column', maxWidth: '720px' }}>
-            <div style={{ fontSize: '15px', color: '#10b981', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '8px' }}>
+            <div style={{ display: 'flex', fontSize: '15px', color: '#10b981', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '8px' }}>
               {category}
             </div>
             <div
               style={{
+                display: 'flex',
                 fontSize: '56px',
                 fontWeight: '900',
                 letterSpacing: '-1.5px',
@@ -138,7 +142,7 @@ export default async function Image({
             >
               {brandName}
             </div>
-            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap' }}>
               <div
                 style={{
                   display: 'flex',
@@ -150,6 +154,7 @@ export default async function Image({
                   color: '#a1a1aa',
                   fontSize: '14px',
                   fontFamily: 'monospace',
+                  marginRight: '12px',
                 }}
               >
                 RFC: {rfc}
@@ -184,16 +189,15 @@ export default async function Image({
               borderRadius: '24px',
               backgroundColor: '#18181b',
               border: '2px solid rgba(16, 185, 129, 0.4)',
-              boxShadow: '0 20px 40px -15px rgba(0,0,0,0.5)',
             }}
           >
-            <div style={{ fontSize: '64px', fontWeight: '900', color: score > 0 ? '#10b981' : '#71717a', lineHeight: 1 }}>
+            <div style={{ display: 'flex', fontSize: '64px', fontWeight: '900', color: score > 0 ? '#10b981' : '#71717a', lineHeight: 1 }}>
               {score > 0 ? score : '—'}
             </div>
-            <div style={{ fontSize: '13px', color: '#a1a1aa', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '6px' }}>
+            <div style={{ display: 'flex', fontSize: '13px', color: '#a1a1aa', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '6px' }}>
               Trust Score
             </div>
-            <div style={{ fontSize: '11px', color: '#71717a', marginTop: '2px' }}>
+            <div style={{ display: 'flex', fontSize: '11px', color: '#71717a', marginTop: '2px' }}>
               Escala 0–100 Opinio
             </div>
           </div>
@@ -211,18 +215,21 @@ export default async function Image({
             color: '#71717a',
           }}
         >
-          <div style={{ display: 'flex', gap: '30px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ color: '#10b981' }}>✓</span> Cédula SAT Verificada
+          <div style={{ display: 'flex' }}>
+            <div style={{ display: 'flex', alignItems: 'center', marginRight: '30px' }}>
+              <div style={{ width: '8px', height: '8px', borderRadius: '4px', backgroundColor: '#10b981', marginRight: '8px', display: 'flex' }} />
+              <span>Cédula SAT Verificada</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ color: '#10b981' }}>✓</span> Monitoreo PROFECO
+            <div style={{ display: 'flex', alignItems: 'center', marginRight: '30px' }}>
+              <div style={{ width: '8px', height: '8px', borderRadius: '4px', backgroundColor: '#10b981', marginRight: '8px', display: 'flex' }} />
+              <span>Monitoreo PROFECO</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ color: '#10b981' }}>✓</span> Opiniones con Ticket
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <div style={{ width: '8px', height: '8px', borderRadius: '4px', backgroundColor: '#10b981', marginRight: '8px', display: 'flex' }} />
+              <span>Opiniones con Ticket</span>
             </div>
           </div>
-          <div style={{ color: '#a1a1aa', fontWeight: '600' }}>
+          <div style={{ display: 'flex', color: '#a1a1aa', fontWeight: '600' }}>
             opinio.mx/b/{slug}
           </div>
         </div>
