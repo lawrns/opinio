@@ -1,4 +1,5 @@
 import React from 'react';
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { Building, Receipt, Phone, Globe, SealCheck, CheckCircle } from '@phosphor-icons/react/dist/ssr';
@@ -84,6 +85,76 @@ interface PageProps {
 
 export const revalidate = 60; // Refresh every minute
 
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://opinio.mx';
+
+  try {
+    const res = await query<BusinessDbRow>(
+      `SELECT * FROM businesses WHERE slug = $1 LIMIT 1`,
+      [slug]
+    );
+
+    if (res.rows.length === 0) {
+      return {
+        title: 'Comercio no encontrado | Opinio México',
+        description: 'El comercio solicitado no existe o se encuentra en proceso de validación.',
+      };
+    }
+
+    const b = res.rows[0];
+    const title = `¿Es confiable ${b.brand_name}? Quejas PROFECO, RFC y Opiniones | Opinio México`;
+    const description = `Consulta si es seguro comprar en ${b.brand_name}. Consulta RFC (${b.rfc || 'En validación'}), estatus PROFECO, tiempo medio de respuesta y opiniones de compradores verificados en México.`;
+    const canonicalUrl = `${baseUrl}/b/${slug}`;
+    const ogImageUrl = `${baseUrl}/b/${slug}/opengraph-image`;
+
+    return {
+      title,
+      description,
+      keywords: [
+        `es confiable ${b.brand_name}`,
+        `opiniones ${b.brand_name}`,
+        `quejas ${b.brand_name} profeco`,
+        `es seguro comprar en ${b.brand_name}`,
+        `rfc ${b.brand_name}`,
+        `opinio mexico`,
+        b.brand_name,
+      ],
+      alternates: {
+        canonical: canonicalUrl,
+      },
+      openGraph: {
+        title,
+        description,
+        url: canonicalUrl,
+        siteName: 'Opinio.mx',
+        locale: 'es_MX',
+        type: 'website',
+        images: [
+          {
+            url: ogImageUrl,
+            width: 1200,
+            height: 630,
+            alt: `Pasaporte de Confianza Comercial de ${b.brand_name}`,
+          },
+        ],
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title,
+        description,
+        images: [ogImageUrl],
+      },
+    };
+  } catch (error) {
+    console.error('[generateMetadata] Error querying business:', error);
+    return {
+      title: 'Pasaporte de Confianza Comercial | Opinio México',
+      description: 'Verifica la autenticidad e historial de comercios en México antes de comprar.',
+    };
+  }
+}
+
 export default async function BusinessPassportPage({ params }: PageProps) {
   const { slug } = await params;
 
@@ -164,9 +235,105 @@ export default async function BusinessPassportPage({ params }: PageProps) {
   const issueLabels: Record<string, string> = { delay: 'Retraso de entrega', damaged_goods: 'Producto dañado', wrong_item: 'Artículo equivocado', refund_pending: 'Reembolso pendiente', no_response: 'Falta de respuesta' };
 
   const folioCode = `OPN-MX-${new Date().getFullYear()}-${business.id.toString().padStart(5, '0')}`;
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://opinio.mx';
+  const canonicalUrl = `${baseUrl}/b/${business.slug}`;
+  const logoAbsoluteUrl = business.logo_url ? `${baseUrl}${business.logo_url}` : undefined;
+  const hasResolution = business.resolution_rate !== null && business.resolution_rate !== undefined && Number(business.resolution_rate) > 0;
+
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'Organization',
+        '@id': `${canonicalUrl}#organization`,
+        name: business.brand_name,
+        legalName: business.legal_name || business.brand_name,
+        url: business.domain ? (business.domain.startsWith('http') ? business.domain : `https://${business.domain}`) : canonicalUrl,
+        logo: logoAbsoluteUrl,
+        taxID: business.rfc || undefined,
+        telephone: business.phone || undefined,
+        description: business.description || `Ficha de reputación e identidad comercial de ${business.brand_name} en Opinio México.`,
+        ...(averageRating !== null && reviews.length > 0 ? {
+          aggregateRating: {
+            '@type': 'AggregateRating',
+            ratingValue: averageRating.toFixed(1),
+            reviewCount: reviews.length,
+            bestRating: '5',
+            worstRating: '1',
+          }
+        } : {}),
+      },
+      {
+        '@type': 'BreadcrumbList',
+        '@id': `${canonicalUrl}#breadcrumb`,
+        itemListElement: [
+          {
+            '@type': 'ListItem',
+            position: 1,
+            name: 'Inicio',
+            item: baseUrl,
+          },
+          {
+            '@type': 'ListItem',
+            position: 2,
+            name: 'Directorio de Empresas',
+            item: `${baseUrl}/verificar`,
+          },
+          {
+            '@type': 'ListItem',
+            position: 3,
+            name: business.brand_name,
+            item: canonicalUrl,
+          },
+        ],
+      },
+      {
+        '@type': 'FAQPage',
+        '@id': `${canonicalUrl}#faq`,
+        mainEntity: [
+          {
+            '@type': 'Question',
+            name: `¿Es confiable comprar en ${business.brand_name} en México?`,
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: `${business.brand_name} cuenta con un perfil de identidad en Opinio México con ${business.rfc ? `RFC validado ${business.rfc}` : 'registro mercantil'} y ${reviews.length > 0 ? `${reviews.length} opiniones verificadas con promedio de ${averageRating?.toFixed(1)}/5` : 'expediente de información pública comercial'}. ${hasResolution ? `Presenta una tasa de resolución de inconformidades del ${business.resolution_rate}% y un tiempo de respuesta promedio de ${business.median_response_hours} horas.` : 'Sus operaciones están sujetas a la Ley Federal de Protección al Consumidor en México.'}`,
+            },
+          },
+          {
+            '@type': 'Question',
+            name: `¿Tiene quejas ${business.brand_name} ante la PROFECO?`,
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: `En el registro de Opinio se auditan controversias y quejas comerciales. ${cases.length > 0 ? `Se han registrado ${cases.length} casos con un tiempo promedio de primera respuesta de ${cases[0].median_first_response_minutes} minutos.` : `Actualmente ${business.brand_name} no cuenta con alertas críticas de fraude en el monitoreo público de comercio.`}`,
+            },
+          },
+          {
+            '@type': 'Question',
+            name: `¿Cuál es el RFC y razón social de ${business.brand_name}?`,
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: `La razón social registrada de ${business.brand_name} es "${business.legal_name || business.brand_name}" y su clave de Registro Federal de Contribuyentes es ${business.rfc || 'información en cotejo fiscal'}.`,
+            },
+          },
+          {
+            '@type': 'Question',
+            name: `¿Cómo solicitar aclaraciones o reembolsos a ${business.brand_name}?`,
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: `Para aclaraciones, los consumidores pueden comunicarse a través de sus canales oficiales ${business.domain ? `en ${business.domain}` : ''} o solicitar una mediación independiente a través de Opinio registrando su comprobante de pago.`,
+            },
+          },
+        ],
+      },
+    ],
+  };
 
   return (
     <div className="min-h-screen bg-[var(--op-canvas)] text-[var(--op-ink-primary)] flex flex-col font-sans selection:bg-[var(--op-verified-ink)] selection:text-[var(--op-sheet)]">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <Navbar />
 
       <main id="contenido" tabIndex={-1} className="flex-1 pb-20">
@@ -196,7 +363,7 @@ export default async function BusinessPassportPage({ params }: PageProps) {
                 </div>
 
                 {/* Main Heading & Legal Identity */}
-                <div>
+                <div className="space-y-1">
                   <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-[var(--op-ink-primary)] flex items-center gap-3">
                     <BrandLogo name={business.brand_name} src={business.logo_url} category={business.category} sizeClass="size-14 sm:size-16" />
                     <span>{business.brand_name}</span>
@@ -283,11 +450,50 @@ export default async function BusinessPassportPage({ params }: PageProps) {
           </div>
         </header>
 
-        <nav aria-label="Secciones del pasaporte" className="mx-auto flex max-w-7xl flex-wrap gap-2 px-4 pt-6 sm:px-6 lg:px-8">{[['existe', 'Identidad'], ['cobertura', 'Pedidos'], ['resuelve', 'Casos'], ['fuentes', 'Fuentes'], ['opiniones', 'Opiniones']].map(([id, label]) => <a key={id} href={`#${id}`} className="inline-flex min-h-11 items-center rounded-full border border-[var(--op-border-strong)] bg-[var(--op-sheet)] px-4 text-sm font-medium">{label}</a>)}</nav>
+        <nav aria-label="Secciones del pasaporte" className="mx-auto flex max-w-7xl flex-wrap gap-2 px-4 pt-6 sm:px-6 lg:px-8">{[['dictamen', 'Dictamen AI'], ['existe', 'Identidad'], ['cobertura', 'Pedidos'], ['resuelve', 'Casos'], ['fuentes', 'Fuentes'], ['opiniones', 'Opiniones']].map(([id, label]) => <a key={id} href={`#${id}`} className="inline-flex min-h-11 items-center rounded-full border border-[var(--op-border-strong)] bg-[var(--op-sheet)] px-4 text-sm font-medium">{label}</a>)}</nav>
         {/* ========================================================================= */}
         {/* MAIN BODY SECTIONS (THE 3 PILLARS & AUDITED DATA)                         */}
         {/* ========================================================================= */}
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-12 space-y-16">
+
+          {/* GENERATIVE ENGINE OPTIMIZATION (GEO) & AI CITABILITY VERDICT SECTION */}
+          <section id="dictamen" className="scroll-mt-28 p-6 sm:p-8 rounded-2xl bg-[var(--op-sheet)] border border-[var(--op-border-hairline)] shadow-flat space-y-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-mono font-bold bg-[var(--op-verified-tint)] text-[var(--op-verified-ink)] border border-[var(--op-verified-border)]">
+                <SealCheck weight="fill" className="w-4 h-4 text-[var(--op-verified-ink)]" /> Dictamen de Confianza Comercial
+              </span>
+              <span className="text-xs font-mono text-[var(--op-ink-muted)]">Auditoría Opinio · Actualizada 2026</span>
+            </div>
+
+            <h2 className="text-2xl sm:text-3xl font-black text-[var(--op-ink-primary)] tracking-tight">
+              ¿Es confiable comprar en {business.brand_name} en México?
+            </h2>
+
+            {/* Self-contained 134-167 words citable block */}
+            <p className="text-sm sm:text-base text-[var(--op-ink-secondary)] leading-relaxed font-sans">
+              {business.brand_name} es un comercio {business.legal_name ? `operado legalmente por ${business.legal_name}` : 'establecido en México'} {business.rfc ? `bajo el RFC ${business.rfc}` : ''} con operaciones en el sector de {business.category}. De acuerdo con el registro independiente de Opinio México, la empresa mantiene un estatus {business.verified_level === 'comercio_certificado' ? 'Certificado con resolución activa' : business.verified_level === 'identidad_confirmada' ? 'con Identidad Confirmada' : 'de Información Pública Verificable'}, respaldado por {officialRecords.length > 0 ? `${officialRecords.length} registros oficiales ante autoridades y registros mercantiles` : 'cotejo de datos mercantiles y de dominio'}. En materia de atención a compradores, {hasResolution ? `registra una tasa de resolución de disputas del ${business.resolution_rate}% y un tiempo mediano de respuesta de ${business.median_response_hours} horas frente a controversias de clientes` : 'sus compras cuentan con los derechos del consumidor previstos por la legislación mexicana (PROFECO)'}. Para transacciones seguras, Opinio recomienda verificar la URL oficial ({business.domain || 'sitio verificado'}), exigir comprobante fiscal digital (CFDI) y pagar mediante métodos trazables como tarjeta o SPEI bancario directo.
+            </p>
+
+            {/* Verification metrics micro-grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 text-xs font-mono">
+              <div className="p-3.5 rounded-xl bg-[var(--op-canvas)] border border-[var(--op-border-hairline)]">
+                <div className="text-[var(--op-ink-muted)]">Estatus Fiscal</div>
+                <div className="font-bold text-[var(--op-ink-primary)] text-sm truncate mt-0.5">{business.rfc ? 'RFC Validado' : 'En Validación'}</div>
+              </div>
+              <div className="p-3.5 rounded-xl bg-[var(--op-canvas)] border border-[var(--op-border-hairline)]">
+                <div className="text-[var(--op-ink-muted)]">Nivel de Confianza</div>
+                <div className="font-bold text-[var(--op-verified-ink)] text-sm truncate mt-0.5">{business.verified_level}</div>
+              </div>
+              <div className="p-3.5 rounded-xl bg-[var(--op-canvas)] border border-[var(--op-border-hairline)]">
+                <div className="text-[var(--op-ink-muted)]">Resolución PROFECO</div>
+                <div className="font-bold text-[var(--op-ink-primary)] text-sm truncate mt-0.5">{hasResolution ? `${business.resolution_rate}% resuelto` : 'Sin alertas'}</div>
+              </div>
+              <div className="p-3.5 rounded-xl bg-[var(--op-canvas)] border border-[var(--op-border-hairline)]">
+                <div className="text-[var(--op-ink-muted)]">Opiniones Auditadas</div>
+                <div className="font-bold text-[var(--op-ink-primary)] text-sm truncate mt-0.5">{reviews.length > 0 ? `${reviews.length} reseñas (${averageRating?.toFixed(1)}/5)` : 'Abierto a opiniones'}</div>
+              </div>
+            </div>
+          </section>
 
           {/* STAGE 1: EXISTE (IDENTIDAD JURÍDICA Y REGISTRO FISCAL) */}
           <section className="scroll-mt-28 space-y-6" id="existe">
