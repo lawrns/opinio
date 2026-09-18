@@ -3,7 +3,7 @@ import { Pool, PoolClient, QueryResult, QueryResultRow } from 'pg';
 const connectionString = process.env.DATABASE_URL;
 
 if (!connectionString && process.env.NODE_ENV === 'production') {
-  throw new Error('[db] FATAL: DATABASE_URL environment variable is not defined in production.');
+  console.warn('[db] Warning: DATABASE_URL environment variable is not defined.');
 }
 
 declare global {
@@ -26,6 +26,9 @@ export async function query<T extends QueryResultRow = Record<string, unknown>>(
   text: string,
   params?: unknown[]
 ): Promise<QueryResult<T>> {
+  if (!process.env.DATABASE_URL && !connectionString) {
+    throw new Error('[db] FATAL: DATABASE_URL environment variable is required to execute queries.');
+  }
   const start = Date.now();
   try {
     const res = await pool.query<T>(text, params);
@@ -47,6 +50,9 @@ export async function query<T extends QueryResultRow = Record<string, unknown>>(
 export async function withTransaction<T>(
   fn: (client: PoolClient) => Promise<T>
 ): Promise<T> {
+  if (!process.env.DATABASE_URL && !connectionString) {
+    throw new Error('[db] FATAL: DATABASE_URL environment variable is required to execute transactions.');
+  }
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
