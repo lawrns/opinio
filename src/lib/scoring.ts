@@ -51,7 +51,8 @@ export function calculateOpinioScore(
 
   for (const review of reviews) {
     // x_i = 25 * (rating - 1) -> 1 star = 0, 5 stars = 100
-    const xi = 25 * Math.max(1, Math.min(5, review.rating) - 1);
+    const clampedRating = Math.max(1, Math.min(5, review.rating));
+    const xi = 25 * (clampedRating - 1);
     const vi = VERIFICATION_WEIGHTS[review.verificationLevel] ?? 0.35;
     // Recency decay d_i = max(0.25, 2^(-age/365))
     const di = Math.max(0.25, Math.pow(2, -review.ageDays / 365));

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { query } from '@/lib/db';
+import { query, withTransaction } from '@/lib/db';
 import {
   calculateOpinioScore,
   ReviewCalculationItem,
@@ -109,9 +109,46 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const business = bizRes.rows[0];
-    const verificationLevel = body.verification_level || 'unverified_experience';
-    const scoreWeight = VERIFICATION_WEIGHTS[verificationLevel] ?? 0.35;
+    let verifiedLevel: 'confirmed_payment' | 'confirmed_store_order' | 'reviewed_proof' | 'unverified_experience' = 'unverified_experience';
+    let verifiedOrderId: number | null = null;
+
+    if (body.order_id && typeof body.order_id === 'number') {
+      const orderRes = await query<{ id: number; status: string }>(
+        'SELECT id, status FROM orders WHERE id = $1 AND business_id = $2 LIMIT 1',
+        [body.order_id, body.business_id]
+      );
+
+      if (orderRes.rows.length > 0) {
+        // Prevent duplicate reviews on the same order
+        const dupRes = await query<{ id: number }>(
+          'SELECT id FROM reviews WHERE order_id = $1 AND business_id = $2 LIMIT 1',
+          [body.order_id, body.business_id]
+        );
+        if (dupRes.rows.length > 0) {
+          return NextResponse.json(
+            { success: false, error: 'Este pedido ya cuenta con una opinión registrada' },
+            { status: 400 }
+          );
+        }
+
+        verifiedOrderId = orderRes.rows[0].id;
+        const ordStatus = orderRes.rows[0].status;
+        if (ordStatus === 'delivered' || ordStatus === 'fulfilled') {
+          verifiedLevel = body.verification_level === 'confirmed_payment' ? 'confirmed_payment' : 'confirmed_store_order';
+        } else {
+          verifiedLevel = 'confirmed_store_order';
+        }
+      } else {
+        // Order not found for this business: fail safe to unverified_experience
+        verifiedLevel = 'unverified_experience';
+      }
+    } else if (body.verification_level === 'reviewed_proof') {
+      verifiedLevel = 'reviewed_proof';
+    } else {
+      verifiedLevel = 'unverified_experience';
+    }
+
+    const scoreWeight = VERIFICATION_WEIGHTS[verifiedLevel] ?? 0.35;
     const integrityFactor = 1.0;
 
     // Mask author contact if provided or auto-mask name
@@ -121,113 +158,129 @@ export async function POST(request: NextRequest) {
       maskedContact = `${cleanName.slice(0, 2)}***@opinio.mx`;
     }
 
-    // Insert Review
-    const insertRes = await query<ReviewRow>(
-      `INSERT INTO reviews (
-        business_id, order_id, rating, title, body, author_name,
-        author_masked_contact, verification_level, score_weight,
-        integrity_factor, product_name, status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'published')
-      RETURNING *`,
-      [
-        body.business_id,
-        body.order_id || null,
-        Math.round(body.rating),
-        body.title?.trim() || null,
-        body.body.trim(),
-        body.author_name.trim(),
-        maskedContact,
-        verificationLevel,
-        scoreWeight,
-        integrityFactor,
-        body.product_name?.trim() || 'Experiencia Comercial',
-      ]
-    );
-
-    const createdReview = insertRes.rows[0];
-
-    // Recalculate Business Scores
-    const [allReviewsRes, caseStatsRes] = await Promise.all([
-      query<ReviewItemDb>(
-        'SELECT rating, verification_level, integrity_factor, created_at FROM reviews WHERE business_id = $1 AND status = $2',
-        [body.business_id, 'published']
-      ),
-      query<CaseStatsRow>(
-        `SELECT 
-           COUNT(*)::text as total,
-           COUNT(*) FILTER (WHERE is_consumer_confirmed = true)::text as confirmed,
-           COUNT(*) FILTER (WHERE status != 'opened')::text as responded,
-           COUNT(*) FILTER (WHERE status = 'reopened')::text as reopened,
-           AVG(total_resolution_hours)::text as avg_hours
-         FROM resolution_cases
-         WHERE business_id = $1`,
+    const { createdReview, newPassport } = await withTransaction(async (client) => {
+      // 1. Acquire row lock on business to prevent concurrent lost updates
+      const bizRes = await client.query<BusinessStatsRow>(
+        'SELECT id, observed_orders_count, invited_orders_count, median_response_hours FROM businesses WHERE id = $1 FOR UPDATE',
         [body.business_id]
-      ),
-    ]);
+      );
 
-    const nowMs = Date.now();
-    const reviewItems: ReviewCalculationItem[] = allReviewsRes.rows.map((r) => {
-      const reviewDateMs = new Date(r.created_at).getTime();
-      const ageDays = Math.max(0, Math.floor((nowMs - reviewDateMs) / (1000 * 60 * 60 * 24)));
-      return {
-        rating: r.rating,
-        verificationLevel: r.verification_level,
-        ageDays,
-        integrityFactor: Number(r.integrity_factor) || 1.0,
+      if (bizRes.rows.length === 0) {
+        throw new Error(`Negocio con ID ${body.business_id} no existe`);
+      }
+
+      const business = bizRes.rows[0];
+
+      // 2. Insert Review
+      const insertRes = await client.query<ReviewRow>(
+        `INSERT INTO reviews (
+          business_id, order_id, rating, title, body, author_name,
+          author_masked_contact, verification_level, score_weight,
+          integrity_factor, product_name, status
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'published')
+        RETURNING *`,
+        [
+          body.business_id,
+          verifiedOrderId,
+          Math.round(body.rating),
+          body.title?.trim() || null,
+          body.body.trim(),
+          body.author_name.trim(),
+          maskedContact,
+          verifiedLevel,
+          scoreWeight,
+          integrityFactor,
+          body.product_name?.trim() || 'Experiencia Comercial',
+        ]
+      );
+
+      const review = insertRes.rows[0];
+
+      // 3. Recalculate Business Scores
+      const [allReviewsRes, caseStatsRes] = await Promise.all([
+        client.query<ReviewItemDb>(
+          'SELECT rating, verification_level, integrity_factor, created_at FROM reviews WHERE business_id = $1 AND status = $2',
+          [body.business_id, 'published']
+        ),
+        client.query<CaseStatsRow>(
+          `SELECT 
+             COUNT(*)::text as total,
+             COUNT(*) FILTER (WHERE is_consumer_confirmed = true)::text as confirmed,
+             COUNT(*) FILTER (WHERE status != 'opened')::text as responded,
+             COUNT(*) FILTER (WHERE status = 'reopened')::text as reopened,
+             AVG(total_resolution_hours)::text as avg_hours
+           FROM resolution_cases
+           WHERE business_id = $1`,
+          [body.business_id]
+        ),
+      ]);
+
+      const nowMs = Date.now();
+      const reviewItems: ReviewCalculationItem[] = allReviewsRes.rows.map((r) => {
+        const reviewDateMs = new Date(r.created_at).getTime();
+        const ageDays = Math.max(0, Math.floor((nowMs - reviewDateMs) / (1000 * 60 * 60 * 24)));
+        return {
+          rating: r.rating,
+          verificationLevel: r.verification_level,
+          ageDays,
+          integrityFactor: Number(r.integrity_factor) || 1.0,
+        };
+      });
+
+      const caseStats = caseStatsRes.rows[0] || {
+        total: '0',
+        confirmed: '0',
+        responded: '0',
+        reopened: '0',
+        avg_hours: null,
       };
+
+      const casesCount = parseInt(caseStats.total, 10) || 0;
+      const consumerConfirmedCount = parseInt(caseStats.confirmed, 10) || 0;
+      const merchantRespondedCount = parseInt(caseStats.responded, 10) || 0;
+      const reopenedCount = parseInt(caseStats.reopened, 10) || 0;
+      const medianResponseHours = caseStats.avg_hours
+        ? Number(caseStats.avg_hours)
+        : Number(business.median_response_hours) || 4.5;
+
+      const resolutionInput: ResolutionMetricsInput = {
+        casesCount,
+        consumerConfirmedCount,
+        merchantRespondedCount,
+        medianResponseHours,
+        targetResponseHours: 24,
+        reopenedCount,
+      };
+
+      const passport = calculateOpinioScore(
+        reviewItems,
+        resolutionInput,
+        business.observed_orders_count || 0,
+        business.invited_orders_count || 0
+      );
+
+      // 4. Update business table with fresh scores atomically
+      await client.query(
+        `UPDATE businesses SET
+          trust_score = $1,
+          confidence_level = $2,
+          effective_reviews_count = $3,
+          resolution_rate = $4,
+          issues_per_thousand = $5,
+          updated_at = NOW()
+         WHERE id = $6`,
+        [
+          passport.opinioScore,
+          passport.confidenceLevel,
+          Math.round(passport.effectiveSampleSize),
+          passport.resolutionRate,
+          passport.issuesPerThousand,
+          body.business_id,
+        ]
+      );
+
+      return { createdReview: review, newPassport: passport };
     });
-
-    const caseStats = caseStatsRes.rows[0] || {
-      total: '0',
-      confirmed: '0',
-      responded: '0',
-      reopened: '0',
-      avg_hours: null,
-    };
-
-    const casesCount = parseInt(caseStats.total, 10) || 0;
-    const consumerConfirmedCount = parseInt(caseStats.confirmed, 10) || 0;
-    const merchantRespondedCount = parseInt(caseStats.responded, 10) || 0;
-    const reopenedCount = parseInt(caseStats.reopened, 10) || 0;
-    const medianResponseHours = caseStats.avg_hours
-      ? Number(caseStats.avg_hours)
-      : Number(business.median_response_hours) || 4.5;
-
-    const resolutionInput: ResolutionMetricsInput = {
-      casesCount,
-      consumerConfirmedCount,
-      merchantRespondedCount,
-      medianResponseHours,
-      targetResponseHours: 24,
-      reopenedCount,
-    };
-
-    const newPassport = calculateOpinioScore(
-      reviewItems,
-      resolutionInput,
-      business.observed_orders_count || 0,
-      business.invited_orders_count || 0
-    );
-
-    // Update business table with fresh scores
-    await query(
-      `UPDATE businesses SET
-        trust_score = $1,
-        confidence_level = $2,
-        effective_reviews_count = $3,
-        resolution_rate = $4,
-        issues_per_thousand = $5,
-        updated_at = NOW()
-       WHERE id = $6`,
-      [
-        newPassport.opinioScore,
-        newPassport.confidenceLevel,
-        Math.round(newPassport.effectiveSampleSize),
-        newPassport.resolutionRate,
-        newPassport.issuesPerThousand,
-        body.business_id,
-      ]
-    );
 
     return NextResponse.json(
       {

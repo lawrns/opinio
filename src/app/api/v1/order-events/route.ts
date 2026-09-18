@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { query } from '@/lib/db';
+import { query, withTransaction } from '@/lib/db';
 
 interface OrderEventInput {
   business_id?: number;
@@ -63,25 +63,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // If still not found, default to 1 (Luuna) if present in demo mode, else error
+    // If still not found, return 400 fail-closed
     if (!businessId) {
-      const firstBiz = await query<{ id: number }>('SELECT id FROM businesses ORDER BY id ASC LIMIT 1');
-      if (firstBiz.rows.length > 0) {
-        businessId = firstBiz.rows[0].id;
-      } else {
-        return NextResponse.json(
-          { success: false, error: 'business_id o business_slug es requerido' },
-          { status: 400 }
-        );
-      }
-    }
-
-    // Verify business exists
-    const bizRes = await query<BusinessRow>('SELECT * FROM businesses WHERE id = $1', [businessId]);
-    if (bizRes.rows.length === 0) {
       return NextResponse.json(
-        { success: false, error: `Negocio con ID ${businessId} no encontrado` },
-        { status: 404 }
+        { success: false, error: 'business_id o business_slug válido es requerido' },
+        { status: 400 }
       );
     }
 
@@ -90,79 +76,84 @@ export async function POST(request: NextRequest) {
     const status = body.status || 'delivered';
     const amount = body.amount !== undefined ? Number(body.amount) : null;
 
-    // Check if order already exists
-    const existingOrder = await query<OrderRow>(
-      'SELECT id FROM orders WHERE business_id = $1 AND external_order_id = $2 LIMIT 1',
-      [businessId, body.external_order_id.trim()]
-    );
-
-    let order: OrderRow;
-
-    if (existingOrder.rows.length > 0) {
-      // Update existing order status
-      const updateOrderRes = await query<OrderRow>(
-        `UPDATE orders
-         SET status = $1,
-             customer_name = COALESCE($2, customer_name),
-             customer_email = COALESCE($3, customer_email),
-             customer_phone = COALESCE($4, customer_phone),
-             amount = COALESCE($5, amount)
-         WHERE id = $6
-         RETURNING *`,
-        [
-          status,
-          body.customer_name?.trim() || null,
-          body.customer_email?.trim() || null,
-          body.customer_phone?.trim() || null,
-          amount,
-          existingOrder.rows[0].id,
-        ]
-      );
-      order = updateOrderRes.rows[0];
-    } else {
-      // Insert new order
-      const insertOrderRes = await query<OrderRow>(
-        `INSERT INTO orders (
-          business_id, external_order_id, platform, customer_name,
-          customer_email, customer_phone, amount, currency, status,
-          order_date, delivered_date, invited, created_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW(), false, NOW())
-        RETURNING *`,
-        [
-          businessId,
-          body.external_order_id.trim(),
-          platform,
-          body.customer_name?.trim() || 'Cliente Verificado',
-          body.customer_email?.trim() || null,
-          body.customer_phone?.trim() || null,
-          amount,
-          currency,
-          status,
-        ]
-      );
-      order = insertOrderRes.rows[0];
-
-      // Increment observed_orders_count and update coverage
-      await query(
-        `UPDATE businesses
-         SET observed_orders_count = observed_orders_count + 1,
-             coverage_percentage = CASE 
-               WHEN (observed_orders_count + 1) > 0 
-               THEN ROUND((invited_orders_count::numeric / (observed_orders_count + 1)::numeric) * 1000.0) / 10.0
-               ELSE 0.0
-             END,
-             updated_at = NOW()
-         WHERE id = $1`,
+    const { order, updatedBiz } = await withTransaction(async (client) => {
+      // Verify business exists and lock row
+      const bizRes = await client.query<BusinessRow>(
+        'SELECT id, slug, brand_name, observed_orders_count, invited_orders_count, coverage_percentage FROM businesses WHERE id = $1 FOR UPDATE',
         [businessId]
       );
-    }
+      if (bizRes.rows.length === 0) {
+        throw new Error(`Negocio con ID ${businessId} no encontrado`);
+      }
 
-    // Fetch updated business stats
-    const updatedBizRes = await query<BusinessRow>(
-      'SELECT id, slug, brand_name, observed_orders_count, invited_orders_count, coverage_percentage FROM businesses WHERE id = $1',
-      [businessId]
-    );
-    const updatedBiz = updatedBizRes.rows[0];
+      // Check if order already exists
+      const existingOrder = await client.query<OrderRow>(
+        'SELECT id FROM orders WHERE business_id = $1 AND external_order_id = $2 LIMIT 1',
+        [businessId, body.external_order_id.trim()]
+      );
+
+      let ord: OrderRow;
+
+      if (existingOrder.rows.length > 0) {
+        const updateOrderRes = await client.query<OrderRow>(
+          `UPDATE orders
+           SET status = $1,
+               customer_name = COALESCE($2, customer_name),
+               customer_email = COALESCE($3, customer_email),
+               customer_phone = COALESCE($4, customer_phone),
+               amount = COALESCE($5, amount)
+           WHERE id = $6
+           RETURNING *`,
+          [
+            status,
+            body.customer_name?.trim() || null,
+            body.customer_email?.trim() || null,
+            body.customer_phone?.trim() || null,
+            amount,
+            existingOrder.rows[0].id,
+          ]
+        );
+        ord = updateOrderRes.rows[0];
+      } else {
+        const insertOrderRes = await client.query<OrderRow>(
+          `INSERT INTO orders (
+            business_id, external_order_id, platform, customer_name,
+            customer_email, customer_phone, amount, currency, status,
+            order_date, delivered_date, invited, created_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW(), false, NOW())
+          RETURNING *`,
+          [
+            businessId,
+            body.external_order_id.trim(),
+            platform,
+            body.customer_name?.trim() || 'Cliente Verificado',
+            body.customer_email?.trim() || null,
+            body.customer_phone?.trim() || null,
+            amount,
+            currency,
+            status,
+          ]
+        );
+        ord = insertOrderRes.rows[0];
+
+        // Increment observed_orders_count and update coverage with unified formula
+        await client.query(
+          `UPDATE businesses
+           SET observed_orders_count = observed_orders_count + 1,
+               coverage_percentage = LEAST(100.0, ROUND((invited_orders_count::numeric / GREATEST(observed_orders_count + 1, 1)::numeric) * 100.0, 1)),
+               updated_at = NOW()
+           WHERE id = $1`,
+          [businessId]
+        );
+      }
+
+      const updatedBizRes = await client.query<BusinessRow>(
+        'SELECT id, slug, brand_name, observed_orders_count, invited_orders_count, coverage_percentage FROM businesses WHERE id = $1',
+        [businessId]
+      );
+
+      return { order: ord, updatedBiz: updatedBizRes.rows[0] };
+    });
 
     return NextResponse.json(
       {

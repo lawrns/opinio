@@ -246,7 +246,7 @@ const barriReviews: SeedReview[] = [
       body: `Hice un pedido en ${venue}. ${topic} La experiencia con Barri es muy superior a otras aplicaciones de entrega. Da gusto apoyar al comercio local con tarifas justas.`,
       author_name: name,
       author_masked_contact: `${name.slice(0, 1).toLowerCase()}***${name.split(' ')[1]?.slice(0, 1).toLowerCase() || 'x'}@gmail.com`,
-      verification_level: (i % 3 === 0 ? 'confirmed_payment' : (i % 3 === 1 ? 'confirmed_store_order' : 'reviewed_proof')) as any,
+      verification_level: (i % 3 === 0 ? 'confirmed_payment' : (i % 3 === 1 ? 'confirmed_store_order' : 'reviewed_proof')) as 'confirmed_payment' | 'confirmed_store_order' | 'reviewed_proof',
       ageDays: 110 + (idx * 5),
       product_name: `Orden de comida en ${venue}`
     };
@@ -398,7 +398,7 @@ const doctorReviews: SeedReview[] = [
       body: `Agendé una ${spec.toLowerCase()} a través de Doctor.mx. ${hl} Sin duda seguiré utilizando el servicio cada vez que mi familia requiera atención médica rápida y confiable.`,
       author_name: name,
       author_masked_contact: `${name.slice(0, 1).toLowerCase()}***${name.split(' ')[1]?.slice(0, 1).toLowerCase() || 'm'}@gmail.com`,
-      verification_level: (idx % 2 === 0 ? 'confirmed_payment' : (idx % 3 === 0 ? 'confirmed_store_order' : 'reviewed_proof')) as any,
+      verification_level: (idx % 2 === 0 ? 'confirmed_payment' : (idx % 3 === 0 ? 'confirmed_store_order' : 'reviewed_proof')) as 'confirmed_payment' | 'confirmed_store_order' | 'reviewed_proof',
       ageDays: 75 + (idx * 6),
       product_name: spec
     };
@@ -550,7 +550,7 @@ const habloReviews: SeedReview[] = [
       body: `Implementamos Hablo en ${venue}. ${praise} Nuestros comensales están fascinados y el personal de cocina trabaja mucho más organizado.`,
       author_name: name,
       author_masked_contact: `${name.slice(0, 1).toLowerCase()}***${name.split(' ')[1]?.slice(0, 1).toLowerCase() || 'h'}@gmail.com`,
-      verification_level: (idx % 2 === 0 ? 'confirmed_payment' : (idx % 3 === 0 ? 'confirmed_store_order' : 'reviewed_proof')) as any,
+      verification_level: (idx % 2 === 0 ? 'confirmed_payment' : (idx % 3 === 0 ? 'confirmed_store_order' : 'reviewed_proof')) as 'confirmed_payment' | 'confirmed_store_order' | 'reviewed_proof',
       ageDays: 80 + (idx * 6),
       product_name: `Agente Sofía en ${venue}`
     };
@@ -702,7 +702,7 @@ const gogymReviews: SeedReview[] = [
       body: `Entreno en ${gym}. ${txt} Recomiendo GoGym a cualquier gimnasio que quiera modernizar sus cobros, facturación y control de acceso.`,
       author_name: name,
       author_masked_contact: `${name.slice(0, 1).toLowerCase()}***${name.split(' ')[1]?.slice(0, 1).toLowerCase() || 'g'}@gmail.com`,
-      verification_level: (idx % 2 === 0 ? 'confirmed_payment' : (idx % 3 === 0 ? 'confirmed_store_order' : 'reviewed_proof')) as any,
+      verification_level: (idx % 2 === 0 ? 'confirmed_payment' : (idx % 3 === 0 ? 'confirmed_store_order' : 'reviewed_proof')) as 'confirmed_payment' | 'confirmed_store_order' | 'reviewed_proof',
       ageDays: 78 + (idx * 6),
       product_name: `Membresía Activa en ${gym}`
     };

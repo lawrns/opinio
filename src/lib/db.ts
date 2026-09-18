@@ -1,14 +1,17 @@
-import { Pool, QueryResult, QueryResultRow } from 'pg';
+import { Pool, PoolClient, QueryResult, QueryResultRow } from 'pg';
 
-const connectionString = process.env.DATABASE_URL || 'postgres://opinio:Hennie14Hennie14@82.208.21.221:15437/opinio';
+const connectionString = process.env.DATABASE_URL;
+
+if (!connectionString && process.env.NODE_ENV === 'production') {
+  throw new Error('[db] FATAL: DATABASE_URL environment variable is not defined in production.');
+}
 
 declare global {
-  // eslint-disable-next-line no-var
   var _pgPool: Pool | undefined;
 }
 
 export const pool: Pool = global._pgPool || new Pool({
-  connectionString,
+  connectionString: connectionString || process.env.DATABASE_URL,
   max: 15,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 5000,
@@ -34,5 +37,30 @@ export async function query<T extends QueryResultRow = Record<string, unknown>>(
   } catch (error) {
     console.error('[db:error]', error, 'Query:', text);
     throw error;
+  }
+}
+
+/**
+ * Executes a callback within a managed database transaction.
+ * Automatically handles BEGIN, COMMIT, ROLLBACK and client release.
+ */
+export async function withTransaction<T>(
+  fn: (client: PoolClient) => Promise<T>
+): Promise<T> {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const result = await fn(client);
+    await client.query('COMMIT');
+    return result;
+  } catch (error) {
+    try {
+      await client.query('ROLLBACK');
+    } catch (rollbackError) {
+      console.error('[db:rollback-error]', rollbackError);
+    }
+    throw error;
+  } finally {
+    client.release();
   }
 }

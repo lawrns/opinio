@@ -353,7 +353,7 @@ const bienReviews: SeedReview[] = [
       body: `Operamos ${cat.niche} en ${cat.city}. ${cat.comment} Implementamos Bien.mx hace varios meses y el servicio ha funcionado 24/7 sin interrupciones. El equipo de soporte siempre responde al instante y los clientes están encantados.`,
       author_name: name,
       author_masked_contact: `${name.slice(0, 1).toLowerCase()}***${name.split(' ')[1]?.slice(0, 1).toLowerCase() || 'b'}@gmail.com`,
-      verification_level: (idx % 2 === 0 ? 'confirmed_payment' : 'confirmed_store_order') as any,
+      verification_level: (idx % 2 === 0 ? 'confirmed_payment' : 'confirmed_store_order') as 'confirmed_payment' | 'confirmed_store_order',
       ageDays: 148 + idx,
       product_name: cat.service
     };

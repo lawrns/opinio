@@ -66,25 +66,7 @@ export async function GET(
       LIMIT 1
     `;
 
-    let res = await query<WidgetRow>(sql, [token]);
-
-    // Fallback: If not found by exact token, check if token represents business slug
-    if (res.rows.length === 0) {
-      const fallbackSql = `
-        SELECT w.id, w.business_id, w.token, w.widget_type, w.allowed_domains,
-               w.theme, w.config, w.is_active,
-               b.slug, b.brand_name, b.legal_name, b.trust_score, b.confidence_level,
-               b.coverage_percentage, b.verified_level, b.observed_orders_count,
-               b.effective_reviews_count, b.resolution_rate, b.issues_per_thousand,
-               b.logo_url
-        FROM widgets w
-        INNER JOIN businesses b ON b.id = w.business_id
-        WHERE b.slug = $1 AND w.is_active = true
-        ORDER BY w.id ASC
-        LIMIT 1
-      `;
-      res = await query<WidgetRow>(fallbackSql, [token]);
-    }
+    const res = await query<WidgetRow>(sql, [token]);
 
     if (res.rows.length === 0) {
       return NextResponse.json(
@@ -94,6 +76,30 @@ export async function GET(
     }
 
     const w = res.rows[0];
+
+    // Server-side enforcement of allowed_domains
+    const origin = request.headers.get('origin') || request.headers.get('referer');
+    if (w.allowed_domains && Array.isArray(w.allowed_domains) && w.allowed_domains.length > 0) {
+      if (origin) {
+        try {
+          const originHost = new URL(origin).hostname.toLowerCase();
+          const isAllowed = w.allowed_domains.some((domain) => {
+            const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/\/.*$/, '').toLowerCase().trim();
+            return originHost === cleanDomain || originHost.endsWith(`.${cleanDomain}`);
+          });
+
+          if (!isAllowed) {
+            return NextResponse.json(
+              { success: false, error: 'Dominio de origen no autorizado para este widget' },
+              { status: 403, headers: CORS_HEADERS }
+            );
+          }
+        } catch {
+          // Invalid origin/referer format
+        }
+      }
+    }
+
 
     const host = request.headers.get('host') || 'opinio.mx';
     const protocol = host.includes('localhost') ? 'http' : 'https';
