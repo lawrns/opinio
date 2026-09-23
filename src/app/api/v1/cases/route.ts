@@ -175,77 +175,9 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET(request: NextRequest) {
-  // Public containment (P0): the public surface is offline until its records can be
-  // traced to their source. Rejected here, before any parsing or database access.
+export async function GET() {
   return NextResponse.json(
     { success: false, error: 'La plataforma pública de Opinio México está fuera de línea.' },
     { status: 410, headers: { 'cache-control': 'no-store' } }
   );
-  try {
-    const { searchParams } = new URL(request.url);
-    const businessIdParam = searchParams.get('business_id');
-    const caseNumberParam = searchParams.get('case_number');
-    const statusParam = searchParams.get('status');
-    const limitParam = searchParams.get('limit');
-    const offsetParam = searchParams.get('offset');
-
-    const limit = Math.min(100, Math.max(1, parseInt(limitParam || '50', 10) || 50));
-    const offset = Math.max(0, parseInt(offsetParam || '0', 10) || 0);
-
-    const conditions: string[] = [];
-    const params: unknown[] = [];
-    let paramIndex = 1;
-
-    if (caseNumberParam) {
-      conditions.push(`c.case_number = $${paramIndex++}`);
-      params.push(caseNumberParam.trim());
-    }
-
-    if (businessIdParam) {
-      const businessId = parseInt(businessIdParam, 10);
-      if (businessId > 0) {
-        conditions.push(`c.business_id = $${paramIndex++}`);
-        params.push(businessId);
-      }
-    }
-
-    if (statusParam) {
-      conditions.push(`c.status = $${paramIndex++}`);
-      params.push(statusParam.trim());
-    }
-
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
-
-    const sql = `
-      SELECT c.*, b.slug as business_slug, b.brand_name as business_brand_name
-      FROM resolution_cases c
-      INNER JOIN businesses b ON b.id = c.business_id
-      ${whereClause}
-      ORDER BY c.created_at DESC
-      LIMIT $${paramIndex++} OFFSET $${paramIndex++}
-    `;
-    params.push(limit, offset);
-
-    const res = await query<CaseRow>(sql, params);
-
-    const cases = res.rows.map((row) => ({
-      ...row,
-      total_resolution_hours: row.total_resolution_hours ? Number(row.total_resolution_hours) : null,
-    }));
-
-    return NextResponse.json({
-      success: true,
-      count: cases.length,
-      limit,
-      offset,
-      cases,
-    });
-  } catch (error) {
-    console.error('[api/v1/cases GET] Error:', error);
-    return NextResponse.json(
-      { success: false, error: 'Error al consultar casos de resolución' },
-      { status: 500 }
-    );
-  }
 }
