@@ -51,6 +51,12 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // Public containment (P0): the public surface is offline until its records can be
+  // traced to their source. Rejected here, before any parsing or database access.
+  return NextResponse.json(
+    { success: false, error: 'La plataforma pública de Opinio México está fuera de línea.' },
+    { status: 410, headers: { 'cache-control': 'no-store' } }
+  );
   try {
     const { id: rawId } = await params;
     const identifier = rawId?.trim();
@@ -113,6 +119,12 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // Public containment (P0): the public surface is offline until its records can be
+  // traced to their source. Rejected here, before any parsing or database access.
+  return NextResponse.json(
+    { success: false, error: 'La plataforma pública de Opinio México está fuera de línea.' },
+    { status: 410, headers: { 'cache-control': 'no-store' } }
+  );
   try {
     const { id: rawId } = await params;
     const identifier = rawId?.trim();

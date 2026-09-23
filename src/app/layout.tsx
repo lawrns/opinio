@@ -20,16 +20,15 @@ const canonicalSiteUrl = envSiteUrl && !envSiteUrl.includes('fertilitylistings')
 
 export const metadata: Metadata = {
   metadataBase: new URL(canonicalSiteUrl),
-  title: "Opinio.mx | Pasaporte de Confianza Comercial en México",
-  description: "Antes de pagar, comprueba quién vende, cómo cumple y cómo responde. El estándar de confianza independiente para compras en línea, WhatsApp y transferencias en México.",
-  keywords: ["Opinio", "Confianza comercial", "PROFECO", "DENUE", "Comercio electrónico México", "Verificar tienda", "Compras WhatsApp"],
+  title: "Opinio México — Perfiles públicos fuera de línea",
+  description: "Opinio México mantiene fuera de línea los perfiles públicos de comercios, las calificaciones, las opiniones y los casos mientras revisa la verificación de los datos que respaldan cada ficha.",
   icons: {
     icon: "/opinio.svg",
   },
   openGraph: {
-    title: "Opinio.mx — La confianza se demuestra",
-    description: "Comprueba quién vende, cómo cumple y cómo responde antes de transferir.",
-    url: "https://opinio.mx",
+    title: "Opinio México — Perfiles públicos fuera de línea",
+    description: "Los perfiles públicos de comercios, las calificaciones, las opiniones y los casos están fuera de línea.",
+    url: canonicalSiteUrl,
     siteName: "Opinio.mx",
     locale: "es_MX",
     type: "website",

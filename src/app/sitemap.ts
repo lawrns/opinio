@@ -1,57 +1,19 @@
 import type { MetadataRoute } from 'next';
-import { query } from '@/lib/db';
 
-interface BusinessSitemapRow {
-  slug: string;
-  updated_at: string;
-  logo_url: string | null;
-}
-
-export const dynamic = 'force-dynamic';
-export const revalidate = 3600; // Refresh sitemap every hour
-
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+/**
+ * The only public URL Opinio serves while the published records and ratings are
+ * being re-verified. Every other public path (profiles, directory, search,
+ * review and case surfaces) answers 410 Gone, so it must not be advertised here.
+ */
+export default function sitemap(): MetadataRoute.Sitemap {
   const envUrl = process.env.NEXT_PUBLIC_SITE_URL;
   const baseUrl = envUrl && !envUrl.includes('fertilitylistings') ? envUrl : 'https://opinio.mx';
-  const now = new Date();
 
-  const staticEntries: MetadataRoute.Sitemap = [
+  return [
     {
-      url: `${baseUrl}`,
-      lastModified: now,
-      changeFrequency: 'daily',
-      priority: 1.0,
-    },
-    {
-      url: `${baseUrl}/directorio`,
-      lastModified: now,
-      changeFrequency: 'daily',
-      priority: 0.95,
-    },
-    {
-      url: `${baseUrl}/verificar`,
-      lastModified: now,
-      changeFrequency: 'daily',
-      priority: 0.9,
+      url: baseUrl,
+      changeFrequency: 'monthly',
+      priority: 1,
     },
   ];
-
-  try {
-    const res = await query<BusinessSitemapRow>(
-      `SELECT slug, updated_at, logo_url FROM businesses WHERE slug IS NOT NULL ORDER BY id ASC`
-    );
-
-    const businessEntries: MetadataRoute.Sitemap = res.rows.map((b) => ({
-      url: `${baseUrl}/b/${b.slug}`,
-      lastModified: b.updated_at ? new Date(b.updated_at) : now,
-      changeFrequency: 'weekly' as const,
-      priority: 0.8,
-      images: b.logo_url ? [`${baseUrl}${b.logo_url}`] : undefined,
-    }));
-
-    return [...staticEntries, ...businessEntries];
-  } catch (error) {
-    console.error('[sitemap] Failed to query businesses from db, serving static fallback:', error);
-    return staticEntries;
-  }
 }
