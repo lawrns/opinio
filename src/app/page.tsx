@@ -5,7 +5,7 @@ import { CategoryBar } from '@/components/home/CategoryBar';
 import { ConnectedPipeline } from '@/components/home/ConnectedPipeline';
 import { Brand } from '@/components/Brand';
 import { Footer } from '@/components/Footer';
-import Navbar from '@/components/Navbar';
+import { Navbar } from '@/components/Navbar';
 
 const baseUrl = 'https://opinio.mx';
 
