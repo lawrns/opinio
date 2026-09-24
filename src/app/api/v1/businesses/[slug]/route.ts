@@ -127,6 +127,7 @@ export async function GET(
 ) {
   const { slug } = await params;
 
+  try {
     if (!slug) {
       return NextResponse.json(
         { success: false, error: 'Slug parameter is required' },
