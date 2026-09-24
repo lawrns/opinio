@@ -1043,7 +1043,7 @@ const portfolioBusinesses: PortfolioBusiness[] = [
   {
     slug: 'barri',
     brand_name: 'Barri.mx',
-    legal_name: 'Tecnologías Barri S.A.P.I. de C.V.',
+    legal_name: '',
     category: 'Restaurantes, Comida & Delivery',
     description: 'Suite de operaciones y plataforma de entrega a domicilio para restaurantes independientes en México. Tarifa plana de $499 MXN al mes con 0% de comisión por pedido, logística propia y ERP gastronómico.',
     rfc: 'TBA210915B82',
@@ -1086,7 +1086,7 @@ const portfolioBusinesses: PortfolioBusiness[] = [
   {
     slug: 'doctormx',
     brand_name: 'Doctor.mx',
-    legal_name: 'DoctorMX Salud Digital S.A.P.I. de C.V.',
+    legal_name: '',
     category: 'Salud, Medicina & Telemedicina',
     description: 'Plataforma mexicana de telemedicina con videoconsultas inmediatas, recetas médicas electrónicas con firma digital homologada y sello COFEPRIS válidas en farmacias de cadena de todo México.',
     rfc: 'DMX220411MK9',
@@ -1129,7 +1129,7 @@ const portfolioBusinesses: PortfolioBusiness[] = [
   {
     slug: 'hablo',
     brand_name: 'Hablo.com.mx',
-    legal_name: 'Hablo Inteligencia Artificial S.A.P.I. de C.V.',
+    legal_name: '',
     category: 'Software SaaS & Operaciones Restauranteras',
     description: 'Recepcionista telefónica con IA en español mexicano (\'Sofía\') para restaurantes. Atiende llamadas telefónicas simultáneas 24/7, toma comandas exactas con modificaciones de platillos y confirma por WhatsApp.',
     rfc: 'HIA230804TR7',
@@ -1172,7 +1172,7 @@ const portfolioBusinesses: PortfolioBusiness[] = [
   {
     slug: 'gogym',
     brand_name: 'GoGym.mx',
-    legal_name: 'Vigor Tecnologías Fitness S.A.P.I. de C.V.',
+    legal_name: '',
     category: 'Software SaaS & Gestión de Gimnasios',
     description: 'Sistema operativo integral para gimnasios y centros deportivos en México. Facturación automática CFDI 4.0, cobros recurrentes en MXN vía Stripe, control de acceso por torniquetes QR, app de socios y nutrición regional.',
     rfc: 'VTF221103P41',

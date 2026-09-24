@@ -253,7 +253,7 @@ export default async function BusinessPassportPage({ params }: PageProps) {
         '@type': ['Organization', 'OnlineStore'],
         '@id': `${canonicalUrl}#organization`,
         name: business.brand_name,
-        legalName: business.legal_name || business.brand_name,
+        ...(business.legal_name ? { legalName: business.legal_name } : {}),
         url: business.domain ? (business.domain.startsWith('http') ? business.domain : `https://${business.domain}`) : canonicalUrl,
         logo: logoAbsoluteUrl,
         taxID: business.rfc || undefined,
@@ -358,7 +358,11 @@ export default async function BusinessPassportPage({ params }: PageProps) {
             name: `¿Cuál es el RFC y razón social de ${business.brand_name}?`,
             acceptedAnswer: {
               '@type': 'Answer',
-              text: `La razón social registrada de ${business.brand_name} es "${business.legal_name || business.brand_name}" y su clave de Registro Federal de Contribuyentes es ${business.rfc || 'información en cotejo fiscal'}.`,
+              text: business.legal_name
+                ? `La razón social registrada de ${business.brand_name} es "${business.legal_name}"${business.rfc ? ` y su RFC es ${business.rfc}` : ''}.`
+                : business.rfc
+                  ? `El RFC publicado para ${business.brand_name} es ${business.rfc}. La razón social aún no está publicada en Opinio.`
+                  : `La razón social y el RFC de ${business.brand_name} aún no están publicados en Opinio.`,
             },
           },
           {

@@ -166,7 +166,7 @@ function NuevoCasoContent() {
               </option>
             ))}
           </select>
-          <p id="case-business-help" role="status" className="text-xs text-[var(--op-ink-muted)]">{!loadingBusinesses && !businessError && businesses.length === 0 ? 'Sin coincidencias. Prueba otro nombre o dominio.' : 'Comprueba la razón social antes de enviar tu caso.'}</p>
+          <p id="case-business-help" role="status" className="text-xs text-[var(--op-ink-muted)]">{!loadingBusinesses && !businessError && businesses.length === 0 ? 'Sin coincidencias. Prueba otro nombre o dominio.' : 'Confirma que seleccionaste el comercio correcto antes de enviar tu caso.'}</p>
         </div>
 
         {/* Customer Name & Contact */}
