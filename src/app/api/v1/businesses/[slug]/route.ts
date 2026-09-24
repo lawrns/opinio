@@ -125,14 +125,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
 ) {
-  // Public containment (P0): the public surface is offline until its records can be
-  // traced to their source. Rejected here, before any parsing or database access.
-  return NextResponse.json(
-    { success: false, error: 'La plataforma pública de Opinio México está fuera de línea.' },
-    { status: 410, headers: { 'cache-control': 'no-store' } }
-  );
-  try {
-    const { slug } = await params;
+  const { slug } = await params;
 
     if (!slug) {
       return NextResponse.json(

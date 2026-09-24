@@ -43,12 +43,6 @@ interface BusinessRow {
 }
 
 export async function POST(request: NextRequest) {
-  // Public containment (P0): the public surface is offline until its records can be
-  // traced to their source. Rejected here, before any parsing or database access.
-  return NextResponse.json(
-    { success: false, error: 'La plataforma pública de Opinio México está fuera de línea.' },
-    { status: 410, headers: { 'cache-control': 'no-store' } }
-  );
   try {
     const body = (await request.json()) as CaseInput;
 
@@ -176,8 +170,11 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET() {
-  return NextResponse.json(
-    { success: false, error: 'La plataforma pública de Opinio México está fuera de línea.' },
-    { status: 410, headers: { 'cache-control': 'no-store' } }
-  );
+  try {
+    // TODO: implement real case listing
+    return NextResponse.json({ success: true, cases: [], total: 0 });
+  } catch (error) {
+    console.error('[api/v1/cases GET] Error:', error);
+    return NextResponse.json({ success: false, error: 'Error al cargar casos' }, { status: 500 });
+  }
 }

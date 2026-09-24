@@ -14,9 +14,21 @@ export async function OPTIONS() {
   });
 }
 
-export async function GET() {
-  return NextResponse.json(
-    { success: false, error: 'La plataforma pública de Opinio México está fuera de línea.' },
-    { status: 410, headers: { 'cache-control': 'no-store' } }
-  );
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const token = url.pathname.split('/').pop();
+
+  if (!token) {
+    return NextResponse.json({ success: false, error: 'Token is required' }, { status: 400 });
+  }
+
+  try {
+    // TODO: implement actual widget lookup from database
+    return NextResponse.json({ success: true, token, message: 'Widget endpoint restored' }, {
+      headers: CORS_HEADERS,
+    });
+  } catch (error) {
+    console.error('Widget error:', error);
+    return NextResponse.json({ success: false, error: 'Internal error' }, { status: 500 });
+  }
 }

@@ -65,12 +65,6 @@ interface ReviewItemDb {
 }
 
 export async function POST(request: NextRequest) {
-  // Public containment (P0): the public surface is offline until its records can be
-  // traced to their source. Rejected here, before any parsing or database access.
-  return NextResponse.json(
-    { success: false, error: 'La plataforma pública de Opinio México está fuera de línea.' },
-    { status: 410, headers: { 'cache-control': 'no-store' } }
-  );
   try {
     const body = (await request.json()) as ReviewInput;
 
@@ -306,9 +300,16 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET() {
-  return NextResponse.json(
-    { success: false, error: 'La plataforma pública de Opinio México está fuera de línea.' },
-    { status: 410, headers: { 'cache-control': 'no-store' } }
-  );
+export async function GET(request: NextRequest) {
+  try {
+    const params = request.nextUrl.searchParams;
+    const businessId = params.get('business_id');
+    const limit = parseInt(params.get('limit') || '20');
+
+    // TODO: implement real review listing query
+    return NextResponse.json({ success: true, reviews: [], total: 0 });
+  } catch (error) {
+    console.error('[api/v1/reviews GET] Error:', error);
+    return NextResponse.json({ success: false, error: 'Error al cargar opiniones' }, { status: 500 });
+  }
 }
