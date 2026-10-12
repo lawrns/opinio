@@ -179,3 +179,20 @@ CREATE INDEX IF NOT EXISTS idx_cases_business_id ON resolution_cases(business_id
 CREATE INDEX IF NOT EXISTS idx_orders_business_id ON orders(business_id);
 CREATE INDEX IF NOT EXISTS idx_invitations_token ON invitations(token);
 CREATE INDEX IF NOT EXISTS idx_widgets_token ON widgets(token);
+
+-- ---------------------------------------------------------------------------
+-- Review provenance (see TRUST_PROVENANCE.md). Additive and idempotent.
+-- Four independent fields; owner attestation NEVER implies customer authorship
+-- or transaction verification. Nullable customer_authored = unresolved.
+ALTER TABLE reviews ADD COLUMN IF NOT EXISTS provenance_source VARCHAR(60);
+ALTER TABLE reviews ADD COLUMN IF NOT EXISTS owner_attested BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE reviews ADD COLUMN IF NOT EXISTS attestation_ref TEXT;
+ALTER TABLE reviews ADD COLUMN IF NOT EXISTS attested_at TIMESTAMP WITH TIME ZONE;
+ALTER TABLE reviews ADD COLUMN IF NOT EXISTS customer_authored BOOLEAN;
+ALTER TABLE reviews ADD COLUMN IF NOT EXISTS transaction_verified BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE reviews ADD COLUMN IF NOT EXISTS verification_record_ref TEXT;
+
+-- Public display draws only from records eligible as customer feedback.
+CREATE INDEX IF NOT EXISTS idx_reviews_public_eligibility
+  ON reviews(business_id)
+  WHERE status = 'published' AND (customer_authored = true OR transaction_verified = true);
