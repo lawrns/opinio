@@ -27,7 +27,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "Opinio México — Pasaporte de Confianza Comercial",
-    description: "Consulta opiniones verificadas, evidencia de compra y resolución de casos antes de transferir o comprar.",
+    description: "Consulta opiniones de clientes, evidencia de compra y resolución de casos antes de transferir o comprar.",
     url: canonicalSiteUrl,
     siteName: "Opinio.mx",
     locale: "es_MX",

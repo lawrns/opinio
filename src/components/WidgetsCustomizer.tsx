@@ -111,7 +111,7 @@ export function WidgetsCustomizer({ business, existingWidgets }: WidgetsCustomiz
           <div>
             <h2 className="text-xl font-semibold text-op-ink">Sellos y Cintas de Confianza</h2>
             <p className="mt-2 text-sm leading-relaxed text-op-muted">
-              Muestra las opiniones verificadas y el índice de {business.brand_name} en tu propia página web.
+              Muestra las opiniones de clientes y el índice de {business.brand_name} en tu propia página web, cuando esas opiniones existen.
             </p>
           </div>
 

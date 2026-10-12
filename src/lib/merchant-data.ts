@@ -107,6 +107,13 @@ export async function getMerchantReviews(
     helpful_count: row.helpful_count,
     created_at: row.created_at,
     updated_at: row.updated_at,
+    provenance_source: row.provenance_source ?? null,
+    owner_attested: row.owner_attested ?? null,
+    attestation_ref: row.attestation_ref ?? null,
+    attested_at: row.attested_at ?? null,
+    customer_authored: row.customer_authored ?? null,
+    transaction_verified: row.transaction_verified ?? null,
+    verification_record_ref: row.verification_record_ref ?? null,
     response: row.resp_id
       ? {
           id: row.resp_id,
@@ -246,8 +253,10 @@ export interface WidgetWithBusiness extends Business {
   widget_type: string;
   theme: string;
   config: Record<string, unknown>;
-  calculated_rating?: number;
-  review_count?: number;
+  /** Average over eligible reviews only; null when none are eligible. */
+  calculated_rating: number | null;
+  /** Eligible review count; null when none are eligible. */
+  review_count: number | null;
 }
 export interface WidgetJoinRow extends Business {
   b_slug: string;
@@ -263,13 +272,14 @@ export async function getWidgetDataByToken(token: string): Promise<WidgetWithBus
   const res = await query<WidgetJoinRow>(
     `SELECT b.*, b.slug as b_slug, w.token as widget_token, w.widget_type, w.theme as w_theme, w.config as w_config,
             COALESCE(r.cnt, 0)::int as rev_count,
-            COALESCE(r.avg_rat, 5.0)::numeric as avg_rating
+            r.avg_rat::numeric as avg_rating
      FROM widgets w
      JOIN businesses b ON b.id = w.business_id
      LEFT JOIN (
        SELECT business_id, COUNT(*) as cnt, AVG(rating) as avg_rat
        FROM reviews
        WHERE status = 'published'
+         AND (customer_authored = true OR transaction_verified = true)
        GROUP BY business_id
      ) r ON r.business_id = b.id
      WHERE w.token = $1 AND w.is_active = true
@@ -279,6 +289,7 @@ export async function getWidgetDataByToken(token: string): Promise<WidgetWithBus
 
   if (res.rows.length > 0) {
     const row = res.rows[0];
+    const count = Number(row.rev_count) || 0;
     return {
       ...row,
       b_slug: row.b_slug,
@@ -286,8 +297,8 @@ export async function getWidgetDataByToken(token: string): Promise<WidgetWithBus
       widget_type: row.widget_type,
       theme: row.w_theme || 'light',
       config: (row.w_config as Record<string, unknown>) || {},
-      calculated_rating: Math.round(Number(row.avg_rating || 5.0) * 10) / 10,
-      review_count: Number(row.rev_count) || 0,
+      calculated_rating: count > 0 ? Math.round(Number(row.avg_rating || 0) * 10) / 10 : null,
+      review_count: count > 0 ? count : null,
     };
   }
 

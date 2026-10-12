@@ -28,13 +28,13 @@ export async function generateMetadata(): Promise<Metadata> {
 
   return {
     title: 'Directorio de 1,199+ Tiendas en Línea y Comercios en México | Opinio México',
-    description: 'Índice de tiendas virtuales, e-commerce y marcas comerciales en México auditadas por Opinio. Consulta RFC, estatus PROFECO, opiniones y pasaporte de confianza.',
+    description: 'Índice de tiendas virtuales, e-commerce y marcas comerciales en México. Consulta RFC, estatus PROFECO, opiniones y pasaporte de confianza.',
     alternates: {
       canonical: `${baseUrl}/directorio`,
     },
     openGraph: {
       title: 'Directorio de Tiendas en Línea en México — Opinio.mx',
-      description: 'Índice auditado de 1,199+ comercios y tiendas virtuales con pasaporte de confianza.',
+      description: 'Índice de 1,199+ comercios y tiendas virtuales con pasaporte de confianza.',
       url: `${baseUrl}/directorio`,
       siteName: 'Opinio.mx',
       locale: 'es_MX',
@@ -127,7 +127,7 @@ export default async function DirectorioPage() {
                 Directorio de Comercios y Tiendas en Línea en México
               </h1>
               <p className="mt-4 text-base leading-relaxed text-op-secondary">
-                Índice completo de <strong>{businesses.length.toLocaleString('es-MX')}</strong> negocios auditados con pasaporte de confianza, monitoreo PROFECO, validación fiscal SAT y reseñas verificadas.
+                Índice completo de <strong>{businesses.length.toLocaleString('es-MX')}</strong> negocios auditados con pasaporte de confianza, monitoreo PROFECO, validación fiscal SAT y opiniones de clientes donde existen.
               </p>
             </div>
 

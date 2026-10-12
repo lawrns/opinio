@@ -20,9 +20,9 @@ export function MerchantWidgetSurface({
 
   // Ribbon Micro-Badge (Trustpilot-grade prestige ribbon)
   if (format === 'ribbon') {
-    const rating = Number(business.calculated_rating || 4.8);
-    const reviewCount = Number(business.review_count || 50);
-    const sentiment = rating >= 4.5 ? 'Excelente' : rating >= 4.0 ? 'Muy bueno' : 'Bueno';
+    const rating = business.calculated_rating;
+    const reviewCount = business.review_count;
+    const hasEvidence = rating !== null && reviewCount !== null && reviewCount > 0;
 
     return (
       <main id="contenido" tabIndex={-1} className="flex items-center justify-center p-0 m-0 w-full">
@@ -30,7 +30,13 @@ export function MerchantWidgetSurface({
           href={`/b/${business.b_slug}`}
           target="_blank"
           rel="noopener noreferrer"
-          aria-label={`Perfil de ${business.brand_name} en Opinio México: Calificación ${sentiment} ${rating.toFixed(1)} de 5 estrellas`}
+          aria-label={
+            hasEvidence
+              ? `Perfil de ${business.brand_name} en Opinio México: Calificación ${
+                  rating >= 4.5 ? 'Excelente' : rating >= 4.0 ? 'Muy bueno' : 'Bueno'
+                } ${rating.toFixed(1)} de 5 estrellas`
+              : `Perfil de ${business.brand_name} en Opinio México`
+          }
           className={cn(
             'group inline-flex items-center gap-2 sm:gap-2.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-150 select-none no-underline',
             isTransparent
@@ -54,32 +60,35 @@ export function MerchantWidgetSurface({
             </span>
           </span>
 
-          <span className={cn('opacity-30 font-light', isDark ? 'text-slate-400' : 'text-slate-500')} aria-hidden="true">
-            |
-          </span>
-
-          {/* Rating & Sentiment */}
-          <span className="flex items-center gap-1">
-            <span className={cn('font-semibold', isDark ? 'text-white' : isTransparent ? 'text-current' : 'text-slate-900')}>
-              {sentiment}
+          {hasEvidence ? (
+            <>
+              <span className={cn('opacity-30 font-light', isDark ? 'text-slate-400' : 'text-slate-500')} aria-hidden="true">
+                |
+              </span>
+              <span className="flex items-center gap-1">
+                <span className={cn('font-semibold', isDark ? 'text-white' : isTransparent ? 'text-current' : 'text-slate-900')}>
+                  {rating >= 4.5 ? 'Excelente' : rating >= 4.0 ? 'Muy bueno' : 'Bueno'}
+                </span>
+                <span className={cn('font-mono font-bold', isDark ? 'text-emerald-400' : 'text-emerald-600')}>
+                  {rating.toFixed(1)}/5
+                </span>
+              </span>
+              <span className={cn('opacity-30 font-light', isDark ? 'text-slate-400' : 'text-slate-500')} aria-hidden="true">
+                |
+              </span>
+              <span className={cn('text-[11px] sm:text-xs', isDark ? 'text-slate-300' : isTransparent ? 'opacity-80' : 'text-slate-600')}>
+                {reviewCount}+ opiniones de clientes
+              </span>
+            </>
+          ) : (
+            <span className={cn('text-[11px] sm:text-xs', isDark ? 'text-slate-300' : isTransparent ? 'opacity-80' : 'text-slate-600')}>
+              Perfil en verificación
             </span>
-            <span className={cn('font-mono font-bold', isDark ? 'text-emerald-400' : 'text-emerald-600')}>
-              {rating.toFixed(1)}/5
-            </span>
-          </span>
-
-          <span className={cn('opacity-30 font-light', isDark ? 'text-slate-400' : 'text-slate-500')} aria-hidden="true">
-            |
-          </span>
-
-          {/* Review Volume / Verification */}
-          <span className={cn('text-[11px] sm:text-xs', isDark ? 'text-slate-300' : isTransparent ? 'opacity-80' : 'text-slate-600')}>
-            {reviewCount}+ reseñas verificadas
-          </span>
+          )}
 
           {/* Subtle external link icon */}
           <ExternalLink
-            className="w-3 h-3 opacity-40 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all shrink-0 ml-0.5"
+            className="w-3 h-3 opacity-40 group-hover:opacity-100 group-hover:-translate-y-px group-hover:translate-x-0.5 transition-all shrink-0 ml-0.5"
             aria-hidden="true"
           />
         </Link>
@@ -142,20 +151,20 @@ export function MerchantWidgetSurface({
             </div>
           </dl>
         )}
-        {format === 'card' && review && (
+        {format === 'card' && review && (review.customer_authored === true || review.transaction_verified === true) && (
           <blockquote
             className={cn('mt-4 border-t pt-4', dark ? 'border-op-secondary' : 'border-op-border')}
           >
             <p className="text-sm leading-relaxed line-clamp-3">“{review.body}”</p>
             <footer className={cn('mt-2 text-xs leading-relaxed', secondary)}>
               {review.author_name} · {review.rating}/5 ·{' '}
-              {review.verification_level === 'unverified_experience'
-                ? 'Experiencia sin verificar'
-                : review.verification_level === 'confirmed_payment'
-                ? 'Pago confirmado'
+              {review.transaction_verified === true
+                ? 'Compra verificada'
                 : review.verification_level === 'confirmed_store_order'
                 ? 'Pedido conectado'
-                : 'Comprobante revisado'}
+                : review.verification_level === 'reviewed_proof'
+                ? 'Comprobante revisado'
+                : 'Opinión de cliente'}
             </footer>
           </blockquote>
         )}

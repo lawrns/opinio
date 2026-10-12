@@ -327,7 +327,7 @@ export default async function MerchantDashboardPage({ searchParams }: PageProps)
                     </div>
 
                     <span className="text-xs font-medium text-op-green-dark bg-op-green-soft px-2 py-0.5 rounded border border-op-green-border">
-                      {r.verification_level === 'confirmed_store_order' ? 'Pedido Verificado' : 'Pago Confirmado'}
+                      {r.transaction_verified === true ? 'Compra verificada' : r.customer_authored === true ? 'Cliente' : 'En revisión de evidencia'}
                     </span>
                   </div>
 

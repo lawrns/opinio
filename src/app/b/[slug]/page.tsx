@@ -104,8 +104,17 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     }
 
     const b = res.rows[0];
+    const eligible = await query<{ count: number }>(
+      `SELECT COUNT(*)::int AS count FROM reviews
+        WHERE business_id = $1 AND status = 'published'
+          AND (customer_authored = true OR transaction_verified = true)`,
+      [b.id]
+    );
+    const hasCustomerReviews = Number(eligible.rows[0]?.count ?? 0) > 0;
     const title = `¿Es confiable ${b.brand_name}? Quejas PROFECO, RFC y Opiniones | Opinio México`;
-    const description = `Consulta si es seguro comprar en ${b.brand_name}. Consulta RFC (${b.rfc || 'En validación'}), estatus PROFECO, tiempo medio de respuesta y opiniones de compradores verificados en México.`;
+    const description = hasCustomerReviews
+      ? `Consulta si es seguro comprar en ${b.brand_name}. Consulta RFC (${b.rfc || 'En validación'}), estatus PROFECO, tiempo medio de respuesta y opiniones de compradores en México.`
+      : `Consulta si es seguro comprar en ${b.brand_name}. Consulta RFC (${b.rfc || 'En validación'}), estatus PROFECO y tiempo medio de respuesta. Este negocio todavía no tiene opiniones de compradores.`;
     const canonicalUrl = `${baseUrl}/b/${slug}`;
     const ogImageUrl = `${baseUrl}/b/${slug}/opengraph-image`;
 
@@ -209,6 +218,7 @@ export default async function BusinessPassportPage({ params }: PageProps) {
          LIMIT 1
        ) rr ON true
        WHERE r.business_id = $1 AND r.status = 'published'
+         AND (r.customer_authored = true OR r.transaction_verified = true)
        ORDER BY r.created_at DESC, r.id DESC`,
       [business.id]
     ),
@@ -226,8 +236,9 @@ export default async function BusinessPassportPage({ params }: PageProps) {
   const score = Number(business.trust_score) || 0;
   const folioCode = `OP-${business.id.toString().padStart(6, '0')}`;
   const confidenceLevel = business.confidence_level;
-  const effectiveSampleSize = Number(business.effective_reviews_count) || 0;
-  const hasScore = effectiveSampleSize > 0;
+  // Score, sample line, hero aggregate and JSON-LD must reflect eligible rows only.
+  const eligibleSampleSize = reviews.length;
+  const hasScore = eligibleSampleSize > 0;
   const hasOrdersData = business.observed_orders_count > 0;
   const coveragePercent = hasOrdersData ? Math.round(business.invited_orders_count / business.observed_orders_count * 1000) / 10 : null;
   const issuesPer1k = hasOrdersData ? Math.round(cases.length / business.observed_orders_count * 10000) / 10 : null;
@@ -342,7 +353,7 @@ export default async function BusinessPassportPage({ params }: PageProps) {
             name: `¿Es confiable comprar en ${business.brand_name} en México?`,
             acceptedAnswer: {
               '@type': 'Answer',
-              text: `${business.brand_name} cuenta con un perfil de identidad en Opinio México con ${business.rfc ? `RFC validado ${business.rfc}` : 'registro mercantil'} y ${reviews.length > 0 ? `${reviews.length} opiniones verificadas con promedio de ${averageRating?.toFixed(1)}/5` : 'expediente de información pública comercial'}. ${hasResolution ? `Presenta una tasa de resolución de inconformidades del ${business.resolution_rate}% y un tiempo de respuesta promedio de ${business.median_response_hours} horas.` : 'Sus operaciones están sujetas a la Ley Federal de Protección al Consumidor en México.'}`,
+              text: `${business.brand_name} cuenta con un perfil de identidad en Opinio México con ${business.rfc ? `RFC validado ${business.rfc}` : 'registro mercantil'} y ${reviews.length > 0 ? `${reviews.length} opiniones de clientes con promedio de ${averageRating?.toFixed(1)}/5` : 'expediente de información pública comercial'}. ${hasResolution ? `Presenta una tasa de resolución de inconformidades del ${business.resolution_rate}% y un tiempo de respuesta promedio de ${business.median_response_hours} horas.` : 'Sus operaciones están sujetas a la Ley Federal de Protección al Consumidor en México.'}`,
             },
           },
           {
@@ -479,20 +490,9 @@ export default async function BusinessPassportPage({ params }: PageProps) {
                   size="lg"
                   confidenceLevel={confidenceLevel}
                 />
-
                 <div className="space-y-1 font-mono text-xs text-[var(--op-ink-secondary)] pt-1">
                   <div className="text-xs font-bold text-[var(--op-ink-primary)]">
-                    Muestra efectiva: {effectiveSampleSize} reseñas
-                  </div>
-                  <div>
-                    {hasOrdersData ? (
-                      `${business.observed_orders_count.toLocaleString('es-MX')} pedidos observados`
-                    ) : (
-                      'Sin volumen conectado aún'
-                    )}
-                  </div>
-                  <div className="text-xs text-[var(--op-ink-muted)]">
-                    Calificación Opinio · Escala de 0 a 100
+                    {hasScore ? `Muestra efectiva: ${eligibleSampleSize} reseñas` : 'Sin muestra de opiniones'}
                   </div>
                 </div>
               </div>
@@ -539,8 +539,8 @@ export default async function BusinessPassportPage({ params }: PageProps) {
                 <div className="font-bold text-[var(--op-ink-primary)] text-sm truncate mt-0.5">{hasResolution ? `${business.resolution_rate}% resuelto` : 'Sin alertas'}</div>
               </div>
               <div className="p-3.5 rounded-xl bg-[var(--op-canvas)] border border-[var(--op-border-hairline)]">
-                <div className="text-[var(--op-ink-muted)]">Opiniones Auditadas</div>
-                <div className="font-bold text-[var(--op-ink-primary)] text-sm truncate mt-0.5">{reviews.length > 0 ? `${reviews.length} reseñas (${averageRating?.toFixed(1)}/5)` : 'Abierto a opiniones'}</div>
+                <div className="text-[var(--op-ink-muted)]">Opiniones de clientes</div>
+                <div className="font-bold text-[var(--op-ink-primary)] text-sm truncate mt-0.5">{reviews.length > 0 ? `${reviews.length} reseñas (${averageRating?.toFixed(1)}/5)` : 'Aún sin opiniones'}</div>
               </div>
             </div>
           </section>

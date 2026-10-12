@@ -37,6 +37,7 @@ export async function GET(request: NextRequest) {
       LEFT JOIN LATERAL (
         SELECT COUNT(*)::int AS review_count, AVG(r.rating) AS average_rating
         FROM reviews r WHERE r.business_id = b.id AND r.status = 'published'
+          AND (r.customer_authored = true OR r.transaction_verified = true)
       ) stats ON true
       WHERE ($1 = '' OR b.brand_name ILIKE $2 OR b.slug ILIKE $2 OR b.legal_name ILIKE $2
         OR b.category ILIKE $2 OR b.domain ILIKE $3 OR b.rfc ILIKE $2

@@ -88,29 +88,23 @@ export function ReviewsManager({
     }
   };
 
-  const getVerificationBadge = (level: string) => {
-    switch (level) {
-      case 'confirmed_payment':
-        return {
-          label: 'Pago SPEI Confirmado (1.00)',
-          color: 'bg-op-green-soft text-op-green-dark border-op-green-border',
-        };
-      case 'confirmed_store_order':
-        return {
-          label: 'Pedido Conectado (0.90)',
-          color: 'bg-op-shaded text-op-secondary border-op-border',
-        };
-      case 'reviewed_proof':
-        return {
-          label: 'Comprobante Subido (0.75)',
-          color: 'bg-op-shaded text-op-secondary border-op-border',
-        };
-      default:
-        return {
-          label: 'No Verificada (0.35)',
-          color: 'bg-op-shaded text-op-secondary border-op-border',
-        };
+  const getVerificationBadge = (review: Review) => {
+    if (review.transaction_verified === true) {
+      return {
+        label: 'Compra verificada',
+        color: 'bg-op-green-soft text-op-green-dark border-op-green-border',
+      };
     }
+    if (review.customer_authored === true) {
+      return {
+        label: 'Cliente',
+        color: 'bg-op-shaded text-op-secondary border-op-border',
+      };
+    }
+    return {
+      label: 'En revisión de evidencia',
+      color: 'bg-op-shaded text-op-secondary border-op-border',
+    };
   };
 
   return (
@@ -222,10 +216,10 @@ export function ReviewsManager({
             className="px-2.5 py-1 rounded-lg bg-op-canvas border border-op-border text-base text-op-ink focus:outline-none focus:border-op-green-border"
           >
             <option value="all">Todos los niveles</option>
-            <option value="confirmed_payment">Pago SPEI/Bancario (1.00)</option>
-            <option value="confirmed_store_order">Pedido Conectado (0.90)</option>
-            <option value="reviewed_proof">Comprobante Subido (0.75)</option>
-            <option value="unverified_experience">No Verificada (0.35)</option>
+            <option value="confirmed_payment">Pago confirmado</option>
+            <option value="confirmed_store_order">Pedido conectado</option>
+            <option value="reviewed_proof">Comprobante revisado</option>
+            <option value="unverified_experience">Sin comprobante</option>
           </select>
         </div>
       </div>
@@ -242,7 +236,7 @@ export function ReviewsManager({
           </div>
         ) : (
           filteredReviews.map((r) => {
-            const badge = getVerificationBadge(r.verification_level);
+            const badge = getVerificationBadge(r);
             const isReplying = replyingReviewId === r.id;
 
             return (

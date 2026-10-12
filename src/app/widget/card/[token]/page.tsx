@@ -10,6 +10,6 @@ export default async function WidgetPage({ params, searchParams }: { params: Pro
   const { theme } = await searchParams;
   const widgetData = await getWidgetDataByToken(token);
   if (!widgetData) notFound();
-  const reviews = await getMerchantReviews(widgetData.id);
-  return <MerchantWidgetSurface business={widgetData} format="card" theme={theme === 'dark' ? 'dark' : theme === 'light' ? 'light' : widgetData.theme} review={reviews[0] || null} />;
+  const featured = (await getMerchantReviews(widgetData.id)).find((r) => r.status === 'published' && (r.customer_authored === true || r.transaction_verified === true)) ?? null;
+  return <MerchantWidgetSurface business={widgetData} format="card" theme={theme === 'dark' ? 'dark' : theme === 'light' ? 'light' : widgetData.theme} review={featured} />;
 }

@@ -40,8 +40,9 @@ export type RequestedRemedy =
   | 'clarification';
 
 export interface Business {
-  /** Unweighted published-review summary, separate from the evidence-weighted Opinio score. */
-  review_count?: number;
+  /** Eligible-review count; null when no record qualifies (never a substituted total). */
+  review_count?: number | null;
+  /** Eligible-review average; null when no record qualifies. */
   average_rating?: number | string | null;
   id: number;
   slug: string;
@@ -103,7 +104,15 @@ export interface Review {
   helpful_count: number;
   created_at: string;
   updated_at: string;
-  response?: ReviewResponse | null;
+  /** Provenance source tag (e.g. 'legacy_site_migration'); never implies verification. */
+  provenance_source?: string | null;
+  owner_attested?: boolean | null;
+  attestation_ref?: string | null;
+  attested_at?: string | null;
+  /** True only with evidence of customer authorship; null = unresolved. */
+  customer_authored?: boolean | null;
+  transaction_verified?: boolean | null;
+  verification_record_ref?: string | null;
 }
 
 export interface ReviewResponse {
