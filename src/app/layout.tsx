@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { DM_Sans, IBM_Plex_Mono } from "next/font/google";
+import { Analytics } from "@/components/Analytics";
 import "./globals.css";
 
 const brandSans = DM_Sans({
@@ -49,6 +50,7 @@ export default function RootLayout({
         <a href="#contenido" className="skip-link">Saltar al contenido</a>
         {process.env.OPINIO_QA_FIXTURES === '1' && <aside aria-label="Entorno de prueba" className="border-b border-op-border bg-op-warning-soft px-4 py-2 text-center text-xs font-medium text-op-warning">Vista previa con datos de prueba. Las opiniones y los comercios son ejemplos del entorno de desarrollo.</aside>}
         {children}
+        {process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID && <Analytics measurementId={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID} />}
       </body>
     </html>
   );

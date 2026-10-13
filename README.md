@@ -123,6 +123,24 @@ pnpm build
 pnpm start -p 3005
 ```
 
+## Analítica opcional con GA4
+
+- Cuenta: **Bien Portfolio** (`401172876`).
+- Propiedad: **Opinio** (`558767951`).
+- Flujo web: **Opinio.mx**, `https://opinio.mx` (`16121906342`).
+- ID de medición: **`G-TRGQEPV1L5`**.
+- Zona horaria: **America/Mexico_City**. Moneda: **MXN**.
+
+La integración requiere `NEXT_PUBLIC_GA_MEASUREMENT_ID` antes de compilar. El ID es público, no una clave secreta. En Netlify está configurado para el contexto `production` y el alcance `builds`; los cambios requieren un nuevo despliegue. Sin esa variable no se carga la integración.
+
+El visitante decide entre **Aceptar analítica** y **Rechazar analítica**. Antes de aceptar no se carga Google ni se envían solicitudes de analítica. **Preferencias de analítica** permite cambiar la decisión; al rechazar se desactiva la medición y se eliminan las cookies de este flujo. La preferencia se guarda en almacenamiento local; si el navegador lo bloquea, se respeta durante la visita.
+
+Solo se miden las páginas públicas de inicio, directorio, búsqueda, pasaportes, captura de opiniones y apertura de casos. Los expedientes individuales, el panel del comercio, las API y los widgets quedan excluidos. Las ubicaciones enviadas no incluyen parámetros de consulta ni fragmentos, y los referentes se reducen a su origen. No se envían campos de formularios.
+
+La medición mejorada automática está desactivada en el flujo para evitar capturar búsquedas, interacciones con formularios y navegación automática duplicada. Google signals, almacenamiento publicitario y personalización publicitaria también están desactivados. Se envían vistas de página explícitas después del consentimiento, incluida la navegación entre rutas públicas.
+
+GA4 empieza a recoger datos desde su instalación; no recupera tráfico histórico. Realtime permite comprobar nuevas visitas, mientras que los informes agregados pueden tardar en procesarse. Esta integración no sustituye una revisión del aviso de privacidad.
+
 ---
 
 ## 🛡️ Aviso Legal y de Privacidad
