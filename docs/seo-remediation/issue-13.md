@@ -27,7 +27,7 @@ curl -s -A "Mozilla/5.0 (compatible; seo-remediation-observation)" -o NUL \
 | `https://opinio.mx/caso/nuevo` | 200 | — |
 | `https://opinio.mx/escribir-opinion/cinepolis` | 200 | — |
 | `https://opinio.mx/b/cinepolis` | 200 | 84,091 |
-| `https://opinio.mx/b/luuna` | 200 | — |
+| `https://opinio.mx/b/luuna` | 200 | 161,297 |
 | `https://opinio.mx/robots.txt` | 200 | 489 |
 | `https://opinio.mx/sitemap.xml` | 200 | 119,622 |
 | `https://opinio.mx/merchant` | **500** | — |
@@ -35,6 +35,8 @@ curl -s -A "Mozilla/5.0 (compatible; seo-remediation-observation)" -o NUL \
 DOM observations from the same fetches:
 
 - **Sitemap inventory**: 1,202 `<loc>` entries = `/` (1), `/directorio` (1), `/b/<slug>` (1,200). No methodology, press, dataset or blog URL is listed.
+  Scope limit: the 1,200 `/b/*` entries are inventory **addresses**. JSON-LD, folio and outbound-anchor structure were verified only on the two sampled profiles (`/b/cinepolis`, `/b/luuna`); this is not evidence that all 1,200 addresses are machine-readable.
+- **Raw observation artifacts** (local scratch, outside the repository): `C:/Users/isaac/tmp/obs13/{home.html,profile-cinepolis.html,profile-luuna.html,verificar.html}`, `C:/Users/isaac/tmp/obs13/dfs-summary.md`, `C:/Users/isaac/tmp/obs13/dfs-bulk.md`, `C:/Users/isaac/tmp/sitemap-13.xml` — fetch metadata and checksums in §1.5.
 - **Homepage** (`/`): 0 `<script type="application/ld+json">` blocks; no absolute external `href`; in-page anchors `#metodologia` and `#independencia`; the three-pillar standard (Existe / Cumple / Resuelve), the coverage definition (“Cobertura no significa satisfacción: mide invitaciones sobre pedidos registrados. El puntaje Opinio va de 0 a 100 y no es un promedio de estrellas. La falta de información no demuestra una mala experiencia.”) and the illustrative comparator (`13,911 invitados / 14,821 órdenes`, `Cobertura 93.9%`).
 - **Merchant profile** (`/b/cinepolis`): 1 JSON-LD block — `Organization`+`OnlineStore` with `legalName`, `url: https://cinepolis.com`, `logo`, `telephone`, `areaServed: Mexico`, plus a `WebPage` node. Identity fields render as “No registrado” (SAT cédula, INEGI census) and “Sin pedidos conectados”; section `04 · Fuentes` states “Este perfil todavía no tiene fuentes públicas vinculadas.”
 - **Merchant profile** (`/b/luuna`): folio `OP-000001`, “Perfil reclamado”; identity shows RFC `CZE150414AB2`, INEGI CLEE `0901547891234001`; coverage `93.9%` = “13,911 clientes invitados de 14,821 compras observadas”; 8 published reviews, “87.5% Confirmado”, “14.1 hrs”; `04 · Fuentes` links out to `https://burocomercial.profeco.gob.mx` and `https://www.inegi.org.mx/app/mapa/denue/`.
@@ -62,6 +64,29 @@ From `audit.json` / `market-review.json` / `digest.md` in the report directory a
 - **Bulk referring domains**: “This endpoint will provide you with the number of referring domains pointing to domains, subdomains, and pages specified in the `targets` array. The returned numbers are based on all **live** referring domains … that were found during the latest check.” — <https://docs.dataforseo.com/v3/backlinks/bulk_referring_domains/live/>
 - **Summary**: “This endpoint will provide you with an overview of backlinks data **available** for a given domain, subdomain, or webpage.” The vendor derives the dataset from “the live index” and crawls continuously — <https://docs.dataforseo.com/v3/backlinks/summary/live/>, <https://docs.dataforseo.com/v3/backlinks/overview/>
 - **Search Console Links report**: “This report isn’t a comprehensive list of every link on your site. It shows a **sample** of internal and external links … Tables are limited to 1,000 rows”. It “includes links that Google has found over time” (possibly since removed) and “doesn’t specify if a link is marked as `nofollow`”. Export note: “Values shown as either ~ or - in the report (not available/not a number) will be **zeros** in the downloaded data.” — <https://support.google.com/webmasters/answer/9049606>
+
+### 1.5 Raw observation artifacts (local scratch, outside the repository)
+
+Retained so a reviewer can re-inspect exactly what was fetched. All timestamps are local `-0600` with UTC equivalent; `md5` is `md5sum` of the file as written.
+
+| Artifact | Bytes | Written (−0600 / UTC) | md5 |
+| --- | --- | --- | --- |
+| `C:/Users/isaac/tmp/obs13/home.html` | 81,532 | 16:33:26 / 22:33:26Z | `4c84a4ad8cf12fd4a9f0eb50c9c18611` |
+| `C:/Users/isaac/tmp/obs13/profile-cinepolis.html` | 84,091 | 16:33:26 / 22:33:26Z | `2ebf0d5a162cd7e9cfa615902494b8e7` |
+| `C:/Users/isaac/tmp/obs13/profile-luuna.html` | 161,297 | 16:37:56 / 22:37:56Z | `812f645786bebee760700583da1fa004` |
+| `C:/Users/isaac/tmp/obs13/verificar.html` | 16,483 | 16:33:26 / 22:33:26Z | `f5de292fc7746181ba9dab41a7affe30` |
+| `C:/Users/isaac/tmp/sitemap-13.xml` | 119,622 | 16:33:04 / 22:33:04Z | `d65b4ba50ddc3fcee6a0eff46462100e` |
+| `C:/Users/isaac/tmp/obs13/dfs-summary.md` | 21,194 | 16:36:17 / 22:36:17Z | `ee1a4a24c6e72a59a14fbb83b7e52d26` |
+| `C:/Users/isaac/tmp/obs13/dfs-bulk.md` | 15,476 | 16:36:18 / 22:36:18Z | `2c9177be2a02bda18f403af9f4ec27eb` |
+
+Command that produced the HTML/XML artifacts (the `dfs-*.md` files are the resolved vendor `.md` documents after following redirects):
+
+```
+curl -s -A "Mozilla/5.0 (compatible; seo-remediation-observation)" --max-time 60 -o obs13/home.html https://opinio.mx/ ...
+```
+
+`/b/luuna` HTTP status/bytes were re-measured in the same session (`200`, 161,297 bytes) before writing `profile-luuna.html`.
+
 
 ## 2. What JEV-006’s numbers do and do not mean
 
@@ -105,18 +130,18 @@ The set mixes marketplaces, a review platform, government and a job board, so it
 
 Each opportunity below is anchored to something the site **actually has today** (observed in §1.1) plus a demand or surface observed in the dated provider capture. None involves contacting anyone, buying anything, or creating accounts. Venue classes are described from observed SERP evidence, not from named relationships — no partnership exists and none is implied.
 
-**A. The merchant Passport record set (1,200 addressable, machine-readable pages).**
-- Real evidence: 1,200 `/b/<slug>` URLs in the live sitemap; each sampled profile carries a folio (`OP-000160`, `OP-000001`), a JSON-LD `Organization`/`OnlineStore` node with `legalName` and the merchant’s official site URL, and explicit identity/case/coverage sections.
-- Why it is a plausible citation surface: the pages answer the “¿es confiable <comercio>?” question class, and the dated capture shows that class carries large volumes for other merchants (e.g. `creditea es confiable` 18,100/mo, `baubap es confiable` 6,600/mo, both currently ranking at positions 61 and 53, i.e. Opinio competes there today).
-- Observed surfaces that currently occupy those answers: the sampled SERPs put merchant-owned sites, Facebook/Instagram profiles and government consumer pages in the top three (e.g. `farmacia san pablo` → `farmaciasanpablo.com.mx`, `facebook.com`, `instagram.com`; `sfe farmacia` → `pacientes.sfe.com.mx`, `distintivodigital.profeco.gob.mx`), with Opinio absent (`own position None`) in all five sampled SERPs.
+**A. The merchant Passport record set (1,200 addressable profile URLs).**
+- Real evidence: 1,200 `/b/<slug>` addresses in the live sitemap inventory (§1.1). On the **two sampled profiles only**, a folio (`OP-000160`, `OP-000001`), a JSON-LD `Organization`/`OnlineStore` node with `legalName` and the merchant’s official site URL, and explicit identity/case/coverage sections were observed. Field depth varies by profile — the sampled unclaimed profile had no registry links, no coverage and no reviews — so promotion must follow what each profile actually shows.
+- Why it is a plausible citation surface: the pages answer the “¿es confiable <comercio>?” question class. The only quantitative support for that class in this work is the **dated provider capture (DataForSEO, 2026-10-13, location 2484 / language `es`)** — vendor **estimates**, not measured traffic and not current demand: `creditea es confiable` ≈18,100/mo with Opinio recorded at position 61, and `baubap es confiable` ≈6,600/mo recorded at position 53 in that capture only.
+- Observed surfaces occupying those answers **in the same dated capture**: the sampled SERPs put merchant-owned sites, Facebook/Instagram profiles and government consumer pages in the top three (e.g. `farmacia san pablo` → `farmaciasanpablo.com.mx`, `facebook.com`, `instagram.com`; `sfe farmacia` → `pacientes.sfe.com.mx`, `distintivodigital.profeco.gob.mx`), with Opinio recorded as absent (`own position None`) in all five sampled SERPs.
 - Human-only step: decide whether a profile is mature enough to be promoted (identity, coverage, cases) before any third party is invited to look at it. **Do not** present profiles whose fields read “No registrado”, “En validación” or “Sin volumen conectado aún” as verification evidence.
 - Later measurement: referrer sessions in analytics, and a dated re-capture of the bulk/summary endpoints (§6.3).
 
-**B. A publishable methodology statement (currently only a homepage anchor).**
-- Real evidence: measurable definitions of the three pillars and of the coverage metric exist as page text (`#metodologia`, `#independencia`), including the explicit limitation that “[la] falta de información no demuestra una mala experiencia” and that the 0–100 score is not a star average.
-- Why it is citable: a self-contained definition of “denominator-based” trust scoring is the kind of asset consumer-protection and e-commerce-trust writers cite by reference.
-- Gap an agent cannot close: the statement has no stable, separate URL (the sitemap contains only `/`, `/directorio` and `/b/*`), so it cannot be cited as a document. Turning it into one is a product/roadmap decision for the owner — recorded here as context, not proposed as a change in this ticket.
-- Later measurement: none until/unless such a page exists.
+**B. The methodology statement — already addressable as a homepage anchor.**
+- Real evidence: measurable definitions of the three pillars and of the coverage metric exist as live page text, addressable today at `https://opinio.mx/#metodologia` (and `https://opinio.mx/#independencia`), including the explicit limitation that “[la] falta de información no demuestra una mala experiencia” and that the 0–100 score is not a star average.
+- Why it is citable: a self-contained definition of “denominator-based” trust scoring is the kind of asset consumer-protection and e-commerce-trust writers cite by reference, and the fragment URL is retrievable now — it does not depend on any further work.
+- Optional, not a prerequisite: promoting the same statement to a standalone page (or a dataset/methodology page with its own URL) is a human product decision that would give it a cleaner citation target. This ticket neither requires it nor blocks any reference on it.
+- Later measurement: none specific; a reference to the fragment would surface in the same instruments as any other reference (§6.3).
 
 **C. Registry provenance already exposed on profiles.**
 - Real evidence: `/b/luuna` links out to PROFECO’s Buró Comercial and INEGI DENUE and prints the checked registry value; README describes “Fuentes Oficiales PROFECO/DENUE” as part of the passport.
@@ -147,7 +172,7 @@ Cross-ticket caution (not this ticket’s fix): `/merchant` returns **HTTP 500**
 
 1. Decide whether to pursue earned references at all. A decision to do nothing is a valid outcome of this ticket.
 2. If yes: the owner chooses venues and performs every contact personally. The only link-relevant, evidence-based direction available today is the one the report already states — material that a third party would choose to cite (the Passport record set, published methodology, registry-backed data) — never payment or exchange.
-3. Explicitly authorize any re-check: a fresh two-endpoint provider check costs ≈ **$0.048** at the dated ledger rates ($0.024216 bulk + $0.024036 summary), plus $0.101 if the AI-mentions endpoint is re-run. GSC re-captures are free but must be re-run by the owner. Neither is part of this ticket.
+3. Authorize any later read/measurement separately. A fresh two-endpoint provider check costs ≈ **$0.048** at the dated ledger rates ($0.024216 bulk + $0.024036 summary), plus $0.101 if the AI-mentions endpoint is re-run — paid provider calls require explicit authorization. A Search Console re-capture is only a read of an already-connected property, not a paid call or a privacy change, and an agent may perform it once authorized. This ticket is preparation only and took no new capture; the two roles stay distinct — **the owner executes outreach**, **authorized later reads (agent or owner) measure**.
 4. Before citing any figure externally, confirm its provenance: for the sampled portfolio profile the live values match the repository’s seeded baseline (off by one unit) and the live review/case texts are not in the repository, so an agent cannot certify them as independent production data.
 5. Measure only after something actually changes: GSC Links report refresh, provider re-check, referrer/session data — with the same reported-zero vs unknown vs sampled limitations restated.
 
@@ -171,7 +196,7 @@ Human outreach is **not** a prerequisite for #14 (technical verification of the 
 
 ## 8. Sources
 
-- Live site (HTTP/DOM), 2026-10-13: `https://opinio.mx/`, `/directorio`, `/verificar`, `/b/cinepolis`, `/b/luuna`, `/caso/nuevo`, `/escribir-opinion/cinepolis`, `/robots.txt`, `/sitemap.xml`, `/merchant`.
+- Live site (HTTP/DOM), 2026-10-13: `https://opinio.mx/`, `/directorio`, `/verificar`, `/b/cinepolis`, `/b/luuna`, `/caso/nuevo`, `/escribir-opinion/cinepolis`, `/robots.txt`, `/sitemap.xml`, `/merchant`. Raw retrievals with timestamps, sizes and checksums: §1.5.
 - Local dated audit capture (untracked): `C:/Users/isaac/ghprojects/opinio/jev-seo-reports/opinio.mx-2026-10-13-full/{audit.json,digest.md,market-review.json,first-party-evidence.json,report.md,first-party-addendum.md}` — crawl 2026-10-13T18:48:01Z, DataForSEO location 2484 / `es`.
 - Repository evidence for the provenance note: `scripts/seed.ts:65-66`, `scripts/seed-portfolio-businesses.ts:1144-1145`, `src/components/home/ProofBentoGrid.tsx:119-151`, `README.md:16-19,71`, `data/mexican_stores_1000.json`.
 - Vendor documentation: <https://docs.dataforseo.com/v3/backlinks/overview/>, <https://docs.dataforseo.com/v3/backlinks/bulk_referring_domains/live/>, <https://docs.dataforseo.com/v3/backlinks/summary/live/>.
