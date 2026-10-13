@@ -7,10 +7,12 @@
  *   - the utility families carry purpose titles/descriptions instead of the
  *     homepage fallback, keep the approved noindex policy and never echo query
  *     tokens;
- *   - public passports state the identity and record scope the database holds
- *     (razón social, cobertura/domicilio) without publishing raw street
- *     addresses, and records that share a brand stay distinguishable;
- *   - the passport/case-portal families keep their canonical/indexing policy;
+ *   - public passports state the record's own facts — razón social or catalogue
+ *     category and the recorded scope quoted verbatim from `operating_area` —
+ *     never a coverage/domicile classification invented from the value's shape,
+ *     and source placeholders are omitted rather than published;
+ *   - records that share a brand stay distinguishable, and the passport/case
+ *     portal families keep their canonical/indexing policy;
  *   - the private case portal keeps static, purpose-only metadata: no case
  *     number, id, customer name, contact or merchant name.
  *
@@ -53,12 +55,16 @@ const UTILITY_TITLES = {
   casoPortal: 'Seguimiento de caso | Opinio México',
 };
 const SITE_FALLBACK_TITLE = 'Opinio México — Pasaporte de Confianza Comercial';
+// Sample selector only: values that announce themselves as source placeholders
+// are not scope samples (the assertion below still checks the served page).
+const SOURCE_PLACEHOLDER = /^(no proporciona|sin datos|no disponible|datos por sucursal|consultar)/i;
 
 const looseKey = (value) => (value || '').normalize('NFC').toLowerCase().replace(/[^a-z0-9áéíóúñü]+/gi, '');
 
 /**
  * Reads the catalogue from the database: the records that share a brand (the
- * audit's duplicate-title families) and representative identity/scope samples.
+ * audit's duplicate-title families) and one representative per inventory class
+ * of the recorded scope.
  */
 async function loadRecords() {
   const client = new Client({ connectionString: process.env.DATABASE_URL });
@@ -81,20 +87,17 @@ async function loadRecords() {
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key).push(row);
     }
-    const sameBrandGroups = [...groups.values()].filter((members) => members.length > 1);
 
-    const hasLegalName = (row) => Boolean(row.legal_name && row.legal_name.trim());
     const areaOf = (row) => (row.operating_area || '').trim();
-    // "City, State" values are the informative compact places in this catalogue;
-    // source placeholders ("NO PROPORCIONA") are not place samples.
-    const placeShape = /^[^,\d]+,\s*[^,\d]+$/;
+    const documented = rows.filter((row) => areaOf(row) && !SOURCE_PLACEHOLDER.test(areaOf(row)));
     const samples = {
-      identityAddress: rows.find((row) => hasLegalName(row) && /\d/.test(areaOf(row)) && !/nacional/i.test(areaOf(row))),
-      identityPlace: rows.find((row) => hasLegalName(row) && placeShape.test(areaOf(row)) && areaOf(row).length <= 40),
-      nationalNoIdentity: rows.find((row) => !hasLegalName(row) && /nacional/i.test(areaOf(row))),
+      documentedLong: documented.find((row) => areaOf(row).length > 60),
+      documentedShort: documented.find((row) => areaOf(row).length <= 40),
+      placeholderScope: rows.find((row) => SOURCE_PLACEHOLDER.test(areaOf(row))),
+      noIdentity: rows.find((row) => !(row.legal_name || '').trim()),
     };
 
-    return { rows, sameBrandGroups, samples };
+    return { rows, sameBrandGroups: [...groups.values()].filter((members) => members.length > 1), samples };
   } finally {
     await client.end();
   }
@@ -256,52 +259,62 @@ try {
     `GET /verificar?q=SmokeTokenXYZ → title/description without the token`,
   );
 
-  // 2. Passport identity: the served metadata reflects the stored record facts.
-  if (samples.identityAddress) {
-    const row = samples.identityAddress;
+  // 2. Passport identity: the served metadata quotes the stored record facts.
+  for (const [sample, label] of [
+    [samples.documentedLong, 'long recorded scope'],
+    [samples.documentedShort, 'short recorded scope'],
+  ]) {
+    if (!sample) {
+      record(`passport sample for the ${label} available`, false, 'no such record in this database');
+      continue;
+    }
+    const area = (sample.operating_area || '').trim();
+    const { status, body } = await request(`/b/${encodeURIComponent(sample.slug)}`);
+    const title = titleContent(body) ?? '';
+    const description = descriptionContent(body) ?? '';
+    const withoutSourceValue = `${title} ${description}`.split(area).join('');
+    record(
+      `passport with a ${label} quotes it verbatim without a classification`,
+      status === 200 && title.includes(area) && description.includes(area) && !/cobertura|domicilio/i.test(withoutSourceValue),
+      `/b/${sample.slug} → title="${title}"`,
+    );
+  }
+
+  if (samples.placeholderScope) {
+    const area = (samples.placeholderScope.operating_area || '').trim();
+    const { status, body } = await request(`/b/${encodeURIComponent(samples.placeholderScope.slug)}`);
+    const title = titleContent(body) ?? '';
+    const description = descriptionContent(body) ?? '';
+    record(
+      'passport omits a non-informative source value instead of stating a scope',
+      status === 200 &&
+        !title.includes(area) &&
+        !description.includes(area) &&
+        !/ámbito|cobertura|domicilio/i.test(`${title} ${description}`),
+      `/b/${samples.placeholderScope.slug} → title="${title}", description="${description}"`,
+    );
+  } else {
+    record('passport sample with a non-informative source value available', false, 'no such record in this database');
+  }
+
+  if (samples.noIdentity) {
+    const row = samples.noIdentity;
+    const category = (row.category || '').trim();
     const { status, body } = await request(`/b/${encodeURIComponent(row.slug)}`);
     const title = titleContent(body) ?? '';
     const description = descriptionContent(body) ?? '';
-    const area = (row.operating_area || '').trim();
     record(
-      'specific-scope passport states identity and domicile without publishing the street',
+      'passport without a published razón social states the catalogue category instead',
       status === 200 &&
         title.includes(row.brand_name) &&
-        description.includes(row.legal_name.trim()) &&
-        !title.includes(area) &&
-        !description.includes(area),
-      `/b/${row.slug} → title="${title}"`,
-    );
-  } else {
-    record('specific-scope passport sample available', false, 'no record with razón social + street address in this database');
-  }
-
-  if (samples.identityPlace) {
-    const row = samples.identityPlace;
-    const { body } = await request(`/b/${encodeURIComponent(row.slug)}`);
-    const title = titleContent(body) ?? '';
-    const area = (row.operating_area || '').trim();
-    record(
-      'place-scope passport states the recorded coverage',
-      title.includes(area) && descriptionContent(body)?.includes(row.legal_name.trim()) === true,
-      `/b/${row.slug} → title="${title}"`,
-    );
-  } else {
-    record('place-scope passport sample available', false, 'no record with razón social + compact place in this database');
-  }
-
-  if (samples.nationalNoIdentity) {
-    const row = samples.nationalNoIdentity;
-    const { body } = await request(`/b/${encodeURIComponent(row.slug)}`);
-    const title = titleContent(body) ?? '';
-    const description = descriptionContent(body) ?? '';
-    record(
-      'passport without published identity claims none and keeps national scope',
-      title.includes('cobertura nacional') && !/razón social/i.test(description) && description.length > 0,
+        Boolean(category) &&
+        title.includes(category) &&
+        !/razón social/i.test(description) &&
+        description.length > 0,
       `/b/${row.slug} → title="${title}", description="${description}"`,
     );
   } else {
-    record('national no-identity passport sample available', false, 'no such record in this database');
+    record('passport sample without a published razón social available', false, 'no such record in this database');
   }
 
   // 3. Same-brand records: every group stays distinguishable over HTTP.
@@ -356,10 +369,13 @@ try {
   );
 
   const missing = await request(`/b/smoke-missing-${Date.now()}`);
+  const missingMetadata = `${titleContent(missing.body)} ${descriptionContent(missing.body)}`;
   record(
-    'unknown passport slug still returns 404 without a canonical',
-    missing.status === 404 && canonicalHref(missing.body) === null,
-    `GET /b/smoke-missing-… → ${missing.status}, canonical=${canonicalHref(missing.body)}`,
+    'unknown passport slug returns 404 without a canonical and without an imaginary validation process',
+    missing.status === 404 &&
+      canonicalHref(missing.body) === null &&
+      !/validación|en proceso|proceso de/i.test(missingMetadata),
+    `GET /b/smoke-missing-… → ${missing.status}, canonical=${canonicalHref(missing.body)}, title="${titleContent(missing.body)}"`,
   );
 
   // 5. Private case portal: static purpose metadata only (locally created row).
@@ -374,7 +390,7 @@ try {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        business_id: catalogue[0].id ?? undefined,
+        business_id: catalogue[0].id,
         customer_name: customerName,
         customer_contact: customerContact,
         issue_category: 'delay',
@@ -401,7 +417,7 @@ try {
         'case portal metadata is static and leaks no case, customer or merchant data',
         portal.status === 200 &&
           titleContent(portal.body) === UTILITY_TITLES.casoPortal &&
-          !/razón social|cobertura|domicilio/i.test(portalDescription) &&
+          !/razón social|ámbito|cobertura|domicilio/i.test(portalDescription) &&
           leaked.length === 0,
         `/caso/${caseId} → title="${titleContent(portal.body)}"${leaked.length ? `, leaked: ${leaked.join(', ')}` : ', no identifiers in <head>'}`,
       );

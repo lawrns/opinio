@@ -1,13 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import {
-  passportDescription,
-  passportRecordScope,
-  passportTitle,
-  type PassportRecordFacts,
-} from './passport-metadata';
+import { passportMetadata, passportRecordScope, type PassportRecordFacts } from './passport-metadata';
 
 // Record facts as observed on the live production passports during the audit
-// (razón social, categoría and cobertura are the values the pages render).
+// (razón social, categoría and ámbito are the values those pages render).
 const OBSERVED_PAIRS: Array<[PassportRecordFacts, PassportRecordFacts]> = [
   [
     { brandName: 'Mercado Pago', legalName: null, category: 'Comercio Electrónico Especializado', operatingArea: 'Nacional (México)' },
@@ -31,86 +26,104 @@ const OBSERVED_PAIRS: Array<[PassportRecordFacts, PassportRecordFacts]> = [
   ],
 ];
 
-describe('passport metadata for same-brand merchant records', () => {
-  it.each(OBSERVED_PAIRS)('renders distinguishable titles and descriptions', (first, second) => {
-    const titles = [passportTitle(first), passportTitle(second)].map((value) => value.toLowerCase().replace(/[^a-z0-9]+/g, ''));
-    const descriptions = [passportDescription(first), passportDescription(second)].map((value) => value.toLowerCase().replace(/[^a-z0-9]+/g, ''));
-    expect(titles[0]).not.toBe(titles[1]);
-    expect(descriptions[0]).not.toBe(descriptions[1]);
+const loose = (value: string) => value.toLowerCase().replace(/[^a-z0-9áéíóúñü]+/gi, '');
+
+describe('same-brand merchant records', () => {
+  it.each(OBSERVED_PAIRS)('stay distinguishable in title and description', (first, second) => {
+    const firstMetadata = passportMetadata(first);
+    const secondMetadata = passportMetadata(second);
+
+    expect(loose(firstMetadata.title)).not.toBe(loose(secondMetadata.title));
+    expect(loose(firstMetadata.description)).not.toBe(loose(secondMetadata.description));
+    expect(firstMetadata.title).toContain(first.brandName);
+    expect(secondMetadata.title).toContain(second.brandName);
   });
 
-  it('keeps a record without published identity out of the identity claim', () => {
-    const [withoutLegalName] = OBSERVED_PAIRS[0];
-    expect(passportTitle(withoutLegalName)).toBe(
-      '¿Es confiable Mercado Pago? Comercio Electrónico Especializado · cobertura nacional | Opinio México'
-    );
-    expect(passportDescription(withoutLegalName)).not.toContain('razón social');
-  });
+  it('quote each record scope verbatim instead of a classification', () => {
+    const [addressRecord, nationalRecord] = OBSERVED_PAIRS[3];
+    const addressScope = passportMetadata(addressRecord);
+    const nationalScope = passportMetadata(nationalRecord);
 
-  it('states the razón social and the recorded scope for a specific-scope record', () => {
-    const [, innovaSportNational] = OBSERVED_PAIRS[2];
-    expect(passportTitle(innovaSportNational)).toBe(
-      '¿Es confiable Innovasport? Belleza, moda y calzado · cobertura nacional | Opinio México'
-    );
-    expect(passportDescription(innovaSportNational)).toContain('razón social: Innovasport, S.A. de C.V.');
-    expect(passportDescription(innovaSportNational)).toContain('Cobertura nacional.');
+    expect(addressScope.title).toContain(addressRecord.operatingArea);
+    expect(addressScope.description).toContain(addressRecord.operatingArea);
+    expect(nationalScope.title).toContain(nationalRecord.operatingArea);
+    expect(nationalScope.title).not.toContain(addressRecord.operatingArea);
   });
 });
 
-describe('record scope classification', () => {
-  it.each(['Nacional (México)', 'Plataforma nacional'])('reads national coverage from %j', (area) => {
-    expect(passportRecordScope(area).kind).toBe('national');
-  });
+describe('record scope', () => {
+  it.each([
+    '32 estados',
+    'Monterrey, Nuevo León',
+    'Nacional (México)',
+    'Región Metropolitana del Valle de México y zonas conurbadas del norte del país',
+    'DURANGO NO. 230, COLONIA ROMA, ALCALDÍA CUAUHTÉMOC, C.P. 06700, CIUDAD DE MÉXICO',
+  ])('keeps the source value %j verbatim whatever its shape', (operatingArea) => {
+    expect(passportRecordScope(operatingArea)).toEqual({ kind: 'documented', value: operatingArea });
 
-  it('keeps a compact place verbatim', () => {
-    expect(passportRecordScope('Monterrey, Nuevo León')).toMatchObject({
-      kind: 'place',
-      titlePhrase: 'cobertura en Monterrey, Nuevo León',
-    });
-    expect(passportTitle({ brandName: 'X', operatingArea: 'Guadalajara, Jalisco' })).toContain('cobertura en Guadalajara, Jalisco');
-  });
-
-  it('does not read "internacional" as national coverage', () => {
-    const scope = passportRecordScope('AEROPUERTO INTERNACIONAL DE MONTERREY. TERMINAL C, CARRETERA MIGUEL ALEMÁN KM 24, APODACA, NL, MÉXICO, C.P. 66600');
-    expect(scope.kind).toBe('address');
+    const { title, description } = passportMetadata({ brandName: 'Marca', operatingArea });
+    expect(title).toContain(operatingArea);
+    expect(description).toContain(operatingArea);
   });
 
   it.each(['NO PROPORCIONA', 'DATOS POR SUCURSAL. CONSULTAR', '', '   ', null, undefined])(
-    'states no scope for the non-informative value %j',
-    (area) => {
-      const scope = passportRecordScope(area);
-      expect(scope.kind).toBe('unknown');
-      expect(scope.titlePhrase).toBeNull();
-      const title = passportTitle({ brandName: 'X', legalName: 'Equis, S.A. de C.V.', operatingArea: area });
-      const description = passportDescription({ brandName: 'X', legalName: 'Equis, S.A. de C.V.', operatingArea: area });
-      expect(title).not.toMatch(/cobertura|domicilio/);
-      expect(description).not.toMatch(/cobertura|domicilio/);
-    }
+    'omits the non-informative source value %j instead of stating a scope',
+    (operatingArea) => {
+      expect(passportRecordScope(operatingArea)).toEqual({ kind: 'unknown', value: null });
+
+      const { title, description } = passportMetadata({
+        brandName: 'Marca',
+        legalName: 'Marca, S.A. de C.V.',
+        category: 'Comercio Electrónico Especializado',
+        operatingArea,
+      });
+      expect(title).not.toMatch(/ámbito/i);
+      expect(description).not.toMatch(/ámbito/i);
+      if (operatingArea?.trim()) {
+        expect(`${title} ${description}`).not.toContain(operatingArea.trim());
+      }
+    },
   );
 
-  it('never publishes a raw street address in the title or the description', () => {
-    const address = 'DURANGO NO. 230, COLONIA ROMA, ALCALDÍA CUAUHTÉMOC, C.P. 06700, CIUDAD DE MÉXICO';
-    const facts: PassportRecordFacts = { brandName: 'El Palacio de Hierro', legalName: 'El Palacio de Hierro, S.A. de C.V.', category: 'Retail y departamentales', operatingArea: address };
-    expect(passportRecordScope(address).kind).toBe('address');
-    expect(passportTitle(facts)).toContain('domicilio registrado');
-    expect(passportTitle(facts)).not.toContain('DURANGO');
-    expect(passportDescription(facts)).not.toContain('DURANGO');
-  });
+  it.each(['32 estados', 'Guadalajara, Jalisco', 'BOULEVARD MANUEL ÁVILA CAMACHO NO. 5, C.P. 53390'])(
+    'never turns the source value %j into a coverage or domicile claim',
+    (operatingArea) => {
+      const { title, description } = passportMetadata({ brandName: 'Marca', operatingArea });
+      const withoutSourceValue = `${title} ${description}`.split(operatingArea).join('');
+
+      expect(withoutSourceValue).not.toMatch(/cobertura|domicilio/i);
+    },
+  );
 });
 
-describe('razón social that only repeats the brand', () => {
-  it('distinguishes through the catalogue category instead of repeating the brand', () => {
-    const facts: PassportRecordFacts = { brandName: 'Innovasport', legalName: 'Innovasport, S.A. de C.V.', category: 'Moda, Calzado y Accesorios', operatingArea: 'Monterrey, Nuevo León' };
-    const title = passportTitle(facts);
-    expect(title).toBe('¿Es confiable Innovasport? Moda, Calzado y Accesorios · cobertura en Monterrey, Nuevo León | Opinio México');
-    expect(title.match(/Innovasport/g)).toHaveLength(1);
-    expect(passportDescription(facts)).toContain('razón social: Innovasport, S.A. de C.V.');
+describe('record facts', () => {
+  it('carries the published razón social and category as record data', () => {
+    const facts: PassportRecordFacts = {
+      brandName: 'Marca',
+      legalName: 'Comercializadora Marca, S. de R.L. de C.V.',
+      category: 'Hogar, Muebles y Decoración',
+      operatingArea: 'Nacional (México)',
+    };
+    const { title, description } = passportMetadata(facts);
+
+    expect(title).toContain(facts.legalName);
+    expect(description).toContain(facts.legalName);
+    expect(description).toContain(facts.category);
   });
 
-  it('falls back to a plain passport title when no distinguishing fact is known', () => {
-    expect(passportTitle({ brandName: 'X' })).toBe('¿Es confiable X? Pasaporte de Confianza | Opinio México');
-    expect(passportDescription({ brandName: 'X' })).toBe(
-      'Pasaporte de confianza de X. Consulta su identidad, registros públicos y opiniones en Opinio México.'
-    );
+  it('falls back to the catalogue category when no razón social is published', () => {
+    const { title, description } = passportMetadata({ brandName: 'Marca', category: 'Comercio Electrónico Especializado' });
+
+    expect(title).toContain('Comercio Electrónico Especializado');
+    expect(description).not.toMatch(/razón social/i);
+  });
+
+  it('claims no identity, scope or verification the record does not publish', () => {
+    const { title, description } = passportMetadata({ brandName: 'Marca' });
+
+    expect(title).toContain('Marca');
+    expect(description).toContain('Marca');
+    expect(title).not.toMatch(/ámbito/i);
+    expect(description).not.toMatch(/ámbito|razón social|categoría/i);
   });
 });

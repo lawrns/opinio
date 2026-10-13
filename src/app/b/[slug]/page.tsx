@@ -12,7 +12,7 @@ import { PassportActionButtons } from '@/components/passport/PassportActionButto
 import { TrustGauge } from '@/components/passport/TrustGauge';
 import { OfficialRecordCard } from '@/components/passport/OfficialRecordCard';
 import { query } from '@/lib/db';
-import { passportDescription, passportTitle } from '@/lib/passport-metadata';
+import { passportMetadata } from '@/lib/passport-metadata';
 
 interface BusinessDbRow {
   id: number;
@@ -100,19 +100,17 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     if (res.rows.length === 0) {
       return {
         title: 'Comercio no encontrado | Opinio México',
-        description: 'El comercio solicitado no existe o se encuentra en proceso de validación.',
+        description: 'Este comercio no está registrado en Opinio México.',
       };
     }
 
     const b = res.rows[0];
-    const facts = {
+    const { title, description } = passportMetadata({
       brandName: b.brand_name,
       legalName: b.legal_name,
       category: b.category,
       operatingArea: b.operating_area,
-    };
-    const title = passportTitle(facts);
-    const description = passportDescription(facts);
+    });
     const canonicalUrl = `${baseUrl}/b/${slug}`;
     const ogImageUrl = `${baseUrl}/b/${slug}/opengraph-image`;
 
@@ -157,8 +155,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   } catch (error) {
     console.error('[generateMetadata] Error querying business:', error);
     return {
-      title: 'Pasaporte de Confianza Comercial | Opinio México',
-      description: 'Verifica la autenticidad e historial de comercios en México antes de comprar.',
+      title: 'Comercio no disponible | Opinio México',
+      description: 'No pudimos cargar la información de este comercio en Opinio México.',
     };
   }
 }
