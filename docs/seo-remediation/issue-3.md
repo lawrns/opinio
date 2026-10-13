@@ -11,7 +11,7 @@ Approved decision implemented as given (JEV-016/JEV-024/JEV-025): noindex the se
 | `src/app/verificar/layout.tsx` (new) | Route metadata wrapper: `robots: { index: false, follow: true }`. Applies to `/verificar` and every query/category/action variant because they are the same route. |
 | `src/app/caso/nuevo/layout.tsx` (new) | Route metadata wrapper: `robots: { index: false, follow: true }`. Applies to `/caso/nuevo` and its `?b=<merchant>` variants. |
 | `src/app/escribir-opinion/[slug]/page.tsx` | Added `generateMetadata`: merchant-specific title/description and a self-canonical `…/escribir-opinion/<merchant>` built from the path only, so incidental parameters (`?b=…`, `utm_*`) normalize to the merchant path and are never cross-canonicalized to the `/b/<merchant>` passport. Unknown slugs return no canonical (Next injects `noindex` for the 404). The page body and the form flow are unchanged. |
-| `scripts/verify-seo-indexing.mjs` (new) | Deterministic HTTP regression for this policy. Boots `next dev` and asserts real served HTML: noindex+follow on the utility variants, indexability + self-canonical on opinion entry (including parameter normalization), passport/directory indexability, sitemap inventory shape, robots.txt not blocking retrieval, and the unknown-slug 404. |
+| `scripts/verify-seo-indexing.mjs` (new) | Deterministic HTTP regression for this policy. Boots `next dev` and asserts real served HTML: noindex+follow on the utility variants, indexability + self-canonical on opinion entry (including parameter normalization), passport/directory indexability, `/robots.txt` not blocking retrieval, unknown slug `404` with noindex and no canonical, and the sitemap inventory compared as an exact URL set against the complete non-empty business slug inventory read from the database (base routes preserved, only directory-family extras allowed, zero utility URLs). |
 
 No canonical is emitted for the two noindex routes: they are excluded from the index, so a canonical would only add noise. `sitemap.ts` and `robots.ts` are intentionally untouched.
 
@@ -19,9 +19,9 @@ No canonical is emitted for the two noindex routes: they are excluded from the i
 
 Runtime (runtime-verification's isolated environment): private DB `opinio_issue_3` = 1108 real PROFECO-derived catalogue businesses (production has 1200 profile slugs; the local inventory is smaller and is never asserted as a production figure). Dev mode: `next dev --webpack -H 127.0.0.1 --port 3203` (Turbopack dev on this host fails to load the externalized `pg` driver from a hoisted node_modules; see limitations).
 
-1. HTTP regression, before → after (same script, same catalogue):
-   - Pre-fix code in this worktree: `7/16 checks passed` — utility variants `robots="null"`, opinion entry `canonical=null`, sitemap/passport/directory/robots.txt already green.
-   - Post-fix code in this worktree (command below): `16/16 checks passed`:
+1. HTTP regression, before → after (same hardened script, same catalogue):
+   - Pre-fix code in this worktree: `8/17 checks passed`, exit 1 — the six utility-noindex checks, the opinion self-canonical check, the merchant-title check and the parameter-normalization check are red (`robots="null"`, `canonical=null`); passport/directory/sitemap/robots.txt/404 checks pass.
+   - Post-fix code in this worktree (command below): `17/17 checks passed`, exit 0.
 
      ```
      DATABASE_URL=postgres://opinio:opinio_local_dev@127.0.0.1:54732/opinio_issue_3 SMOKE_PORT=3203 \
@@ -31,10 +31,13 @@ Runtime (runtime-verification's isolated environment): private DB `opinio_issue_
      Observed excerpts: `/verificar`, `/verificar?q=luuna`, `/verificar?categoria=Restaurantes`, `/verificar?accion=opinar`, `/caso/nuevo`, `/caso/nuevo?b=2io-electronics` → `200, robots="noindex, follow"`;
      `/escribir-opinion/2io-electronics` → `200, canonical=https://opinio.mx/escribir-opinion/2io-electronics`;
      `/escribir-opinion/2io-electronics?b=…&utm_source=smoke` → same canonical (not the passport);
-     `/b/2io-electronics` and `/directorio` → `200`, no noindex, canonical intact; `/sitemap.xml` → `1110 declared URLs, utility entries: 0`; `/robots.txt` → no utility `Disallow`; unknown slug → `404, robots="noindex", canonical=null`.
-2. Base-commit baseline (read-only reference instance on port 3214, base commit, same catalogue family): `/sitemap.xml` → `1110` declared (1108 profiles + `/` + `/directorio`); all `/verificar`, `/caso/nuevo*` and `/escribir-opinion/*` responses `robots=null, canonical=null`; `/b/mercado-libre` and `/directorio` canonical intact.
-3. Rendered DOM + raw HTML parity (runtime evidence collector, `evidence/seo-3/render/results.json`, 10 screenshots): server HTML and DOM agree — utility variants `robots="noindex, follow"` in both; `/escribir-opinion/mercado-libre` (plain and `?b=x&utm_source=smoke`) renders `canonical=https://opinio.mx/escribir-opinion/mercado-libre` with no noindex; passport and directory unchanged. Zero console errors on these routes.
-4. Working flows at the DOM interface (Playwright, system Chrome, `evidence/seo-3/journey/journey.json`; 5/5 steps, no POSTs):
+     `/b/2io-electronics` and `/directorio` → `200`, no noindex, canonical intact;
+     `/sitemap.xml` → `1110 declared URLs, utility entries: 0`; `sitemap declares exactly the catalogue business passports — 1108/1108 passport URLs match the database slug inventory`; `sitemap keeps the base routes and only directory-family extras — 2 non-passport URLs: /, /directorio`;
+     `/robots.txt` → no utility `Disallow`; unknown slug → `404, robots="noindex", canonical=null`.
+2. Sitemap check red-capability probe (temporary, reverted): with `src/app/sitemap.ts` locally patched to drop one passport (`2io-electronics`), the same run reported `FAIL sitemap declares exactly the catalogue business passports — 1107/1108 passport URLs match the database slug inventory, missing: https://opinio.mx/b/2io-electronics` (`16/17`). The route file was restored to its pristine committed state immediately after (`git status` clean for `sitemap.ts`), so the check is not a tautology over the route's own output.
+3. Base-commit baseline (read-only reference instance on port 3214, base commit, same catalogue family): `/sitemap.xml` → `1110` declared (1108 profiles + `/` + `/directorio`); all `/verificar`, `/caso/nuevo*` and `/escribir-opinion/*` responses `robots=null, canonical=null`; `/b/mercado-libre` and `/directorio` canonical intact.
+4. Rendered DOM + raw HTML parity (runtime evidence collector, `evidence/seo-3/render/results.json`, 10 screenshots): server HTML and DOM agree — utility variants `robots="noindex, follow"` in both; `/escribir-opinion/mercado-libre` (plain and `?b=x&utm_source=smoke`) renders `canonical=https://opinio.mx/escribir-opinion/mercado-libre` with no noindex; passport and directory unchanged. Zero console errors on these routes.
+5. Working flows at the DOM interface (Playwright, system Chrome, `evidence/seo-3/journey/journey.json`; 5/5 steps, no POSTs):
    - `/verificar?q=luuna&accion=opinar` → clicked “Opinar sobre Luuna” → navigated to `/escribir-opinion/luuna` (h1 “Opinar sobre Luuna”, merchant title, self-canonical, indexable). Search selection navigation still works and the utility page itself is `noindex, follow`.
    - `/caso/nuevo?b=luuna` → merchant preselected in the form (`Luuna`), `robots="noindex, follow"`.
    - `/verificar?categoria=Hogar&accion=opinar` → `Hogar` filter pressed, text search for `luuna` returns the merchant heading, page still functional and noindex.
@@ -47,7 +50,7 @@ Runtime (runtime-verification's isolated environment): private DB `opinio_issue_
 - [x] Retain `/escribir-opinion/<merchant>` indexability; passports and directory indexability preserved — smoke + DOM checks.
 - [x] Merchant-specific canonical on opinion entry; incidental parameters normalized, no passport cross-canonical — smoke + DOM (plain and parameterized URLs identical canonical).
 - [x] Crawler-visible directives without robots blocking — `noindex, follow` present in raw HTML and DOM; `/robots.txt` has no `Disallow` for these paths; pages stay fetchable (200).
-- [x] Preserve the declared sitemap families — `sitemap.ts` untouched; local sitemap identical before/after (`1110 = 1108 + 2`, zero utility entries); production declared `1202` URLs observed unchanged; no utility variant added to satisfy JEV-024.
+- [x] Preserve the declared sitemap families — `sitemap.ts` untouched; the served sitemap matches, as an exact URL set, the complete non-empty business slug inventory read from the database (`1108/1108`) in both the pre-fix and post-fix runs; non-passport entries are only `/` and `/directorio` (directory-family extras such as directory pagination are allowed), with zero utility URLs; the exact-set check was probed red-capable (dropped passport → `1107/1108`, missing reported); production declared `1202` URLs observed unchanged; no utility variant added to satisfy JEV-024.
 - [x] Verify actual HTTP/DOM metadata and unchanged working search/case/opinion flows — regression script, render evidence, DOM journeys.
 
 ## Environment / staging

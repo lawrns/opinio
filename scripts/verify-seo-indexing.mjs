@@ -11,8 +11,9 @@
  *     merchant path, incidental parameters normalized (never canonicalized to
  *     the /b/<merchant> passport)
  *   - /b/<merchant> and /directorio: still indexable with their canonical
- *   - /sitemap.xml: still only base routes + business passports (no utility
- *     variants); the declared count is printed for before/after comparison
+ *   - /sitemap.xml: base routes + directory-family entries + exactly the business
+ *     passports present in the database (no utility variants)
+ *   - unknown merchant slug: 404 with noindex and no canonical
  *
  * Usage: DATABASE_URL=postgres://… SMOKE_PORT=3203 node scripts/verify-seo-indexing.mjs
  * Env:   SEO_SLUG=<merchant slug>  (default: first slug found in the database)
@@ -54,28 +55,33 @@ if (!process.env.DATABASE_URL) {
 const requireFromRoot = createRequire(join(ROOT, 'package.json'));
 const { Client } = requireFromRoot('pg');
 
-/** Merchant slug used for the opinion-entry / passport / case-parameter checks. */
-async function resolveMerchant() {
-  if (process.env.SEO_SLUG) return { slug: process.env.SEO_SLUG, brand_name: null };
+/**
+ * Smoke merchant plus the complete non-empty slug inventory from the database —
+ * the sitemap must declare exactly these passports (independent source of truth).
+ */
+async function loadCatalogue() {
   const client = new Client({ connectionString: process.env.DATABASE_URL });
   await client.connect();
   try {
     const { rows } = await client.query(
       `SELECT slug, brand_name FROM businesses
-       WHERE slug IS NOT NULL AND BTRIM(slug) <> '' AND slug <> 'locomotion'
-       ORDER BY slug ASC LIMIT 1`,
+       WHERE slug IS NOT NULL AND BTRIM(slug) <> ''
+       ORDER BY slug ASC`,
     );
     if (rows.length === 0) {
       console.error('No business slug found in the database; cannot smoke-test merchant metadata.');
       process.exit(2);
     }
-    return rows[0];
+    const merchant = process.env.SEO_SLUG
+      ? rows.find((row) => row.slug === process.env.SEO_SLUG) ?? { slug: process.env.SEO_SLUG, brand_name: null }
+      : rows[0];
+    return { merchant, catalogueSlugs: rows.map((row) => row.slug) };
   } finally {
     await client.end();
   }
 }
 
-const merchant = await resolveMerchant();
+const { merchant, catalogueSlugs } = await loadCatalogue();
 
 const results = [];
 const devArgs = (process.env.NEXT_DEV_ARGS ?? '--webpack').split(/\s+/).filter(Boolean);
@@ -236,16 +242,32 @@ try {
   const locs = [...sitemap.body.matchAll(/<loc>([^<]*)<\/loc>/g)].map((match) => match[1]);
   const paths = locs.map((loc) => new URL(loc).pathname);
   const utilityPaths = paths.filter((path) => /^\/(verificar|caso|escribir-opinion)/.test(path));
-  const profilePaths = paths.filter((path) => /^\/b\/[^/]+$/.test(path));
   record(
     'sitemap declares no utility variant',
     sitemap.status === 200 && utilityPaths.length === 0,
     `GET /sitemap.xml → ${sitemap.status}, ${locs.length} declared URLs, utility entries: ${utilityPaths.length}`,
   );
+
+  const expectedProfiles = new Set(catalogueSlugs.map((slugValue) => `${ORIGIN}/b/${slugValue}`));
+  const actualProfiles = new Set(locs.filter((loc) => new URL(loc).pathname.startsWith('/b/')));
+  const missingProfiles = [...expectedProfiles].filter((loc) => !actualProfiles.has(loc));
+  const extraProfiles = [...actualProfiles].filter((loc) => !expectedProfiles.has(loc));
   record(
-    'sitemap keeps the base routes and every declared business passport',
-    sitemap.status === 200 && paths.includes('/') && paths.includes('/directorio') && profilePaths.length === paths.length - 2,
-    `${profilePaths.length} business passports + base routes = ${locs.length} URLs (${locs.length - profilePaths.length - 2} other)`,
+    'sitemap declares exactly the catalogue business passports',
+    sitemap.status === 200 && missingProfiles.length === 0 && extraProfiles.length === 0,
+    `${actualProfiles.size}/${expectedProfiles.size} passport URLs match the database slug inventory` +
+      (missingProfiles.length ? `, missing: ${missingProfiles.slice(0, 3).join(', ')}` : '') +
+      (extraProfiles.length ? `, unexpected: ${extraProfiles.slice(0, 3).join(', ')}` : ''),
+  );
+
+  const nonProfilePaths = paths.filter((path) => !path.startsWith('/b/'));
+  const strayPaths = nonProfilePaths.filter((path) => path !== '/' && !path.startsWith('/directorio'));
+  record(
+    'sitemap keeps the base routes and only directory-family extras',
+    sitemap.status === 200 && paths.includes('/') && paths.includes('/directorio') && strayPaths.length === 0,
+    nonProfilePaths.length
+      ? `${nonProfilePaths.length} non-passport URLs: ${nonProfilePaths.slice(0, 6).join(', ')}${nonProfilePaths.length > 6 ? ', …' : ''}`
+      : 'no non-passport URLs',
   );
 
   const robotsTxt = await request('/robots.txt');
@@ -260,8 +282,8 @@ try {
 
   const missing = await request(`/escribir-opinion/smoke-missing-${Date.now()}`);
   record(
-    'unknown merchant slug stays out of the index without a bogus canonical',
-    isNoindex(missing.body) && canonicalHref(missing.body) === null,
+    'unknown merchant slug returns 404 without a bogus canonical',
+    missing.status === 404 && isNoindex(missing.body) && canonicalHref(missing.body) === null,
     `GET /escribir-opinion/smoke-missing-… → ${missing.status}, robots="${metaContent(missing.body, 'robots')}", canonical=${canonicalHref(missing.body)}`,
   );
 } catch (error) {
