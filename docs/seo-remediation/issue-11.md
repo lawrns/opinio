@@ -102,7 +102,8 @@ rendered their controls (`PASS … controls in DOM: true`).
 
 ```bash
 # dev
-DATABASE_URL='postgres://opinio:opinio_local_dev@127.0.0.1:54732/opinio_issue_11' NEXT_TELEMETRY_DISABLED=1 \
+# local throwaway container credentials live only in the external runtime.md (non-publishable)
+DATABASE_URL='postgres://…@127.0.0.1:54732/opinio_issue_11' NEXT_TELEMETRY_DISABLED=1 \
   node node_modules/next/dist/bin/next dev --webpack -H 127.0.0.1 --port 3211
 # headers only
 BASE_URL=http://127.0.0.1:3211 WIDGET_TOKEN=wgt_mercado-libre_ribbon_2026 SLUG=mercado-libre \
