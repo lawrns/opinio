@@ -72,7 +72,7 @@ Delivered as §4. No provider request, account change, or outreach was made or i
 Fetched 2026-10-13T22:36:32Z → 22:36:33Z (UTC), `GET https://opinio.mx/b/farmacias-especializadas`, UA `seo-12-investigation`:
 
 - `HTTP 200`, 84,119 bytes; `<title>` = "¿Es confiable FARMACIAS ESPECIALIZADAS? Quejas PROFECO, RFC y Opiniones | Opinio México"; single `<h1>FARMACIAS ESPECIALIZADAS</h1>`; `rel=canonical` self-referential.
-- Rendered trust content present: "Este negocio todavía no tiene opiniones", "Sin calificación", "Muestra efectiva: 0 reseñas", "Dictamen de Confianza Comercial", "En validación" (RFC), "Escribir opinión", "Abrir un caso". (The phrase "En auditoría" appears only in a search-listing anchor on another page, not in this passport's rendered HTML.)
+- Rendered trust content present: "Este negocio todavía no tiene opiniones", "Sin calificación", "Muestra efectiva: 0 reseñas", "Dictamen de Confianza Comercial", "En validación" (RFC), "Escribir opinión", "Abrir un caso".
 - Consistent with the independent audit crawl record (2026-10-13T18:49:06Z: 517 raw words, same title/H1, 11 schema types including `FAQPage`, `Organization`, `OnlineStore`, `BreadcrumbList`) — the passport is live, indexable, canonical, and sitemap-listed.
 
 ## 4. Disposition
