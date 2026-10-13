@@ -261,7 +261,9 @@ try {
   );
 
   const nonProfilePaths = paths.filter((path) => !path.startsWith('/b/'));
-  const strayPaths = nonProfilePaths.filter((path) => path !== '/' && !path.startsWith('/directorio'));
+  const strayPaths = nonProfilePaths.filter(
+    (path) => path !== '/' && path !== '/directorio' && !path.startsWith('/directorio/'),
+  );
   record(
     'sitemap keeps the base routes and only directory-family extras',
     sitemap.status === 200 && paths.includes('/') && paths.includes('/directorio') && strayPaths.length === 0,
