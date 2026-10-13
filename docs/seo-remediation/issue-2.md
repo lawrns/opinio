@@ -85,13 +85,13 @@ PROFECO-derived businesses + private write-capable `opinio_issue_2`, both on
    header="Amazon" (expected amazon/Amazon)`, `GET /merchant/reviews?business=amazon →
    200, selected=amazon, header="Amazon"`, unknown slug → `200`, `selected=mercado-libre`.
 
-2. **Database work per page view, counted server-side** (`log_statement=all` on the private
-   database, statement deltas around a single request; both the parameterized and the
-   simple protocol statements are counted):
-
-   | Request | Base layout | This branch |
-   | --- | --- | --- |
-   | statements per `GET /merchant` | **1112** = 1109 `resolution_cases` + 2 businesses list + 1 reviews | **5** = 2 `resolution_cases` + 2 businesses list + 1 reviews (the batched message query is skipped when a page has no cases) |
+2. **Database work per page view** — the base layout issued one `resolution_cases` query per
+   listed business (the mechanism that starves the shared pool); this branch issues a single
+   batched query for the whole list. A per-request statement count was observed during local
+   diagnosis, but the single-request window of the raw server log was not retained
+   (`issue-2/pg-log-window.txt` is empty), so no statement count is quoted here. The retained
+   logs (`issue-2/pg-log-full.txt`, `issue-2/pg-log-tail.txt`) do show the repeated per-case
+   `resolution_cases` statements of the pre-fix layout.
 
 3. **DOM / navigation / selection, production-like latency active** (Playwright + system
    Chrome against the dev server, `http://127.0.0.1:3202`):
