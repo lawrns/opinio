@@ -28,8 +28,8 @@ raising a model score.
 
 ## 2. Change
 
-`src/app/b/[slug]/page.tsx` (passport body only — `generateMetadata` and the in-body JSON-LD are
-untouched; metadata is #4's scope):
+`src/app/b/[slug]/page.tsx` (passport body incl. in-body JSON-LD — `generateMetadata` is untouched;
+its identity metadata remains #4's scope):
 
 - Dictamen text is derived from the records that exist: published legal name/RFC, readable verification
   level, count of identities with recorded verification (attributed to Opinio, with recorded sources),
@@ -46,6 +46,11 @@ untouched; metadata is #4's scope):
 - Response-time stat is only shown when case records exist.
 - The purchase-safety recommendation is labelled "Consejo editorial de Opinio"; nav label "Dictamen AI"
   → "Dictamen".
+- In-body JSON-LD (`@graph`): the WebPage description is neutral, and the trust/case FAQ answers state
+  only supported facts — published RFC with its recorded status (`factEvidence`), readable verification
+  level, review count, registered case count and the case-derived `resolutionRate`. The stored
+  aggregates (`business.resolution_rate`, `business.median_response_hours`) and the `hasResolution` flag
+  are no longer used there.
 
 `src/components/passport/OfficialRecordCard.tsx`: record date uses the shared day-first/ISO parser and
 falls back to the raw source value instead of "No disponible".
@@ -61,7 +66,8 @@ every row (e.g. `2026-09-04T16:23:27.173Z`), so it is not a verification date.
 
 `src/lib/passport-evidence.test.ts` (new): semantic regression tests for identity type/value matching,
 status/source transitions, and calendar-date parsing/selection — no visitor-wording or locale-format
-assertions (those are covered by the HTTP/DOM capture).
+assertions (those are covered by the HTTP/DOM capture). A self-comparing `verificationLevelLabel` test
+was removed as a wiring tautology (director correction).
 
 Standards-review notes addressed: machine-readable status instead of label-keyed business logic
 (note 1); the raw-string `status` typing is documented as deliberate so unknown statuses surface
@@ -92,10 +98,11 @@ repeated here.)
   (source/fact/`record_date`/URL). Cross-checked against the repo definition `scripts/seed.ts` that
   produced them. **Not mapped: reviews and resolution cases** (hand-authored demo data). This fixture
   lives only in the isolated DB; capture script `C:/Users/isaac/tmp/seo6-prod/map-luuna-evidence.sql`.
-- Cleanup after capture (exact rows only): identities 5→0, official_records 2→0, fixture `audit_logs`
-  notes 2→0, reviews 0→0, cases 0→0; the business row's `rfc`/`clee`/`whatsapp` were reverted to the
-  catalogue's NULLs. Post-cleanup the profile renders the empty states again (capture in
-  `post-cleanup/`), and the row state matches the shared catalogue.
+- Cleanup after capture (exact rows only, performed for each capture cycle): identities 5→0,
+  official_records 2→0, fixture `audit_logs` notes 1–2→0, reviews 0→0, cases 0→0; the business row's
+  `rfc`/`clee`/`whatsapp` were reverted to the catalogue's NULLs. Post-cleanup the profile renders the
+  empty states again (capture in `post-cleanup/`), and the database is catalogue-only (0 identities,
+  0 official_records, 0 reviews, 0 cases, 0 `seo-6` audit rows).
 
 Collector `C:/Users/isaac/tmp/opinio-remediation/qa/render-evidence.mjs` (system Chrome, real DOM):
 
@@ -132,9 +139,13 @@ Assertions (script `C:/Users/isaac/tmp/seo6-prod/check-issue6-evidence.js`, 0 fa
   "Registrado sin verificación en Opinio"; "Sin registros vinculados"; "Sin opiniones publicadas".
 - `/b/aliexpress` (missing facts): no "Razón social" line; "Sin RFC publicado";
   "1 de 4 datos registrados"; empty states as above.
-- Post-cleanup `/b/luuna`: empty states only, no `Fuente registrada:`/`Verificado en el registro de Opinio`.
+- In-body JSON-LD on all three routes: parses to one object, carries the neutral WebPage description,
+  and contains no "RFC validado" / "alertas críticas"; on the populated fixture it carries
+  "Estado del RFC: CZE150414AB2 (Verificado en el registro de Opinio)".
+- Post-cleanup `/b/luuna`: empty states only, no `Fuente registrada:`/`Verificado en el registro de Opinio`,
+  JSON-LD falls back to "Estado del RFC: sin RFC publicado" with no unsupported claims.
 
-Suite: `node node_modules/vitest/vitest.mjs run` → 3 files / 37 tests passed;
+Suite: `node node_modules/vitest/vitest.mjs run` → 3 files / 36 tests passed;
 `node node_modules/typescript/bin/tsc --noEmit` → clean; ESLint on the changed files → clean.
 
 What this proves and what it does not: the runtime capture proves the conditional rendering path —
@@ -152,10 +163,10 @@ recorded attributions (observed read-only), not independent confirmation by the 
   page rendered it "1 de febrero de 2026" and rendered `15/03/2026` as "No disponible".
 - `businesses.updated_at`, `official_records.retrieved_at` and `identities.verified_at` are import/update
   timestamps and are not used as verification or freshness dates.
-- Metadata remains out of scope by director decision: `generateMetadata` and the in-body JSON-LD
-  (WebPage description, FAQ answers) still contain unsupported-claim wording (e.g. "RFC validado",
-  "no cuenta con alertas críticas"); #4 owns accurate identity metadata. Flagged by the standards review
-  so integration does not treat that surface as covered.
+- Metadata: `generateMetadata` remains #4's scope (untouched; the standards review flagged its
+  unsupported-claim wording so integration does not treat that surface as covered). In-body JSON-LD is
+  #6's approved scope (director correction) and is now truthful: no "RFC validado"/"alertas críticas"
+  wording, neutral WebPage description, FAQ facts derived from `factEvidence`/`resolutionRate`.
 - Files staged for this ticket (explicit paths only; no config): `src/app/b/[slug]/page.tsx`,
   `src/components/passport/OfficialRecordCard.tsx`, `src/lib/passport-evidence.ts`,
   `src/lib/passport-evidence.test.ts`, `docs/seo-remediation/issue-6.md`.

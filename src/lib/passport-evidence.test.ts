@@ -3,7 +3,6 @@ import {
   factStatus,
   latestRecordDateValue,
   parseRecordDate,
-  verificationLevelLabel,
   type IdentityEvidenceRow,
 } from './passport-evidence';
 
@@ -81,13 +80,6 @@ describe('factStatus', () => {
     expect(factStatus(rfcFact, [{ ...verifiedRfc, status: 'pending' }]).status).toBe('pending');
     expect(factStatus(rfcFact, [{ ...verifiedRfc, status: 'rejected' }]).status).toBe('rejected');
     expect(factStatus(rfcFact, [{ ...verifiedRfc, status: 'imported' }]).status).toBe('unknown');
-  });
-});
-
-describe('verificationLevelLabel', () => {
-  it('does not present a missing or unrecognized stored level as a known level', () => {
-    expect(verificationLevelLabel(null)).toBe(verificationLevelLabel('comercio_certificado'));
-    expect(verificationLevelLabel(null)).not.toBe(verificationLevelLabel('public_info'));
   });
 });
 
