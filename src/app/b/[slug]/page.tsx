@@ -12,6 +12,7 @@ import { PassportActionButtons } from '@/components/passport/PassportActionButto
 import { TrustGauge } from '@/components/passport/TrustGauge';
 import { OfficialRecordCard } from '@/components/passport/OfficialRecordCard';
 import { query } from '@/lib/db';
+import { passportDescription, passportTitle } from '@/lib/passport-metadata';
 
 interface BusinessDbRow {
   id: number;
@@ -104,8 +105,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     }
 
     const b = res.rows[0];
-    const title = `¿Es confiable ${b.brand_name}? Quejas PROFECO, RFC y Opiniones | Opinio México`;
-    const description = `Consulta si es seguro comprar en ${b.brand_name}. Consulta RFC (${b.rfc || 'En validación'}), estatus PROFECO, tiempo medio de respuesta y opiniones de compradores verificados en México.`;
+    const facts = {
+      brandName: b.brand_name,
+      legalName: b.legal_name,
+      category: b.category,
+      operatingArea: b.operating_area,
+    };
+    const title = passportTitle(facts);
+    const description = passportDescription(facts);
     const canonicalUrl = `${baseUrl}/b/${slug}`;
     const ogImageUrl = `${baseUrl}/b/${slug}/opengraph-image`;
 

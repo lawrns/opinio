@@ -5,6 +5,8 @@ import type { Metadata } from 'next';
 // stay crawlable (no robots.txt blocking) and keep passing discovery to the
 // public passports and the directory.
 export const metadata: Metadata = {
+  title: 'Registrar un caso de compra | Opinio México',
+  description: 'Registra el problema de compra y la solución que solicitas: se crea una página para consultar el estado del caso y continuar la conversación con el comercio.',
   robots: {
     index: false,
     follow: true,
