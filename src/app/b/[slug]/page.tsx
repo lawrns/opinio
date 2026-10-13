@@ -415,7 +415,7 @@ export default async function BusinessPassportPage({ params }: PageProps) {
                 {/* Main Heading & Legal Identity */}
                 <div className="space-y-1">
                   <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-[var(--op-ink-primary)] flex items-center gap-3">
-                    <BrandLogo name={business.brand_name} src={business.logo_url} category={business.category} sizeClass="size-14 sm:size-16" />
+                    <BrandLogo name={business.brand_name} src={business.logo_url} category={business.category} sizeClass="size-14 sm:size-16" priority />
                     <span>{business.brand_name}</span>
                   </h1>
                   {business.legal_name && (
