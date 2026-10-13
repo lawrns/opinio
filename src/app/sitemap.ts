@@ -1,5 +1,7 @@
 import type { MetadataRoute } from 'next';
 import { query } from '@/lib/db';
+import { directoryPageHref } from '@/lib/directory-pagination';
+import { getDirectoryIndex } from '@/lib/directory-catalogue';
 
 interface BusinessSitemapRow {
   slug: string;
@@ -20,10 +22,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
        AND slug <> 'locomotion'
      ORDER BY slug ASC`
   );
+  const { totalPages } = await getDirectoryIndex();
 
   return [
     { url: baseUrl },
     { url: `${baseUrl}/directorio` },
+    // Every real directory page, so crawlers can traverse the whole public
+    // catalogue through the paginated directory as well as through /b/ links.
+    ...Array.from({ length: Math.max(0, totalPages - 1) }, (_, index) => ({
+      url: `${baseUrl}${directoryPageHref(index + 2)}`,
+    })),
     ...businesses.rows.map(({ slug, updated_at }) => ({
       url: `${baseUrl}/b/${slug}`,
       ...(updated_at ? { lastModified: updated_at } : {}),

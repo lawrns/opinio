@@ -125,6 +125,94 @@ export interface CaseFilterOptions {
   category?: string;
 }
 
+interface CaseRow extends ResolutionCase {
+  review_rating?: number | null;
+  review_title?: string | null;
+  review_body?: string | null;
+}
+
+const CASE_SELECT = `
+    SELECT 
+      c.*,
+      r.rating as review_rating,
+      r.title as review_title,
+      r.body as review_body
+    FROM resolution_cases c
+    LEFT JOIN reviews r ON r.id = c.review_id`;
+
+const CASE_ORDER_BY = `
+    ORDER BY 
+      CASE 
+        WHEN c.status = 'opened' THEN 1
+        WHEN c.status = 'reopened' THEN 2
+        WHEN c.status = 'acknowledged' THEN 3
+        WHEN c.status = 'remedy_offered' THEN 4
+        ELSE 5
+      END,
+      c.created_at DESC`;
+
+async function getCaseMessagesByCaseIds(caseIds: number[]): Promise<Map<number, CaseMessage[]>> {
+  const grouped = new Map<number, CaseMessage[]>();
+  if (caseIds.length === 0) return grouped;
+
+  const res = await query<CaseMessage>(
+    `SELECT * FROM case_messages WHERE case_id = ANY($1::int[]) ORDER BY case_id ASC, created_at ASC`,
+    [caseIds]
+  );
+  for (const message of res.rows) {
+    const bucket = grouped.get(message.case_id);
+    if (bucket) bucket.push(message);
+    else grouped.set(message.case_id, [message]);
+  }
+  return grouped;
+}
+
+function mapCaseRow(row: CaseRow, messages: CaseMessage[]): ResolutionCase {
+  return {
+    id: row.id,
+    business_id: row.business_id,
+    review_id: row.review_id,
+    order_id: row.order_id,
+    case_number: row.case_number,
+    customer_name: row.customer_name,
+    customer_contact: row.customer_contact,
+    issue_category: row.issue_category,
+    customer_requested_remedy: row.customer_requested_remedy,
+    status: row.status,
+    is_consumer_confirmed: row.is_consumer_confirmed,
+    remedy_offered: row.remedy_offered,
+    resolution_summary: row.resolution_summary,
+    median_first_response_minutes: row.median_first_response_minutes,
+    total_resolution_hours: row.total_resolution_hours,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    resolved_at: row.resolved_at,
+    messages,
+    review: row.review_id
+      ? {
+          id: row.review_id,
+          business_id: row.business_id,
+          order_id: row.order_id,
+          invitation_id: null,
+          rating: Number(row.review_rating) || 5,
+          title: row.review_title || null,
+          body: row.review_body || '',
+          author_name: row.customer_name,
+          author_masked_contact: row.customer_contact,
+          verification_level: 'confirmed_store_order',
+          score_weight: 0.9,
+          integrity_factor: 1.0,
+          product_name: null,
+          status: 'published',
+          upvotes: 0,
+          helpful_count: 0,
+          created_at: row.created_at,
+          updated_at: row.updated_at,
+        }
+      : null,
+  };
+}
+
 export async function getMerchantCases(
   businessId: number,
   filters?: CaseFilterOptions
@@ -142,86 +230,41 @@ export async function getMerchantCases(
     whereClauses += ` AND c.issue_category = $${params.length}`;
   }
 
-  const sql = `
-    SELECT 
-      c.*,
-      r.rating as review_rating,
-      r.title as review_title,
-      r.body as review_body
-    FROM resolution_cases c
-    LEFT JOIN reviews r ON r.id = c.review_id
-    WHERE ${whereClauses}
-    ORDER BY 
-      CASE 
-        WHEN c.status = 'opened' THEN 1
-        WHEN c.status = 'reopened' THEN 2
-        WHEN c.status = 'acknowledged' THEN 3
-        WHEN c.status = 'remedy_offered' THEN 4
-        ELSE 5
-      END,
-      c.created_at DESC
+  const sql = `${CASE_SELECT}
+    WHERE ${whereClauses}${CASE_ORDER_BY}
   `;
-
-  interface CaseRow extends ResolutionCase {
-    review_rating?: number | null;
-    review_title?: string | null;
-    review_body?: string | null;
-  }
   const res = await query<CaseRow>(sql, params);
-  const cases: ResolutionCase[] = [];
+  if (res.rows.length === 0) return res.rows; // common empty local path: skip the caseIds projection and message fan-out
+  const messagesByCase = await getCaseMessagesByCaseIds(res.rows.map((row) => row.id));
 
-  for (const row of res.rows) {
-    const msgRes = await query<CaseMessage>(
-      `SELECT * FROM case_messages WHERE case_id = $1 ORDER BY created_at ASC`,
-      [row.id]
-    );
+  return res.rows.map((row) => mapCaseRow(row, messagesByCase.get(row.id) ?? []));
+}
 
-    cases.push({
-      id: row.id,
-      business_id: row.business_id,
-      review_id: row.review_id,
-      order_id: row.order_id,
-      case_number: row.case_number,
-      customer_name: row.customer_name,
-      customer_contact: row.customer_contact,
-      issue_category: row.issue_category,
-      customer_requested_remedy: row.customer_requested_remedy,
-      status: row.status,
-      is_consumer_confirmed: row.is_consumer_confirmed,
-      remedy_offered: row.remedy_offered,
-      resolution_summary: row.resolution_summary,
-      median_first_response_minutes: row.median_first_response_minutes,
-      total_resolution_hours: row.total_resolution_hours,
-      created_at: row.created_at,
-      updated_at: row.updated_at,
-      resolved_at: row.resolved_at,
-      messages: msgRes.rows,
-      review: row.review_id
-        ? {
-            id: row.review_id,
-            business_id: row.business_id,
-            order_id: row.order_id,
-            invitation_id: null,
-            rating: Number(row.review_rating) || 5,
-            title: row.review_title || null,
-            body: row.review_body || '',
-            author_name: row.customer_name,
-            author_masked_contact: row.customer_contact,
-            verification_level: 'confirmed_store_order',
-            score_weight: 0.9,
-            integrity_factor: 1.0,
-            product_name: null,
-            status: 'published',
-            upvotes: 0,
-            helpful_count: 0,
-            created_at: row.created_at,
-            updated_at: row.updated_at,
-          }
-        : null,
-    });
-  }
+/**
+ * Loads the resolution cases of several businesses in one round trip.
+ *
+ * The merchant layout lists every business and needs each one's cases, because
+ * the selected business is only known from the URL inside the page, not in the
+ * layout. Querying per business starves the shared pool: against a remote
+ * database (production measures ~160 ms per round trip) the queued checkouts of
+ * ~1200 businesses outlive `connectionTimeoutMillis` and the whole merchant
+ * section answers HTTP 500 (issue #2).
+ */
+export async function getMerchantCasesForBusinesses(
+  businessIds: number[]
+): Promise<ResolutionCase[]> {
+  if (businessIds.length === 0) return [];
 
-  return cases;
+  const res = await query<CaseRow>(
+    `${CASE_SELECT}
+    WHERE c.business_id = ANY($1::int[])${CASE_ORDER_BY}
+  `,
+    [businessIds]
+  );
+  if (res.rows.length === 0) return res.rows; // common empty local path: skip the caseIds projection and message fan-out
+  const messagesByCase = await getCaseMessagesByCaseIds(res.rows.map((row) => row.id));
+
+  return res.rows.map((row) => mapCaseRow(row, messagesByCase.get(row.id) ?? []));
 }
 
 export async function getMerchantInvitations(businessId: number): Promise<Invitation[]> {
