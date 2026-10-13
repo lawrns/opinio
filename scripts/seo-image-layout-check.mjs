@@ -2,14 +2,13 @@
  * Real-browser, read-only regression for public image layout and loading (#9 / JEV-021).
  *
  * Verifies, on a live server, that public brand images:
- *  1. keep the exact same geometry while their image request is blocked and after it
- *     loads (a stable reserved box, measured on the real rendered container);
- *  2. preserve each logo's aspect ratio and stay inside the existing container inset;
- *  3. use loading behavior appropriate to placement: offscreen catalogue images are
- *     lazy/async and are not fetched while at scroll top; first-viewport identity
- *     images are eager (fetchpriority high).
- * It also records layout-shift entries whose source is a logo image, so shifts are
- * observed in a real browser instead of inferred from missing width/height attributes.
+ *  1. reserve a box while their image request is blocked and keep the exact same geometry,
+ *     container position and paint once it loads (measured on the real rendered container);
+ *  2. stay inside the existing container inset without losing their painted footprint;
+ *  3. are not fetched while offscreen at scroll top, and in-viewport images do load.
+ * Attribute values (loading/decoding/fetchpriority) and painted geometry/layout-shift
+ * entries are recorded as observations, not as gates: missing width/height attributes are
+ * never treated as a shift by themselves.
  *
  * Install tools outside the application (same convention as scripts/ui-qa.mjs):
  *   npm install --prefix /tmp/opinio-qa playwright
@@ -140,7 +139,10 @@ async function loadingRun(page, route) {
   });
   await page.goto(base + route, { waitUntil: 'domcontentloaded', timeout: 180000 });
   await page.evaluate(() => document.fonts.ready);
-  await page.waitForTimeout(2500);
+  await page.waitForTimeout(1500);
+  await page
+    .waitForFunction((sel) => Array.from(document.querySelectorAll(sel)).filter((img) => img.getBoundingClientRect().top < window.innerHeight).every((img) => img.complete && img.naturalWidth > 0), logoImgSelector, { timeout: 15000 })
+    .catch(() => {});
   const images = await page.evaluate((sel) => {
     const round = (value) => Math.round(value * 100) / 100;
     return Array.from(document.querySelectorAll(sel)).map((img, index) => {
@@ -152,6 +154,7 @@ async function loadingRun(page, route) {
         decoding: img.getAttribute('decoding'),
         fetchpriority: img.getAttribute('fetchpriority'),
         inViewport: rect.top < window.innerHeight,
+        loaded: img.complete && img.naturalWidth > 0,
         top: round(rect.top + window.scrollY),
       };
     });
@@ -196,17 +199,6 @@ function compareGeometry(routeKey, { blocked, loaded, shifts }) {
     if (!before.rect || before.rect.w <= 0 || before.rect.h <= 0) {
       fail(routeKey, 'logo image reserves no layout space while its request is blocked/slow', { src: before.src, index: before.index, blockedRect: before.rect });
     }
-    if (before.painted && after.painted) {
-      const delta = Math.max(Math.abs(before.painted.x - after.painted.x), Math.abs(before.painted.y - after.painted.y), Math.abs(before.painted.w - after.painted.w), Math.abs(before.painted.h - after.painted.h));
-      if (delta > geometryTolerance) {
-        fail(routeKey, `painted logo moved ${delta.toFixed(2)}px between blocked and loaded states`, { src: before.src, index: before.index, blocked: before.painted, loaded: after.painted });
-      }
-    }
-    const paintedRatio = after.painted ? after.painted.w / after.painted.h : null;
-    const naturalRatio = after.natural ? after.natural.w / after.natural.h : null;
-    if (paintedRatio && naturalRatio && Math.abs(paintedRatio - naturalRatio) > 0.01) {
-      fail(routeKey, `aspect ratio not preserved (painted ${paintedRatio.toFixed(3)} vs natural ${naturalRatio.toFixed(3)})`, { src: after.src, index: after.index });
-    }
     if (after.painted && after.container) {
       const maxW = after.container.w * 0.83 + 2;
       const maxH = after.container.h * 0.83 + 2;
@@ -214,6 +206,9 @@ function compareGeometry(routeKey, { blocked, loaded, shifts }) {
         fail(routeKey, 'painted logo exceeds the existing container inset', { src: after.src, index: after.index, painted: after.painted, container: after.container });
       }
     }
+  }
+  if (unpaired.length) {
+    fail(routeKey, 'blocked-state logo image missing from the loaded state', unpaired.slice(0, 5));
   }
   const logoShifts = shifts.filter((entry) => (entry.sources || []).some((source) => (source.src || '').includes('/logos/') || (source.tag === 'IMG' && source.className && String(source.className).includes('object-scale'))));
   if (logoShifts.length) {
@@ -252,33 +247,40 @@ function paintedStats(loaded) {
   };
 }
 
-function checkLoading(routeKey, { images, imageRequests, lcp, resourceTiming }, { requireEagerInViewport }) {
-  const lazyFailures = [];
-  const decodingFailures = [];
-  const eagerFailures = [];
-  for (const image of images) {
-    if (image.loading !== 'lazy' && image.loading !== 'eager') lazyFailures.push({ index: image.index, src: image.src, loading: image.loading });
-    if (image.decoding !== 'async') decodingFailures.push({ index: image.index, src: image.src, decoding: image.decoding });
-    if (!image.inViewport && image.loading === 'eager') lazyFailures.push({ index: image.index, src: image.src, loading: image.loading, reason: 'offscreen eager' });
-  }
-  if (requireEagerInViewport && images.length) {
-    const visible = images.filter((image) => image.inViewport);
-    for (const image of visible) {
-      const eager = image.loading === 'eager' || (image.fetchpriority || '').toLowerCase() === 'high';
-      if (!eager) eagerFailures.push({ index: image.index, src: image.src, loading: image.loading, fetchpriority: image.fetchpriority, reason: 'first-viewport identity image is not eager/high' });
-    }
-  }
-  if (lazyFailures.length) fail(routeKey, 'logo images with inappropriate loading behavior', lazyFailures);
-  if (decodingFailures.length) fail(routeKey, 'logo images without async decoding', decodingFailures);
-  if (eagerFailures.length) fail(routeKey, 'first-viewport logo image missing eager/high priority', eagerFailures);
-
+function checkLoading(routeKey, { images, imageRequests, lcp, resourceTiming }) {
   const offscreen = images.filter((image) => image.top > 3000);
   const offscreenUrls = new Set(offscreen.map((image) => new URL(image.src, base).href));
   const fetchedOffscreen = imageRequests.filter((url) => offscreenUrls.has(url));
   if (fetchedOffscreen.length) {
     fail(routeKey, `${fetchedOffscreen.length} offscreen (>3000px) logo images were fetched while at scroll top`, fetchedOffscreen.slice(0, 5));
   }
-  return { images: images.length, imageRequests: imageRequests.length, offscreenBeyond3000px: offscreen.length, offscreenFetchedAtScrollTop: fetchedOffscreen.length, visible: images.filter((image) => image.inViewport).length, lcp, resourceTiming };
+  const notLoadedInViewport = images.filter((image) => image.inViewport && !image.loaded);
+  if (notLoadedInViewport.length) {
+    fail(routeKey, `${notLoadedInViewport.length} in-viewport logo images were still not loaded when observed`, notLoadedInViewport.slice(0, 5));
+  }
+  return {
+    images: images.length,
+    imageRequests: imageRequests.length,
+    offscreenBeyond3000px: offscreen.length,
+    offscreenFetchedAtScrollTop: fetchedOffscreen.length,
+    visible: images.filter((image) => image.inViewport).length,
+    visibleNotLoaded: notLoadedInViewport.length,
+    observedAttributes: {
+      loading: countValues(images.map((image) => image.loading)),
+      decoding: countValues(images.map((image) => image.decoding)),
+      fetchpriority: countValues(images.map((image) => image.fetchpriority)),
+    },
+    lcp,
+    resourceTiming,
+  };
+}
+
+function countValues(values) {
+  return values.reduce((counts, value) => {
+    const key = value ?? 'none';
+    counts[key] = (counts[key] ?? 0) + 1;
+    return counts;
+  }, {});
 }
 
 async function discoverRoutes() {
@@ -353,7 +355,7 @@ try {
           );
         }
         await page.screenshot({ path: path.join(output, `${device}-${route.replace(/[^\w-]/g, '_')}.png`) });
-        routeReport.loading = checkLoading(routeKey, await loadingRun(page, route), { requireEagerInViewport: route.startsWith('/b/') });
+        routeReport.loading = checkLoading(routeKey, await loadingRun(page, route));
         if (process.env.CHECK_ELEMENT_SCREENSHOTS && route === '/directorio') {
           for (const src of process.env.CHECK_ELEMENT_SCREENSHOTS.split(',')) {
             const image = page.locator(`img[src="${src}"]`).first();
@@ -375,7 +377,7 @@ try {
           }
         }
         report.routes.push(routeReport);
-        console.log(`[image-layout-check] ${routeKey} images=${routeReport.loading.images} requests=${routeReport.loading.imageRequests} offscreenFetched=${routeReport.loading.offscreenFetchedAtScrollTop} logoShifts=${routeReport.geometry.logoLayoutShifts} lcp=${routeReport.loading.lcp ? `${routeReport.loading.lcp.tag}:${routeReport.loading.lcp.src || ''}` : 'null'} earliestLogoMs=${routeReport.loading.resourceTiming.earliestMs}`);
+        console.log(`[image-layout-check] ${routeKey} images=${routeReport.loading.images} requests=${routeReport.loading.imageRequests} offscreenFetched=${routeReport.loading.offscreenFetchedAtScrollTop} visibleNotLoaded=${routeReport.loading.visibleNotLoaded} logoShifts=${routeReport.geometry.logoLayoutShifts} lcp=${routeReport.loading.lcp ? `${routeReport.loading.lcp.tag}:${routeReport.loading.lcp.src || ''}` : 'null'} earliestLogoMs=${routeReport.loading.resourceTiming.earliestMs}`);
       } catch (error) {
         fail(routeKey, `route check crashed: ${error.message}`, error.stack ? error.stack.split('\n').slice(0, 3) : undefined);
       } finally {

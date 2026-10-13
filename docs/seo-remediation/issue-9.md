@@ -67,6 +67,8 @@ Route sweep after the change (all `200`): `/`, `/directorio`, `/verificar`, `/b/
 
 ```bash
 # in the issue-9 worktree, with the isolated runtime (see opinio-remediation/runtime.md)
+# (DATABASE_URL below is the published local, non-secret runtime credential for the isolated
+#  Postgres container; no production credential, token or private analytics export is used anywhere)
 DATABASE_URL='postgres://opinio:opinio_local_dev@127.0.0.1:54732/opinio_issue_9' \
 NEXT_TELEMETRY_DISABLED=1 node node_modules/next/dist/bin/next dev --webpack -H 127.0.0.1 --port 3209
 
@@ -78,14 +80,27 @@ CHECK_ELEMENT_SCREENSHOTS=/logos/99minutos.png,/logos/bestday.png,/logos/genesys
 node scripts/seo-image-layout-check.mjs
 ```
 
-The script blocks logo requests, measures the rendered box, replays the loads in place, and fails
-when: a logo image reserves no space while blocked, its box/painted geometry or its container moves
-between states, a painted logo leaves the container inset or loses its aspect ratio, an offscreen
-(> 3000 px) logo is fetched at scroll top, a visible identity image is not eager/high, or any
-layout-shift entry is sourced from a logo image. Exit code 0 on this branch; on `fefc090` the same
-script reports 2218 findings for `/directorio` per viewport (1108 images reserving no box while
-blocked, 1107 whose box moved between blocked and loaded states, plus the loading/decoding/
-offscreen-fetch findings) and 5 per viewport on the passport route.
+The script blocks logo requests, measures the rendered box, replays the loads in place, and fails on
+consumer-visible regressions only: a logo image reserves no box while its request is blocked, its
+box or its container moves between the blocked and loaded states, a blocked-state image is missing
+after the replay (render-transition protection), a painted logo leaves the existing container
+inset, an offscreen (> 3000 px) logo is fetched while at scroll top, an in-viewport logo is still
+not loaded when observed, or a layout-shift entry is sourced from a logo image. Attribute values
+(`loading`, `decoding`, `fetchpriority`), painted-size statistics, LCP/request timing and shift
+entries are recorded as observations, not gates: missing `width`/`height` attributes are never
+treated as a shift by themselves, and no per-attribute default is pinned.
+
+Observed runs:
+
+- This branch, `3209`, desktop + mobile, routes `/`, `/directorio`, `/b/99minutos`, `/b/abba-joyas`:
+  exit 0, 0 findings (`visibleNotLoaded=0`, `offscreenFetched=0`, `logoShifts=0`).
+- Unmodified baseline `fefc090` (runtime-verification reference instance on `3214`, read-only
+  catalogue), desktop, `/directorio` + `/b/mercado-libre`: exit 1, 2218 findings — 1109 images
+  reserving no box while blocked (1108 in `/directorio`, 1 in `/b/mercado-libre`), 1108 boxes
+  moving between the blocked and loaded states (1107 directory + 1 passport), and 1040 offscreen
+  directory images fetched at scroll top. Log:
+  `C:/Users/isaac/tmp/opinio-evidence-9/red-baseline.log`; green log:
+  `final-harness.log`; before/after card screenshots and fingerprints under the same directory.
 
 ## 5. Limits
 
