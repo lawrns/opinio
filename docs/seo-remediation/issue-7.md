@@ -4,7 +4,7 @@ Ticket: lawrns/opinio#7 `[SEO] Verify and repair rendered utility user journeys`
 Session `seo-7` · Branch `fix/opinio-seo-issue-7` · Worktree `C:/Users/isaac/tmp/opinio-seo-worktrees/issue-7` · Base `fefc090` (integration `fix/opinio-seo-remediation`)
 
 Outcome: **no consumer-visible defect reproduced in the hydrated journeys; no source file changed.**
-Verified on the local integration branch; not published/released.
+Verified on the local ticket worktree based on the integration branch; integration review/merged proof pending; not published/released.
 
 ## Runtime
 
