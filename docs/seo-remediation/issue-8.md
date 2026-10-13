@@ -44,11 +44,11 @@ Deliberately omitted because nothing visible supports them: `sameAs` (no social 
 
 Confirmed with real HTTP + a real browser DOM (Playwright 1.59.1, system Chrome), plus a DOM parser over the raw response. The block is server-rendered (present without JavaScript) and hydrates identically.
 
-Server-response parse (Python `html.parser`, DOM-based, not a source-text assertion), `after.html`:
+Server-response parse (Python `html.parser`, DOM-based, not a source-text assertion), `after.html`. The checker prints `text_chars` (Python string length: **89,368 characters**); the actual HTTP body for that same response was **89,531 bytes** (`curl -w %{size_download}`; the difference is UTF-8 multibyte content). The checker output follows:
 
 ```
 === AFTER (issue-8 working tree, local :3208) ===
-bytes=89368 ld+json blocks=1
+text_chars=89368 ld+json blocks=1
 --- block[0] valid JSON; nodes with @type: 2
   root.@graph[0]: @type=Organization @id=https://opinio.mx#organization name=Opinio México
   root.@graph[1]: @type=WebSite @id=https://opinio.mx#website name=Opinio México
@@ -70,7 +70,7 @@ Real-browser DOM collector (`qa/render-evidence.mjs`, GET-only), observed:
 
 #### AC4 — Do not add LocalBusiness address/phone/hours from rejected JEV-005
 
-Confirmed by construction and by scan. `@type` values in the block: `Organization`, `WebSite` only. Property scan over every JSON node found no `address`, `telephone`, `email`, `openingHours`, `openingHoursSpecification`, `geo`, `priceRange`, `hasMap`, `currenciesAccepted`, `paymentAccepted`; forbidden type scan found no `LocalBusiness`/`OnlineStore`/`Store`/`Restaurant`/`Dentist`. Owner-review annotation applied verbatim: *"Do not add address, phone or hours without a real Opinio location described on the page."*
+Confirmed by construction and by scan. `@type` values in the block: `Organization`, `WebSite` only. Property scan over every JSON node found no `address`, `telephone`, `email`, `openingHours`, `openingHoursSpecification`, `geo`, `priceRange`, `hasMap`, `currenciesAccepted`, `paymentAccepted`; forbidden type scan found no `LocalBusiness`/`OnlineStore`/`Store`/`Restaurant`/`Dentist`. The rejected-recommendation wording comes from the audit's JEV-005 disposition: `report.md` (JEV-005 block, its "Owner review" line) states *"Use accurate Organization/WebSite markup under JEV-004. Do not add address, phone or hours without a real Opinio location described on the page."* The underlying machine record `owner-review.json` → `.annotations[action_id=JEV-005]` states `verdict: "Recommendation rejected"` and `owner_next_step: "Do not implement the automatic LocalBusiness recipe. Use accurate Organization/WebSite markup under JEV-004; a real location would require separate evidence."`
 
 ### Before/after (actual local HTTP)
 
@@ -82,6 +82,8 @@ AFTER:  HTTP 200 bytes=89531 time=2.38s    ld+json blocks=1   RESULT: PASS
         title: "Opinio México — Pasaporte de Confianza Comercial"
         canonical: https://opinio.mx
 ```
+
+(`bytes=`/`time=` are true HTTP response byte counts and wall time from `curl -w`; the `ld+json blocks` / `JSON-LD: ABSENT` / `RESULT: PASS` lines are the DOM checker.)
 
 Delta is +1 script block (1,649 bytes) and nothing else: `metadata` export, title, meta description, canonical, OG/Twitter tags and the rendered page are byte-identical in the compared markers (see §4).
 
@@ -97,7 +99,7 @@ Delta is +1 script block (1,649 bytes) and nothing else: `metadata` export, titl
 | Browser console errors | — | 0 |
 | Failed requests | — | 0 |
 
-No test files were added (no permanent wiring/mocks); verification is behavior-level HTTP/DOM only.
+No test files were added. This change is factual schema wiring (a static literal graph with no user-controlled input), and the repository's vitest suite covers library logic only (`src/lib/analytics.test.ts`, `src/lib/scoring.test.ts`) — there is no page-render/DOM test harness to extend, so a permanent regression test would mean adding new render-test wiring the ticket did not request. The issue's verification rule asks for a deterministic consumer-visible regression "where practical": here the deterministic, consumer-visible check is the actual HTTP response plus real-browser DOM capture (external checker and `qa/render-evidence.mjs`, GET-only), which exercises the rendered contract a crawler/consumer sees; re-running §6's commands against a fresh server reproduces the same assertion for this static graph. No mocks, no source-text assertions, no production fixtures.
 
 ## 3. Exact rendered JSON-LD (verbatim from the HTTP response, after)
 
@@ -133,8 +135,8 @@ Rendered via the repo's established convention (same as `/directorio` and `/b/[s
 ## 4. What changed (files)
 
 - `src/app/page.tsx` — added the `jsonLd` object and the JSON-LD `<script>`; `metadata` export unchanged. The script tag is the first child of the page fragment, matching the sibling pages' placement.
-
-`git add` was explicit-path only (`src/app/page.tsx`, `docs/seo-remediation/issue-8.md`); the approved uncommitted local agent config (`M CLAUDE.md`, `?? docs/agents/`) was left uncommitted and untouched, and nothing was pushed.
+- Commit `f225b80` contains exactly these two paths (`git diff --name-only fefc090...f225b80` = `docs/seo-remediation/issue-8.md`, `src/app/page.tsx`): no `CLAUDE.md`, no `docs/agents/**`, no `.env*`, no `jev-seo-reports/**`, no other route or component.
+- `git add` was explicit-path only; the approved uncommitted local agent config (`M CLAUDE.md`, `?? docs/agents/`) was left uncommitted and untouched, and nothing was pushed. The focused-review note fixes in this document are themselves a follow-up doc-only commit containing this file only.
 
 ## 5. Limits and residual uncertainty
 
