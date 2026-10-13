@@ -17,9 +17,41 @@ export const metadata: Metadata = {
   },
 };
 
+// Opinio's own identity only: name, URL and logo agree with the visible brand
+// (navbar/footer "opinio.mx", document title, /opinio.svg). No address, phone,
+// hours or merchant data — the platform has no published physical location.
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'Organization',
+      '@id': `${baseUrl}#organization`,
+      name: 'Opinio México',
+      alternateName: 'Opinio.mx',
+      url: baseUrl,
+      logo: `${baseUrl}/opinio.svg`,
+      description: 'Antes de comprar, conoce a quién le compras. Verifica identidad, cumplimiento y resolución de comercios en México.',
+    },
+    {
+      '@type': 'WebSite',
+      '@id': `${baseUrl}#website`,
+      name: 'Opinio México',
+      url: baseUrl,
+      inLanguage: 'es-MX',
+      publisher: {
+        '@id': `${baseUrl}#organization`,
+      },
+    },
+  ],
+};
+
 export default function HomePage() {
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <Navbar />
       <main>
         <TrustGraphHero />
