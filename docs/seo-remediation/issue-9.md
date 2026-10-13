@@ -83,9 +83,9 @@ when: a logo image reserves no space while blocked, its box/painted geometry or 
 between states, a painted logo leaves the container inset or loses its aspect ratio, an offscreen
 (> 3000 px) logo is fetched at scroll top, a visible identity image is not eager/high, or any
 layout-shift entry is sourced from a logo image. Exit code 0 on this branch; on `fefc090` the same
-script reports 2218 failures for `/directorio` at desktop and 2218 at mobile (1108 unexplained-box
-plus 1108 moved-box plus loading/decoding/offscreen-fetch findings per viewport), and 5 per viewport
-on the passport route.
+script reports 2218 findings for `/directorio` per viewport (1108 images reserving no box while
+blocked, 1107 whose box moved between blocked and loaded states, plus the loading/decoding/
+offscreen-fetch findings) and 5 per viewport on the passport route.
 
 ## 5. Limits
 
