@@ -51,9 +51,24 @@ no image today — `TrustGraphHero` is used without a `business`; `BusinessCard`
 | Directory `img` box while request blocked | 0×0 (no reserved space) | 31.16×31.16 (reserved) |
 | `loading` / `decoding` attributes (directory) | none / none | `lazy` / `async` on all 1108 |
 | Passport `h1` logo | no attributes (eager by default) | `eager`, `async`, DOM `fetchpriority="high"` |
-| Painted logo geometry, pre vs post (1107 images compared per device) | — | max delta 0.07 px (one 7.48:1 logo, sub-pixel snap); 0 images changed by ≥ 0.5 px; all aspect ratios preserved (painted-vs-natural deviation ≤ 0.008, i.e. rounding) |
+| Painted logo geometry, pre vs post | — | fingerprints `fp-before/*` vs `fp-after2/*`, 1107 images compared per device: max delta 0.07 px (one 7.48:1 logo, sub-pixel snap), 0 images changed by ≥ 0.5 px; painted-vs-natural deviation ≤ 0.008 (rounding). A measured bound on this runtime, not a universal equality |
 | Logo-sourced layout-shift entries (blocked → loaded replay) | 0 | 0 |
-| Card screenshots (`99minutos` 256×256, `bestday` 16×16, `genesys` 1915×256), desktop + mobile | — | pixel-identical sha256 before vs after |
+| Card screenshots (`99minutos` 256×256, `bestday` 16×16, `genesys` 1915×256), desktop + mobile | `before-cards/*` | identical sha256 in the shipped revision `after/*` and `final-harness/*` (desktop `054051114064d6e9`, `c0f6a87eeae2ca89`, `db0339b5603c52a9`; mobile `ff079592fce0764d`, `726e5eccb8cb28b5`, `11e5d536fe656237`) |
+| Same-route viewport captures (`/directorio`, passport), desktop | `before/*` | identical in `after/*` and `final-harness/*` (`3d4668b42a5573be` directory, `9c553e9cb703069d` passport) |
+
+Screenshot families and their caveats:
+
+- Compared families are the retained captures `before-cards/*` and `before/*` (pre-fix `fefc090`),
+  `after/*` and `final-harness/*` (shipped revision: stable box + `object-scale-down`), plus the
+  fingerprint JSON `fp-before/*` vs `fp-after2/*`.
+- The superseded intermediate revision (`after-cards/*`, `object-contain`, which upscaled the
+  16×16/30×30 sources) is retained as-is and is *not* the shipped revision: there `bestday` differs
+  (`8c8295d5c55f23e5` desktop, `d90998754e6a07a1` mobile) while `99minutos` and `genesys` match.
+  Its fingerprints (`fp-after/*`) show the same: `bestday` painted `31.16×31.16` vs `16×16` before;
+  in the shipped revision `fp-after2/*` has box `31.16×31.16` but painted `16×16`.
+- Captures are dev-mode renders on one Chrome build; sub-pixel geometry can differ without changing
+  a capture (the 0.07 px case above). Pixel identity is claimed only for the compared capture
+  families and hashes listed here, not as a universal guarantee.
 
 Notes: the five smallest sources (16×16 and 30×30 logos) are deliberately *not* upscaled —
 `object-scale-down` reproduces the previous painted size exactly. `fetchpriority` is present in the
@@ -67,9 +82,9 @@ Route sweep after the change (all `200`): `/`, `/directorio`, `/verificar`, `/b/
 
 ```bash
 # in the issue-9 worktree, with the isolated runtime (see opinio-remediation/runtime.md)
-# (DATABASE_URL below is the published local, non-secret runtime credential for the isolated
-#  Postgres container; no production credential, token or private analytics export is used anywhere)
-DATABASE_URL='postgres://opinio:opinio_local_dev@127.0.0.1:54732/opinio_issue_9' \
+# DATABASE_URL below is redacted to the uniform postgres://…@ form; use the local runtime
+# credential from runtime.md (isolated container, not reusable elsewhere)
+DATABASE_URL='postgres://…@127.0.0.1:54732/opinio_issue_9' \
 NEXT_TELEMETRY_DISABLED=1 node node_modules/next/dist/bin/next dev --webpack -H 127.0.0.1 --port 3209
 
 npm install --prefix /tmp/opinio-qa playwright           # once, outside the app
