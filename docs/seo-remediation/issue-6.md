@@ -108,6 +108,17 @@ node C:/Users/isaac/tmp/opinio-remediation/qa/render-evidence.mjs
 Observed: all three routes `server=200`, `browser=200`, `consoleErrors=0`, canonical
 `https://opinio.mx/b/{slug}`, intact `Escribir opinión` / `Abrir un caso` links, one image with alt text.
 
+Differential against unmodified code (same catalogue-only data, no fixture): my branch on 3206 vs the
+reference baseline on 3214 (commit `fefc090`). The visible-text diff contains only the intended claim
+changes — baseline "Auditoría Opinio · Actualizada 2026" → "Sin fuentes públicas con fecha registrada";
+"Estatus Fiscal: En Validación / Nivel de Confianza: public_info / Resolución PROFECO: Sin alertas /
+Opiniones Auditadas: Abierto a opiniones" → "Sin RFC publicado / Información pública /
+Sin casos registrados / Sin opiniones publicadas"; baseline's "respaldado por cotejo de datos mercantiles
+y de dominio" → "Opinio no tiene todavía registros de identidad verificados ni fuentes públicas
+vinculadas para este perfil."; "Datos disponibles" → "1 de 4 datos registrados"; sources header gains
+"Sin registros vinculados". No section or content is lost (stripped text: baseline 4445 vs branch 4426
+characters). Captures and segment diff: `differential/`.
+
 Assertions (script `C:/Users/isaac/tmp/seo6-prod/check-issue6-evidence.js`, 0 failures):
 
 - `/b/luuna` (populated fixture): "Fuente más reciente: 15 de marzo de 2026";
