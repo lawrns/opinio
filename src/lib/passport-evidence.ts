@@ -1,6 +1,11 @@
 export interface IdentityEvidenceRow {
   type: string;
   identifier: string;
+  /**
+   * Stored as a plain string on purpose: the table can carry statuses outside
+   * the known union, and those must surface as `unknown` rather than being
+   * narrowed away by a cast.
+   */
   status: string;
   source: string | null;
 }
@@ -15,9 +20,16 @@ export interface MerchantFact {
   value: string | null;
 }
 
+export type FactVerificationStatus = 'missing' | 'registered' | 'verified' | 'pending' | 'rejected' | 'unknown';
+
 export interface FactStatus {
+  status: FactVerificationStatus;
+  /** Visitor-facing record status, attributed to Opinio's records rather than an authority guarantee. */
   label: string;
+  /** Recorded source of the verification, or null when the record has none. */
   source: string | null;
+  /** Explicit provenance note for records that exist, or null when there is no record to attribute. */
+  sourceNote: string | null;
 }
 
 const VERIFICATION_LEVEL_LABELS: Record<string, string> = {
@@ -28,19 +40,29 @@ const VERIFICATION_LEVEL_LABELS: Record<string, string> = {
   transparent_coverage: 'Cobertura transparente',
 };
 
+const FACT_STATUS_LABELS: Record<FactVerificationStatus, string> = {
+  missing: 'Sin información disponible',
+  registered: 'Registrado sin verificación en Opinio',
+  verified: 'Verificado en el registro de Opinio',
+  pending: 'Verificación pendiente en Opinio',
+  rejected: 'Verificación rechazada en Opinio',
+  unknown: 'Estado de verificación no reconocido',
+};
+
 const normalizeIdentifier = (value: string) => value.replace(/[^a-z0-9]/gi, '').toLowerCase();
 
 const IDENTIFIER_LABEL_PREFIX = /^(rfc|clee|denue|sat|inegi)[\s:.\-/]+/i;
 
 /**
- * Describes what Opinio actually knows about one merchant fact (RFC, CLEE,
- * domain, WhatsApp). A value registered on the business row is never treated as
- * verified; only an identity record of the same type can support a verified,
- * pending or rejected state, and its source name is surfaced when present.
+ * Describes what Opinio's records actually support for one merchant fact (RFC,
+ * CLEE, domain, WhatsApp). A value registered on the business row is never
+ * treated as verified; only an identity record of the same type can produce a
+ * verified, pending or rejected state, and the recorded source is attributed
+ * as Opinio's record — never as proof that the authority itself verified it.
  */
 export function factStatus(fact: MerchantFact, identities: IdentityEvidenceRow[]): FactStatus {
   if (!fact.value) {
-    return { label: 'Sin información disponible', source: null };
+    return { status: 'missing', label: FACT_STATUS_LABELS.missing, source: null, sourceNote: null };
   }
 
   const normalizedValue = normalizeIdentifier(fact.value);
@@ -52,22 +74,25 @@ export function factStatus(fact: MerchantFact, identities: IdentityEvidenceRow[]
   };
 
   const identity = identities.find(matchesFact);
-
   if (!identity) {
-    return { label: 'Registrado sin verificación en Opinio', source: null };
+    return { status: 'registered', label: FACT_STATUS_LABELS.registered, source: null, sourceNote: null };
   }
 
   const source = identity.source?.trim() || null;
-  if (identity.status === 'verified') {
-    return { label: 'Verificado', source };
-  }
-  if (identity.status === 'pending') {
-    return { label: 'Verificación pendiente', source };
-  }
-  if (identity.status === 'rejected') {
-    return { label: 'Verificación rechazada', source };
-  }
-  return { label: 'Estado de verificación desconocido', source };
+  const status: FactVerificationStatus =
+    identity.status === 'verified'
+      ? 'verified'
+      : identity.status === 'pending'
+        ? 'pending'
+        : identity.status === 'rejected'
+          ? 'rejected'
+          : 'unknown';
+  return {
+    status,
+    label: FACT_STATUS_LABELS[status],
+    source,
+    sourceNote: `Fuente registrada: ${source || 'no registrada'}`,
+  };
 }
 
 /** Maps the stored `verified_level` code to visitor-readable text. */
@@ -113,11 +138,11 @@ export function formatRecordDate(value: string): string | null {
 }
 
 /**
- * Returns the `record_date` of the most recent official source record, or null
- * when no record carries a parseable date. Used to show freshness only where an
- * actual source record exists.
+ * Returns the `record_date` value of the most recent official source record, or
+ * null when no record carries a parseable date. Used to show freshness only
+ * where an actual source record exists.
  */
-export function latestRecordDate(records: OfficialRecordEvidenceRow[]): string | null {
+export function latestRecordDateValue(records: OfficialRecordEvidenceRow[]): string | null {
   let latestDate: Date | null = null;
   let latestRaw: string | null = null;
   for (const record of records) {

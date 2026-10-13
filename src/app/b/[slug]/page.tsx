@@ -12,7 +12,7 @@ import { PassportActionButtons } from '@/components/passport/PassportActionButto
 import { TrustGauge } from '@/components/passport/TrustGauge';
 import { OfficialRecordCard } from '@/components/passport/OfficialRecordCard';
 import { query } from '@/lib/db';
-import { factStatus, formatRecordDate, latestRecordDate, verificationLevelLabel } from '@/lib/passport-evidence';
+import { factStatus, formatRecordDate, latestRecordDateValue, verificationLevelLabel } from '@/lib/passport-evidence';
 
 interface BusinessDbRow {
   id: number;
@@ -234,17 +234,16 @@ export default async function BusinessPassportPage({ params }: PageProps) {
   const issuesPer1k = hasOrdersData ? Math.round(cases.length / business.observed_orders_count * 10000) / 10 : null;
   const confirmedCasesCount = cases.filter((item) => item.is_consumer_confirmed).length;
   const resolutionRate = cases.length > 0 ? Math.round(confirmedCasesCount / cases.length * 1000) / 10 : null;
-  const identityRows = idRes.rows.map((row) => ({ type: row.type, identifier: row.identifier, status: row.status, source: row.source }));
   const factEvidence = {
-    rfc: factStatus({ type: 'rfc', value: business.rfc }, identityRows),
-    denue: factStatus({ type: 'denue', value: business.clee }, identityRows),
-    domain: factStatus({ type: 'domain', value: business.domain }, identityRows),
-    whatsapp: factStatus({ type: 'whatsapp', value: business.whatsapp }, identityRows),
+    rfc: factStatus({ type: 'rfc', value: business.rfc }, idRes.rows),
+    denue: factStatus({ type: 'denue', value: business.clee }, idRes.rows),
+    domain: factStatus({ type: 'domain', value: business.domain }, idRes.rows),
+    whatsapp: factStatus({ type: 'whatsapp', value: business.whatsapp }, idRes.rows),
   };
-  const registeredFactCount = Object.values(factEvidence).filter((evidence) => evidence.label !== 'Sin información disponible').length;
-  const verifiedIdentities = identityRows.filter((row) => row.status === 'verified');
+  const registeredFactCount = Object.values(factEvidence).filter((evidence) => evidence.status !== 'missing').length;
+  const verifiedIdentities = idRes.rows.filter((row) => row.status === 'verified');
   const verifiedSources = [...new Set(verifiedIdentities.map((row) => row.source?.trim()).filter((source): source is string => Boolean(source)))].slice(0, 2);
-  const latestRecordDateRaw = latestRecordDate(officialRecords);
+  const latestRecordDateRaw = latestRecordDateValue(officialRecords);
   const latestRecordDateLabel = latestRecordDateRaw ? formatRecordDate(latestRecordDateRaw) : null;
   const issueLabels: Record<string, string> = { delay: 'Retraso de entrega', damaged_goods: 'Producto dañado', wrong_item: 'Artículo equivocado', refund_pending: 'Reembolso pendiente', no_response: 'Falta de respuesta' };
 
@@ -252,6 +251,7 @@ export default async function BusinessPassportPage({ params }: PageProps) {
   const baseUrl = envPageUrl && !envPageUrl.includes('fertilitylistings') ? envPageUrl : 'https://opinio.mx';
   const canonicalUrl = `${baseUrl}/b/${business.slug}`;
   const logoAbsoluteUrl = business.logo_url ? `${baseUrl}${business.logo_url}` : undefined;
+  const hasResolution = business.resolution_rate !== null && business.resolution_rate !== undefined && Number(business.resolution_rate) > 0;
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -300,7 +300,7 @@ export default async function BusinessPassportPage({ params }: PageProps) {
         '@id': canonicalUrl,
         url: canonicalUrl,
         name: `¿Es confiable ${business.brand_name}? Pasaporte de Confianza | Opinio México`,
-        description: `Perfil público de ${business.brand_name} en Opinio México: datos registrados, fuentes públicas y opiniones de compradores.`,
+        description: `Consulta si es seguro comprar en ${business.brand_name}. RFC ${business.rfc || 'validado'}, opiniones y estatus PROFECO.`,
         inLanguage: 'es-MX',
         isPartOf: {
           '@type': 'WebSite',
@@ -349,7 +349,7 @@ export default async function BusinessPassportPage({ params }: PageProps) {
             name: `¿Es confiable comprar en ${business.brand_name} en México?`,
             acceptedAnswer: {
               '@type': 'Answer',
-              text: `${business.brand_name} cuenta con un perfil público en Opinio México. Estado del RFC: ${business.rfc ? `${business.rfc} (${factEvidence.rfc.label})` : 'sin RFC publicado'}. Nivel de verificación registrado: ${verificationLevelLabel(business.verified_level)}. ${reviews.length > 0 ? `Tiene ${reviews.length} opiniones publicadas con promedio de ${averageRating?.toFixed(1)}/5.` : 'Todavía no tiene opiniones publicadas.'} ${cases.length > 0 ? `Se han registrado ${cases.length} casos de atención.` : 'No tiene casos de atención registrados.'}`,
+              text: `${business.brand_name} cuenta con un perfil de identidad en Opinio México con ${business.rfc ? `RFC validado ${business.rfc}` : 'registro mercantil'} y ${reviews.length > 0 ? `${reviews.length} opiniones verificadas con promedio de ${averageRating?.toFixed(1)}/5` : 'expediente de información pública comercial'}. ${hasResolution ? `Presenta una tasa de resolución de inconformidades del ${business.resolution_rate}% y un tiempo de respuesta promedio de ${business.median_response_hours} horas.` : 'Sus operaciones están sujetas a la Ley Federal de Protección al Consumidor en México.'}`,
             },
           },
           {
@@ -357,9 +357,7 @@ export default async function BusinessPassportPage({ params }: PageProps) {
             name: `¿Tiene quejas ${business.brand_name} ante la PROFECO?`,
             acceptedAnswer: {
               '@type': 'Answer',
-              text: cases.length > 0
-                ? `Opinio ha registrado ${cases.length} casos de atención para ${business.brand_name}; el más reciente tuvo una primera respuesta en ${cases[0].median_first_response_minutes} minutos.`
-                : `Opinio no tiene casos de atención registrados para ${business.brand_name}. Consulta los registros públicos disponibles en el pasaporte.`,
+              text: `En el registro de Opinio se auditan controversias y quejas comerciales. ${cases.length > 0 ? `Se han registrado ${cases.length} casos con un tiempo promedio de primera respuesta de ${cases[0].median_first_response_minutes} minutos.` : `Actualmente ${business.brand_name} no cuenta con alertas críticas de fraude en el monitoreo público de comercio.`}`,
             },
           },
           {
@@ -532,7 +530,7 @@ export default async function BusinessPassportPage({ params }: PageProps) {
 
             {/* Self-contained summary of supported facts and registered verification state */}
             <p className="text-sm sm:text-base text-[var(--op-ink-secondary)] leading-relaxed font-sans">
-              {business.brand_name} es un comercio del sector {business.category} con perfil público en Opinio México{business.legal_name ? `; su razón social publicada es ${business.legal_name}` : ''}{business.rfc ? `, con RFC publicado ${business.rfc}` : ''}. Nivel de verificación registrado en Opinio: {verificationLevelLabel(business.verified_level)}. {verifiedIdentities.length > 0 ? `Opinio ha verificado ${verifiedIdentities.length} ${verifiedIdentities.length === 1 ? 'identificador' : 'identificadores'}${verifiedSources.length > 0 ? ` con fuentes como ${verifiedSources.join(' y ')}` : ''}.` : officialRecords.length > 0 ? `Opinio ha recopilado ${officialRecords.length} ${officialRecords.length === 1 ? 'registro' : 'registros'} de fuentes públicas para este perfil.` : 'Opinio no tiene todavía registros de identidad verificados ni fuentes públicas vinculadas para este perfil.'} {cases.length > 0 ? `En atención a compradores hay ${cases.length} ${cases.length === 1 ? 'caso registrado' : 'casos registrados'}${resolutionRate !== null ? `, con ${resolutionRate}% de resoluciones confirmadas por el comprador` : ''}.` : 'No hay casos de atención registrados en Opinio.'} Consejo editorial de Opinio: verifica la URL oficial del comercio{business.domain ? ` (${business.domain})` : ''}, exige comprobante fiscal digital (CFDI) y paga mediante métodos trazables como tarjeta o SPEI bancario directo.
+              {business.brand_name} es un comercio del sector {business.category} con perfil público en Opinio México{business.legal_name ? `; su razón social publicada es ${business.legal_name}` : ''}{business.rfc ? `, con RFC publicado ${business.rfc}` : ''}. Nivel de verificación registrado en Opinio: {verificationLevelLabel(business.verified_level)}. {verifiedIdentities.length > 0 ? `El registro de Opinio incluye ${verifiedIdentities.length} ${verifiedIdentities.length === 1 ? 'identificador con verificación registrada' : 'identificadores con verificación registrada'}${verifiedSources.length > 0 ? `, con fuentes registradas como ${verifiedSources.join(' y ')}` : ', sin fuentes registradas'}.` : officialRecords.length > 0 ? `Opinio ha recopilado ${officialRecords.length} ${officialRecords.length === 1 ? 'registro' : 'registros'} de fuentes públicas para este perfil.` : 'Opinio no tiene todavía registros de identidad verificados ni fuentes públicas vinculadas para este perfil.'} {cases.length > 0 ? `En atención a compradores hay ${cases.length} ${cases.length === 1 ? 'caso registrado' : 'casos registrados'}${resolutionRate !== null ? `, con ${resolutionRate}% de resoluciones confirmadas por el comprador` : ''}.` : 'No hay casos de atención registrados en Opinio.'} Consejo editorial de Opinio: verifica la URL oficial del comercio{business.domain ? ` (${business.domain})` : ''}, exige comprobante fiscal digital (CFDI) y paga mediante métodos trazables como tarjeta o SPEI bancario directo.
             </p>
 
             {/* Verification metrics micro-grid */}
@@ -577,28 +575,28 @@ export default async function BusinessPassportPage({ params }: PageProps) {
                 <div className="text-[var(--op-ink-muted)] text-xs">Cédula Fiscal SAT</div>
                 <div className="break-words text-base font-bold text-[var(--op-ink-primary)]">{business.rfc || 'No registrado'}</div>
                 <div className="text-xs text-[var(--op-verified-ink)] font-bold">{factEvidence.rfc.label}</div>
-                {factEvidence.rfc.source && <div className="text-xs text-[var(--op-ink-muted)]">Fuente: {factEvidence.rfc.source}</div>}
+                {factEvidence.rfc.sourceNote && <div className="text-xs text-[var(--op-ink-muted)]">{factEvidence.rfc.sourceNote}</div>}
               </div>
 
               <div className="p-5 rounded-2xl bg-[var(--op-sheet)] border border-[var(--op-border-hairline)] shadow-flat space-y-1.5">
                 <div className="text-[var(--op-ink-muted)] text-xs">Censo Económico INEGI</div>
                 <div className="break-words text-sm font-bold text-[var(--op-ink-primary)]">{business.clee || 'No registrado'}</div>
                 <div className="text-xs text-[var(--op-verified-ink)] font-bold">{factEvidence.denue.label}</div>
-                {factEvidence.denue.source && <div className="text-xs text-[var(--op-ink-muted)]">Fuente: {factEvidence.denue.source}</div>}
+                {factEvidence.denue.sourceNote && <div className="text-xs text-[var(--op-ink-muted)]">{factEvidence.denue.sourceNote}</div>}
               </div>
 
               <div className="p-5 rounded-2xl bg-[var(--op-sheet)] border border-[var(--op-border-hairline)] shadow-flat space-y-1.5">
                 <div className="text-[var(--op-ink-muted)] text-xs">Sitio web</div>
                 <div className="break-words text-sm font-bold text-[var(--op-ink-primary)]">{business.domain || 'No registrado'}</div>
                 <div className="text-xs text-[var(--op-verified-ink)] font-bold">{factEvidence.domain.label}</div>
-                {factEvidence.domain.source && <div className="text-xs text-[var(--op-ink-muted)]">Fuente: {factEvidence.domain.source}</div>}
+                {factEvidence.domain.sourceNote && <div className="text-xs text-[var(--op-ink-muted)]">{factEvidence.domain.sourceNote}</div>}
               </div>
 
               <div className="p-5 rounded-2xl bg-[var(--op-sheet)] border border-[var(--op-border-hairline)] shadow-flat space-y-1.5">
                 <div className="text-[var(--op-ink-muted)] text-xs">WhatsApp Comercial</div>
                 <div className="text-sm font-bold text-[var(--op-ink-primary)]">{business.whatsapp || 'No registrado'}</div>
                 <div className="text-xs text-[var(--op-verified-ink)] font-bold">{factEvidence.whatsapp.label}</div>
-                {factEvidence.whatsapp.source && <div className="text-xs text-[var(--op-ink-muted)]">Fuente: {factEvidence.whatsapp.source}</div>}
+                {factEvidence.whatsapp.sourceNote && <div className="text-xs text-[var(--op-ink-muted)]">{factEvidence.whatsapp.sourceNote}</div>}
               </div>
             </div>
           </section>
