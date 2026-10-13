@@ -15,6 +15,13 @@
  *   - the sitemap keeps every existing entry and adds exactly the real
  *     paginated directory URLs
  *
+ * The sitemap expectation is derived from the catalogue itself (base routes,
+ * every non-empty public slug, the real pagination pages) and is compared as an
+ * exact URL set — it is not copied from the route's own implementation. If the
+ * catalogue ever contains a legacy alias that production intentionally excludes
+ * or redirects, this check fails loudly so the owner can decide, rather than
+ * silently skipping the slug.
+ *
  * Usage:
  *   DATABASE_URL=postgres://…/opinio_issue_5 BASE_URL=http://127.0.0.1:3205 \
  *     node scripts/verify-directory-pagination.mjs
@@ -170,7 +177,11 @@ check(
   `resolved=${chipsResolved}/${chipHrefs.length}`
 );
 
-// 5. Sitemap: every existing entry preserved, plus exactly the real paginated pages.
+// 5. Sitemap: the full current public catalogue plus the real paginated pages.
+// The expectation is derived from the catalogue itself (never copied from the
+// route's own implementation), so a legacy alias that production intentionally
+// redirects or omits would surface here as a loud failure for an owner decision
+// instead of being silently skipped.
 const sitemap = await get('/sitemap.xml');
 const sitemapUrls = [...sitemap.html.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
 const expectedSitemap = [
@@ -178,7 +189,7 @@ const expectedSitemap = [
   'https://opinio.mx/directorio',
   ...Array.from({ length: Math.max(0, totalPages - 1) }, (_, index) => `https://opinio.mx/directorio?page=${index + 2}`),
   ...catalogue
-    .filter((slug) => slug.trim() !== '' && slug !== 'locomotion')
+    .filter((slug) => slug.trim() !== '')
     .map((slug) => `https://opinio.mx/b/${slug}`),
 ].sort();
 check(
