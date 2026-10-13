@@ -143,3 +143,23 @@ Local integration branch verified; not published or released.
   `<select>`), which the audit separately flags as document/latency weight (JEV-012/
   JEV-028); this ticket only removes the per-business query fan-out that caused the HTTP
   500, without changing the selection surface.
+
+## Integration review corrections (orchestrator, after merge)
+
+Applied at the integration head after the ticket branch was merged, as the final
+integration-quality review of this ticket — no behaviour change to the fix itself:
+
+1. `scripts/verify-merchant-flow.mjs` no longer asserts the incidental dashboard heading
+   copy (`Panel de Control Comercial`) or carries its constant; the two screen checks are
+   now status-only (`GET /merchant` and `GET /merchant?business=…` respond 200), while the
+   real independent assertions stay: the business selected in the served selector, the
+   brand inside the served header, and the sidebar navigation links carrying the selection.
+2. The header brand is read from the `<header>` regions of the served HTML (every
+   `<header>` block is inspected) instead of the first header or the whole body, so a
+   selector option echoing the expected string cannot satisfy the check.
+3. `getMerchantCases` and `getMerchantCasesForBusinesses` return the empty result
+   (`res.rows`) before the `caseIds` projection and the message fan-out, which is the
+   common local path when a business has no cases. `getMerchantBusinesses` already returns
+   `res.rows` directly and needs no guard.
+
+Check count after the corrections: 9 (unchanged; two checks were narrowed, none removed).

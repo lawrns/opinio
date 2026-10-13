@@ -234,6 +234,7 @@ export async function getMerchantCases(
     WHERE ${whereClauses}${CASE_ORDER_BY}
   `;
   const res = await query<CaseRow>(sql, params);
+  if (res.rows.length === 0) return res.rows; // common empty local path: skip the caseIds projection and message fan-out
   const messagesByCase = await getCaseMessagesByCaseIds(res.rows.map((row) => row.id));
 
   return res.rows.map((row) => mapCaseRow(row, messagesByCase.get(row.id) ?? []));
@@ -260,6 +261,7 @@ export async function getMerchantCasesForBusinesses(
   `,
     [businessIds]
   );
+  if (res.rows.length === 0) return res.rows; // common empty local path: skip the caseIds projection and message fan-out
   const messagesByCase = await getCaseMessagesByCaseIds(res.rows.map((row) => row.id));
 
   return res.rows.map((row) => mapCaseRow(row, messagesByCase.get(row.id) ?? []));
