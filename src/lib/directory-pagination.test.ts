@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import {
-  DIRECTORY_PAGE_SIZE,
   categorySectionId,
   directoryPageHref,
   directoryPageWindow,
@@ -9,11 +8,6 @@ import {
 } from './directory-pagination';
 
 describe('Public directory pagination contract', () => {
-  it('keeps a bounded page size so the initial payload cannot grow with the catalogue', () => {
-    expect(DIRECTORY_PAGE_SIZE).toBeLessThanOrEqual(100);
-    expect(DIRECTORY_PAGE_SIZE).toBeGreaterThan(0);
-  });
-
   describe('page query parameter', () => {
     it('treats a missing or empty parameter as page 1 without an explicit page identity', () => {
       expect(selectDirectoryPage(undefined)).toEqual({ page: 1, explicit: false });

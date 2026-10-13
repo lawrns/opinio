@@ -52,7 +52,8 @@ export function selectDirectoryPage(
 }
 
 /** Page numbers rendered as links around the current page, with `null` gaps. */
-export function directoryPageWindow(current: number, total: number, radius = 2): (number | null)[] {
+export function directoryPageWindow(current: number, total: number): (number | null)[] {
+  const radius = 2;
   const candidates: number[] = [1];
   for (let page = current - radius; page <= current + radius; page += 1) candidates.push(page);
   candidates.push(total);
