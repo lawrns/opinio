@@ -1,5 +1,5 @@
 import React, { Suspense } from 'react';
-import { getMerchantBusinesses, getMerchantCases } from '@/lib/merchant-data';
+import { getMerchantBusinesses, getMerchantCasesForBusinesses } from '@/lib/merchant-data';
 import { MerchantShell } from '@/components/MerchantShell';
 
 export const dynamic = 'force-dynamic';
@@ -10,8 +10,10 @@ export default async function MerchantLayout({
   children: React.ReactNode;
 }) {
   const allBusinesses = await getMerchantBusinesses();
-  // Fetch active cases for all businesses to show real-time notifications
-  const cases = (await Promise.all(allBusinesses.map((business) => getMerchantCases(business.id)))).flat();
+  // One batched round trip for every listed business: the layout cannot read the
+  // selected `?business=` value (only pages can), and querying per business
+  // starves the shared pool against a remote database (issue #2).
+  const cases = await getMerchantCasesForBusinesses(allBusinesses.map((business) => business.id));
 
   return (
     <Suspense
