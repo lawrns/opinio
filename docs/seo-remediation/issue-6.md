@@ -64,9 +64,12 @@ Runtime: `runtime.md` (owner `runtime-verification`). Dev server:
 
 ```bash
 cd C:/Users/isaac/tmp/opinio-seo-worktrees/issue-6
-DATABASE_URL='postgres://opinio:opinio_local_dev@127.0.0.1:54732/opinio_issue_6' \
+DATABASE_URL='postgres://opinio:<local-table-password>@127.0.0.1:54732/opinio_issue_6' \
 NEXT_TELEMETRY_DISABLED=1 node node_modules/next/dist/bin/next dev --webpack -H 127.0.0.1 --port 3206
 ```
+
+(The local password is the one in `runtime.md`; it is a throwaway local container credential and is not
+repeated here.)
 
 - Catalogue provenance: 1108 rows from `data/mexican_stores_1000.json` loaded by
   `scripts/seed-mexican-stores-scale.ts` (source "PROFECO Monitoreo Oficial"), `verified_level=public_info`,
