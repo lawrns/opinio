@@ -150,7 +150,10 @@ Rendered via the repo's established convention (same as `/directorio` and `/b/[s
 
 ```bash
 # 1. dev server (worktree root; --webpack required on this host)
-DATABASE_URL='postgres://opinio:opinio_local_dev@127.0.0.1:54732/opinio_issue_8' \
+# DB credentials intentionally redacted: the throwaway local container password
+# lives only in the external, non-publishable runtime.md
+# (C:/Users/isaac/tmp/opinio-remediation/runtime.md §1/§4).
+DATABASE_URL='postgres://…@127.0.0.1:54732/opinio_issue_8' \
 NEXT_TELEMETRY_DISABLED=1 \
 node node_modules/next/dist/bin/next dev --webpack -H 127.0.0.1 --port 3208
 
