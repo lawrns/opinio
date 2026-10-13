@@ -24,9 +24,11 @@ Runtime (runtime-verification's isolated environment): private DB `opinio_issue_
    - Post-fix code in this worktree (command below): `17/17 checks passed`, exit 0.
 
      ```
-     DATABASE_URL=postgres://opinio:opinio_local_dev@127.0.0.1:54732/opinio_issue_3 SMOKE_PORT=3203 \
+     DATABASE_URL=postgres://…@127.0.0.1:54732/opinio_issue_3 SMOKE_PORT=3203 \
        node scripts/verify-seo-indexing.mjs
      ```
+
+     The throwaway local container password is not published; it lives only in the external, non-publishable runtime notes (`C:/Users/isaac/tmp/opinio-remediation/runtime.md`).
 
      Observed excerpts: `/verificar`, `/verificar?q=luuna`, `/verificar?categoria=Restaurantes`, `/verificar?accion=opinar`, `/caso/nuevo`, `/caso/nuevo?b=2io-electronics` → `200, robots="noindex, follow"`;
      `/escribir-opinion/2io-electronics` → `200, canonical=https://opinio.mx/escribir-opinion/2io-electronics`;
