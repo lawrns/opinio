@@ -50,16 +50,17 @@ Cross-check results: 0 catalog slugs missing from the crawl; 92 crawled slugs ab
 
 Available (authorized property `https://opinio.mx/`). The audit-time capture (`first-party-evidence.json`, 2026-10-13T18:53–19:03Z) exposes only the **top 10 of 1,000** rows and therefore cannot resolve an individual term; per the project publication rule, this document does not reproduce performance tables. It does establish the two intent classes the issue requires: review-intent brand queries (for example `buscamed es confiable`, `samara online es confiable`, `ufra es confiable`, `canon stores joyeria es confiable`, `dportenis es confiable`, `casa de las lomas opiniones`) alongside brand-navigation queries (`ufra`, `opinio`) and ambiguous terms.
 
-Additional authorized read performed for this ticket (read-only, no export, no file produced by GSC; raw note kept outside the repo at `C:/Users/isaac/tmp/opinio-remediation/raw/seo-12-gsc-especializ.md`): in the signed-in Search Console, Performance ▸ Search results ▸ 28 days ▸ filter `Query contains "especializ"` (captured 2026-10-13T22:36–22:45Z; range 9/14/26–10/11/26; UI note "totals and table results might be partial when filters are applied"):
+Additional authorized read performed for this ticket (read-only, no export, no file produced by GSC; full raw observations are kept external and private at `C:/Users/isaac/tmp/opinio-remediation/raw/seo-12-gsc-especializ.md`): in the signed-in Search Console, Performance ▸ Search results, 28-day range 9/14/26–10/11/26, filter `Query contains "especializ"` (captured 2026-10-13T22:36–22:45Z):
 
-- Filtered totals: **1 click · 31 impressions · CTR 3.2% · average position 25.7**.
-- All 6 matching query rows (complete, "1-6 of 6"): `farmacias especializadas es confiable` 1/1; `farmacias especializadas` 0/14; `farmacia especializada` 0/11; `opiniones de farmacias especializadas centro` 0/2; `especializada` 0/2; `especializadas` 0/1 (clicks/impressions).
+- The filter returns a small matching set — **6 rows, 31 impressions in aggregate** (impressions only; per-row counts and click/CTR/position figures stay in the external raw note, consistent with the project rule against reproducing analytics exports).
+- The bare term is observed with a **single impression** in that range (previously unassessable from the audit-time top-10 capture).
+- Observed classes among the matches: merchant-review intent (`farmacias especializadas es confiable`, `opiniones de farmacias especializadas centro`) and brand navigation (`farmacias especializadas`).
 
-This resolves the demand question at query level: the bare term does produce first-party impressions (1 in 28 days), and merchant-review intent (`farmacias especializadas es confiable`, `opiniones de farmacias especializadas centro`) is directly observed at tiny volumes.
+This resolves the demand question at query level in direction only: the term does produce first-party impressions at tiny volume, so demand exists but is negligible today. It says nothing about the intent split.
 
 Still missing — explicitly **unassessed**:
 
-- Landing-page attribution for those six queries: a page-breakdown read with the same filter returned unfiltered totals in-session and was not forced further, so which URL earns these impressions is unknown.
+- Landing-page attribution for that matching set: a page-breakdown read with the same filter returned unfiltered totals in-session and was not forced further, so which URL earns those impressions is unknown.
 - No URL Inspection capture for the passport.
 
 ### AC5 — actionable decision on the existing passport; no new paid calls
@@ -77,7 +78,7 @@ Fetched 2026-10-13T22:36:32Z → 22:36:33Z (UTC), `GET https://opinio.mx/b/farma
 ## 4. Disposition
 
 1. **Ownership — no change.** The merchant matching the term exists and its passport `/b/farmacias-especializadas` is a candidate owner for brand and review-intent demand; `especializadas` is an adjective that also names that merchant, so the bare-keyword intent stays unassessed and MUST NOT be used to assert exclusive ownership or to justify a new page.
-2. **Content — no change.** The only provider signal is one dated estimate (position 20, volume 3,600, difficulty 0) with a review-band relevance judgment (`relevance 0.5433`, `band review`, `confidence 0.48`); the first-party data shows 31 impressions across six query variants in 28 days. Rewriting or retitling a merchant verification page on that basis would be speculative and risks converting a merchant passport into a generic article — explicitly warned against in `owner-review.json` → annotations[JEV-007].
+2. **Content — no change.** The only provider signal is one dated estimate (position 20, volume 3,600, difficulty 0) with a review-band relevance judgment (`relevance 0.5433`, `band review`, `confidence 0.48`); the first-party data shows 31 impressions in aggregate across a handful of matching queries in 28 days. Rewriting or retitling a merchant verification page on that basis would be speculative and risks converting a merchant passport into a generic article — explicitly warned against in `owner-review.json` → annotations[JEV-007].
 3. **No false new-page recommendation.** The audit emitted no `dfs_existing_page` / `dfs_new_page` action; this investigation keeps it that way.
 4. **Evidence action — performed, not pending.** The filtered Search Console query read (§2 AC4) was done read-only inside the existing authorized session; no export and no private file were needed. The remaining follow-up is to re-check the same filter after more impressions accumulate, and to capture landing-page attribution the next time the filter resolves per-page rows.
 5. **Review-eligible follow-up candidate (separate decision, not this issue).** Review-intent query coverage of merchant passports (e.g. `X es confiable` for merchants whose passports have zero reviews) is a portfolio-level question, not a `especializadas`-specific fix. Any such work needs its own approved ticket.
