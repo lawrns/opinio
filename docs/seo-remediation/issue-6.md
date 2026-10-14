@@ -76,7 +76,10 @@ its identity metadata remains #4's scope):
   claims; breadcrumb item 2 links the indexable `/directorio`.
 - JSON-LD `Review.author` is emitted only when the review row carries a non-empty `author_name`;
   anonymous or unverified rows omit the `author` object entirely instead of fabricating
-  "Comprador verificado". Review content, counts and `aggregateRating` are unchanged.
+  "Comprador verificado". Review content, counts and `aggregateRating` are unchanged. Per Google's
+  review-snippet documentation (`developers.google.com/search/docs/appearance/structured-data/review-snippet`,
+  last updated 2026-09-08), `author` is a required property for review snippets, so an anonymous review is
+  deliberately not eligible for an author-based snippet rather than silently incomplete.
 - JSON-LD serialization follows the installed Next docs pattern
   (`node_modules/next/dist/docs/01-app/02-guides/json-ld.md`):
   `JSON.stringify(jsonLd).replace(/</g, '\\u003c')`, so company text containing `<` cannot close the
