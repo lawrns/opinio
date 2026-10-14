@@ -13,6 +13,7 @@ import { TrustGauge } from '@/components/passport/TrustGauge';
 import { OfficialRecordCard } from '@/components/passport/OfficialRecordCard';
 import { query } from '@/lib/db';
 import { passportMetadata } from '@/lib/passport-metadata';
+import { factStatus, formatRecordDate, latestRecordDateValue, verificationLevelLabel } from '@/lib/passport-evidence';
 
 interface BusinessDbRow {
   id: number;
@@ -233,36 +234,37 @@ export default async function BusinessPassportPage({ params }: PageProps) {
   const issuesPer1k = hasOrdersData ? Math.round(cases.length / business.observed_orders_count * 10000) / 10 : null;
   const confirmedCasesCount = cases.filter((item) => item.is_consumer_confirmed).length;
   const resolutionRate = cases.length > 0 ? Math.round(confirmedCasesCount / cases.length * 1000) / 10 : null;
-  const identityStatus = (identifier: string | null) => {
-    if (!identifier) return 'Sin información disponible';
-    const identity = idRes.rows.find((item) => item.identifier === identifier);
-    return identity?.status === 'verified' ? 'Identificador verificado' : 'Dato registrado; consulta la fuente';
+  const factEvidence = {
+    rfc: factStatus({ type: 'rfc', value: business.rfc }, idRes.rows),
+    denue: factStatus({ type: 'denue', value: business.clee }, idRes.rows),
+    domain: factStatus({ type: 'domain', value: business.domain }, idRes.rows),
+    whatsapp: factStatus({ type: 'whatsapp', value: business.whatsapp }, idRes.rows),
   };
+  const registeredFactCount = Object.values(factEvidence).filter((evidence) => evidence.status !== 'missing').length;
+  const verifiedIdentities = idRes.rows.filter((row) => row.status === 'verified');
+  const verifiedSources = [...new Set(verifiedIdentities.map((row) => row.source?.trim()).filter((source): source is string => Boolean(source)))].slice(0, 2);
+  const latestRecordDateRaw = latestRecordDateValue(officialRecords);
+  const latestRecordDateLabel = latestRecordDateRaw ? formatRecordDate(latestRecordDateRaw) : null;
   const issueLabels: Record<string, string> = { delay: 'Retraso de entrega', damaged_goods: 'Producto dañado', wrong_item: 'Artículo equivocado', refund_pending: 'Reembolso pendiente', no_response: 'Falta de respuesta' };
 
   const envPageUrl = process.env.NEXT_PUBLIC_SITE_URL;
   const baseUrl = envPageUrl && !envPageUrl.includes('fertilitylistings') ? envPageUrl : 'https://opinio.mx';
   const canonicalUrl = `${baseUrl}/b/${business.slug}`;
   const logoAbsoluteUrl = business.logo_url ? `${baseUrl}${business.logo_url}` : undefined;
-  const hasResolution = business.resolution_rate !== null && business.resolution_rate !== undefined && Number(business.resolution_rate) > 0;
 
   const jsonLd = {
     '@context': 'https://schema.org',
     '@graph': [
       {
-        '@type': ['Organization', 'OnlineStore'],
+        '@type': 'Organization',
         '@id': `${canonicalUrl}#organization`,
         name: business.brand_name,
         ...(business.legal_name ? { legalName: business.legal_name } : {}),
         url: business.domain ? (business.domain.startsWith('http') ? business.domain : `https://${business.domain}`) : canonicalUrl,
         logo: logoAbsoluteUrl,
         taxID: business.rfc || undefined,
-        telephone: business.phone || undefined,
-        description: business.description || `Pasaporte de identidad y confianza comercial de ${business.brand_name} en Opinio México.`,
-        areaServed: {
-          '@type': 'Country',
-          name: 'Mexico',
-        },
+        telephone: business.phone && /\d/.test(business.phone) ? business.phone : undefined,
+        description: `Perfil público de ${business.brand_name} en Opinio México; sector registrado: ${business.category}.`,
         ...(averageRating !== null && reviews.length > 0 ? {
           aggregateRating: {
             '@type': 'AggregateRating',
@@ -273,10 +275,12 @@ export default async function BusinessPassportPage({ params }: PageProps) {
           },
           review: reviews.slice(0, 10).map((r) => ({
             '@type': 'Review',
-            author: {
-              '@type': 'Person',
-              name: r.author_name || 'Comprador verificado',
-            },
+            ...(r.author_name && r.author_name.trim() ? {
+              author: {
+                '@type': 'Person',
+                name: r.author_name,
+              },
+            } : {}),
             datePublished: r.created_at ? new Date(r.created_at).toISOString().split('T')[0] : undefined,
             reviewRating: {
               '@type': 'Rating',
@@ -293,7 +297,7 @@ export default async function BusinessPassportPage({ params }: PageProps) {
         '@id': canonicalUrl,
         url: canonicalUrl,
         name: `¿Es confiable ${business.brand_name}? Pasaporte de Confianza | Opinio México`,
-        description: `Consulta si es seguro comprar en ${business.brand_name}. RFC ${business.rfc || 'validado'}, opiniones y estatus PROFECO.`,
+        description: `Perfil público de ${business.brand_name} en Opinio México: datos registrados, fuentes públicas y opiniones de compradores.`,
         inLanguage: 'es-MX',
         isPartOf: {
           '@type': 'WebSite',
@@ -323,7 +327,7 @@ export default async function BusinessPassportPage({ params }: PageProps) {
             '@type': 'ListItem',
             position: 2,
             name: 'Directorio de Empresas',
-            item: `${baseUrl}/verificar`,
+            item: `${baseUrl}/directorio`,
           },
           {
             '@type': 'ListItem',
@@ -342,7 +346,7 @@ export default async function BusinessPassportPage({ params }: PageProps) {
             name: `¿Es confiable comprar en ${business.brand_name} en México?`,
             acceptedAnswer: {
               '@type': 'Answer',
-              text: `${business.brand_name} cuenta con un perfil de identidad en Opinio México con ${business.rfc ? `RFC validado ${business.rfc}` : 'registro mercantil'} y ${reviews.length > 0 ? `${reviews.length} opiniones verificadas con promedio de ${averageRating?.toFixed(1)}/5` : 'expediente de información pública comercial'}. ${hasResolution ? `Presenta una tasa de resolución de inconformidades del ${business.resolution_rate}% y un tiempo de respuesta promedio de ${business.median_response_hours} horas.` : 'Sus operaciones están sujetas a la Ley Federal de Protección al Consumidor en México.'}`,
+              text: `${business.brand_name} cuenta con un perfil público en Opinio México. Estado del RFC: ${business.rfc ? `${business.rfc} (${factEvidence.rfc.label})` : 'sin RFC publicado'}. Nivel de verificación registrado: ${verificationLevelLabel(business.verified_level)}. ${reviews.length > 0 ? `Tiene ${reviews.length} opiniones publicadas con promedio de ${averageRating?.toFixed(1)}/5.` : 'Todavía no tiene opiniones publicadas.'} ${cases.length > 0 ? `Opinio tiene registrados ${cases.length} ${cases.length === 1 ? 'caso' : 'casos'} de atención de compradores.` : 'Opinio no tiene casos de atención registrados.'}`,
             },
           },
           {
@@ -350,7 +354,7 @@ export default async function BusinessPassportPage({ params }: PageProps) {
             name: `¿Tiene quejas ${business.brand_name} ante la PROFECO?`,
             acceptedAnswer: {
               '@type': 'Answer',
-              text: `En el registro de Opinio se auditan controversias y quejas comerciales. ${cases.length > 0 ? `Se han registrado ${cases.length} casos con un tiempo promedio de primera respuesta de ${cases[0].median_first_response_minutes} minutos.` : `Actualmente ${business.brand_name} no cuenta con alertas críticas de fraude en el monitoreo público de comercio.`}`,
+              text: `${cases.length > 0 ? `Opinio registra ${cases.length} ${cases.length === 1 ? 'caso' : 'casos'} de atención de compradores para ${business.brand_name}.` : `Opinio no registra casos de atención de compradores para ${business.brand_name}.`} Los registros de casos de Opinio no son expedientes confirmados ante la PROFECO. Consulta las fuentes públicas vinculadas en este pasaporte.`,
             },
           },
           {
@@ -382,7 +386,7 @@ export default async function BusinessPassportPage({ params }: PageProps) {
     <div className="min-h-screen bg-[var(--op-canvas)] text-[var(--op-ink-primary)] flex flex-col font-sans selection:bg-[var(--op-verified-ink)] selection:text-[var(--op-sheet)]">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}
       />
       <Navbar />
 
@@ -424,7 +428,7 @@ export default async function BusinessPassportPage({ params }: PageProps) {
                     </p>
                   )}
                   <p className="text-xs text-[var(--op-ink-muted)] font-mono mt-0.5">
-                    Categoría: {business.category} • Cobertura: {business.operating_area || 'No declarada'}
+                    Categoría: {business.category} • Ámbito registrado: {business.operating_area || 'No declarado'}
                   </p>
                 </div>
 
@@ -433,9 +437,14 @@ export default async function BusinessPassportPage({ params }: PageProps) {
                 </a>
 
                 {business.description && (
-                  <p className="text-sm text-[var(--op-ink-secondary)] leading-relaxed max-w-2xl">
-                    {business.description}
-                  </p>
+                  <div className="max-w-2xl space-y-1">
+                    <p className="text-xs font-mono uppercase tracking-wider text-[var(--op-ink-muted)]">
+                      Descripción atribuida, registrada en Opinio (texto descriptivo; no es una credencial de verificación)
+                    </p>
+                    <p className="text-sm text-[var(--op-ink-secondary)] leading-relaxed">
+                      {business.description}
+                    </p>
+                  </div>
                 )}
 
                 {/* Standardized Metadata Chips */}
@@ -500,7 +509,7 @@ export default async function BusinessPassportPage({ params }: PageProps) {
           </div>
         </header>
 
-        <nav aria-label="Secciones del pasaporte" className="mx-auto flex max-w-7xl flex-wrap gap-2 px-4 pt-6 sm:px-6 lg:px-8">{[['dictamen', 'Dictamen AI'], ['existe', 'Identidad'], ['cobertura', 'Pedidos'], ['resuelve', 'Casos'], ['fuentes', 'Fuentes'], ['opiniones', 'Opiniones']].map(([id, label]) => <a key={id} href={`#${id}`} className="inline-flex min-h-11 items-center rounded-full border border-[var(--op-border-strong)] bg-[var(--op-sheet)] px-4 text-sm font-medium">{label}</a>)}</nav>
+        <nav aria-label="Secciones del pasaporte" className="mx-auto flex max-w-7xl flex-wrap gap-2 px-4 pt-6 sm:px-6 lg:px-8">{[['dictamen', 'Dictamen'], ['existe', 'Identidad'], ['cobertura', 'Pedidos'], ['resuelve', 'Casos'], ['fuentes', 'Fuentes'], ['opiniones', 'Opiniones']].map(([id, label]) => <a key={id} href={`#${id}`} className="inline-flex min-h-11 items-center rounded-full border border-[var(--op-border-strong)] bg-[var(--op-sheet)] px-4 text-sm font-medium">{label}</a>)}</nav>
         {/* ========================================================================= */}
         {/* MAIN BODY SECTIONS (THE 3 PILLARS & AUDITED DATA)                         */}
         {/* ========================================================================= */}
@@ -512,35 +521,37 @@ export default async function BusinessPassportPage({ params }: PageProps) {
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-mono font-bold bg-[var(--op-verified-tint)] text-[var(--op-verified-ink)] border border-[var(--op-verified-border)]">
                 <SealCheck weight="fill" className="w-4 h-4 text-[var(--op-verified-ink)]" /> Dictamen de Confianza Comercial
               </span>
-              <span className="text-xs font-mono text-[var(--op-ink-muted)]">Auditoría Opinio · Actualizada 2026</span>
+              <span className="text-xs font-mono text-[var(--op-ink-muted)]">
+                {latestRecordDateLabel ? `Fuente más reciente: ${latestRecordDateLabel}` : 'Sin fuentes públicas con fecha registrada'}
+              </span>
             </div>
 
             <h2 className="text-2xl sm:text-3xl font-black text-[var(--op-ink-primary)] tracking-tight">
               ¿Es confiable comprar en {business.brand_name} en México?
             </h2>
 
-            {/* Self-contained 134-167 words citable block */}
+            {/* Self-contained summary of supported facts and registered verification state */}
             <p className="text-sm sm:text-base text-[var(--op-ink-secondary)] leading-relaxed font-sans">
-              {business.brand_name} es un comercio {business.legal_name ? `operado legalmente por ${business.legal_name}` : 'establecido en México'} {business.rfc ? `bajo el RFC ${business.rfc}` : ''} con operaciones en el sector de {business.category}. De acuerdo con el registro independiente de Opinio México, la empresa mantiene un estatus {business.verified_level === 'comercio_certificado' ? 'Certificado con resolución activa' : business.verified_level === 'identidad_confirmada' ? 'con Identidad Confirmada' : 'de Información Pública Verificable'}, respaldado por {officialRecords.length > 0 ? `${officialRecords.length} registros oficiales ante autoridades y registros mercantiles` : 'cotejo de datos mercantiles y de dominio'}. En materia de atención a compradores, {hasResolution ? `registra una tasa de resolución de disputas del ${business.resolution_rate}% y un tiempo mediano de respuesta de ${business.median_response_hours} horas frente a controversias de clientes` : 'sus compras cuentan con los derechos del consumidor previstos por la legislación mexicana (PROFECO)'}. Para transacciones seguras, Opinio recomienda verificar la URL oficial ({business.domain || 'sitio verificado'}), exigir comprobante fiscal digital (CFDI) y pagar mediante métodos trazables como tarjeta o SPEI bancario directo.
+              {business.brand_name} es un comercio del sector {business.category} con perfil público en Opinio México{business.legal_name ? `; su razón social publicada es ${business.legal_name}` : ''}{business.rfc ? `, con RFC publicado ${business.rfc}` : ''}. Nivel de verificación registrado en Opinio: {verificationLevelLabel(business.verified_level)}. {verifiedIdentities.length > 0 ? `El registro de Opinio incluye ${verifiedIdentities.length} ${verifiedIdentities.length === 1 ? 'identificador con verificación registrada' : 'identificadores con verificación registrada'}${verifiedSources.length > 0 ? `, con fuentes registradas como ${verifiedSources.join(' y ')}` : ', sin fuentes registradas'}.` : officialRecords.length > 0 ? `Opinio ha recopilado ${officialRecords.length} ${officialRecords.length === 1 ? 'registro' : 'registros'} de fuentes públicas para este perfil.` : 'Opinio no tiene todavía registros de identidad verificados ni fuentes públicas vinculadas para este perfil.'} {cases.length > 0 ? `En atención a compradores hay ${cases.length} ${cases.length === 1 ? 'caso registrado' : 'casos registrados'}${resolutionRate !== null ? `, con ${resolutionRate}% de resoluciones confirmadas por el comprador` : ''}.` : 'No hay casos de atención registrados en Opinio.'} Consejo editorial de Opinio: verifica la URL oficial del comercio{business.domain ? ` (${business.domain})` : ''}, exige comprobante fiscal digital (CFDI) y paga mediante métodos trazables como tarjeta o SPEI bancario directo.
             </p>
 
             {/* Verification metrics micro-grid */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 text-xs font-mono">
               <div className="p-3.5 rounded-xl bg-[var(--op-canvas)] border border-[var(--op-border-hairline)]">
                 <div className="text-[var(--op-ink-muted)]">Estatus Fiscal</div>
-                <div className="font-bold text-[var(--op-ink-primary)] text-sm truncate mt-0.5">{business.rfc ? 'RFC Validado' : 'En Validación'}</div>
+                <div className="font-bold text-[var(--op-ink-primary)] text-sm mt-0.5 break-words">{business.rfc ? factEvidence.rfc.label : 'Sin RFC publicado'}</div>
               </div>
               <div className="p-3.5 rounded-xl bg-[var(--op-canvas)] border border-[var(--op-border-hairline)]">
-                <div className="text-[var(--op-ink-muted)]">Nivel de Confianza</div>
-                <div className="font-bold text-[var(--op-verified-ink)] text-sm truncate mt-0.5">{business.verified_level}</div>
+                <div className="text-[var(--op-ink-muted)]">Nivel de verificación</div>
+                <div className="font-bold text-[var(--op-verified-ink)] text-sm truncate mt-0.5">{verificationLevelLabel(business.verified_level)}</div>
               </div>
               <div className="p-3.5 rounded-xl bg-[var(--op-canvas)] border border-[var(--op-border-hairline)]">
-                <div className="text-[var(--op-ink-muted)]">Resolución PROFECO</div>
-                <div className="font-bold text-[var(--op-ink-primary)] text-sm truncate mt-0.5">{hasResolution ? `${business.resolution_rate}% resuelto` : 'Sin alertas'}</div>
+                <div className="text-[var(--op-ink-muted)]">Resolución de casos</div>
+                <div className="font-bold text-[var(--op-ink-primary)] text-sm truncate mt-0.5">{cases.length > 0 && resolutionRate !== null ? `${resolutionRate}% confirmado` : 'Sin casos registrados'}</div>
               </div>
               <div className="p-3.5 rounded-xl bg-[var(--op-canvas)] border border-[var(--op-border-hairline)]">
-                <div className="text-[var(--op-ink-muted)]">Opiniones Auditadas</div>
-                <div className="font-bold text-[var(--op-ink-primary)] text-sm truncate mt-0.5">{reviews.length > 0 ? `${reviews.length} reseñas (${averageRating?.toFixed(1)}/5)` : 'Abierto a opiniones'}</div>
+                <div className="text-[var(--op-ink-muted)]">Opiniones publicadas</div>
+                <div className="font-bold text-[var(--op-ink-primary)] text-sm truncate mt-0.5">{reviews.length > 0 ? `${reviews.length} (${averageRating?.toFixed(1)}/5)` : 'Sin opiniones publicadas'}</div>
               </div>
             </div>
           </section>
@@ -557,7 +568,7 @@ export default async function BusinessPassportPage({ params }: PageProps) {
                 </h2>
               </div>
               <span className="text-xs font-mono text-[var(--op-verified-ink)] font-bold bg-[var(--op-verified-tint)] px-3 py-1 rounded-md border border-[var(--op-verified-border)]">
-                Datos disponibles
+                {registeredFactCount > 0 ? `${registeredFactCount} de 4 datos registrados` : 'Sin datos registrados'}
               </span>
             </div>
 
@@ -565,25 +576,29 @@ export default async function BusinessPassportPage({ params }: PageProps) {
               <div className="p-5 rounded-2xl bg-[var(--op-sheet)] border border-[var(--op-border-hairline)] shadow-flat space-y-1.5">
                 <div className="text-[var(--op-ink-muted)] text-xs">Cédula Fiscal SAT</div>
                 <div className="break-words text-base font-bold text-[var(--op-ink-primary)]">{business.rfc || 'No registrado'}</div>
-                <div className="text-xs text-[var(--op-verified-ink)] font-bold">{identityStatus(business.rfc)}</div>
+                <div className="text-xs text-[var(--op-verified-ink)] font-bold">{factEvidence.rfc.label}</div>
+                {factEvidence.rfc.sourceNote && <div className="text-xs text-[var(--op-ink-muted)]">{factEvidence.rfc.sourceNote}</div>}
               </div>
 
               <div className="p-5 rounded-2xl bg-[var(--op-sheet)] border border-[var(--op-border-hairline)] shadow-flat space-y-1.5">
                 <div className="text-[var(--op-ink-muted)] text-xs">Censo Económico INEGI</div>
                 <div className="break-words text-sm font-bold text-[var(--op-ink-primary)]">{business.clee || 'No registrado'}</div>
-                <div className="text-xs text-[var(--op-verified-ink)] font-bold">{identityStatus(business.clee)}</div>
+                <div className="text-xs text-[var(--op-verified-ink)] font-bold">{factEvidence.denue.label}</div>
+                {factEvidence.denue.sourceNote && <div className="text-xs text-[var(--op-ink-muted)]">{factEvidence.denue.sourceNote}</div>}
               </div>
 
               <div className="p-5 rounded-2xl bg-[var(--op-sheet)] border border-[var(--op-border-hairline)] shadow-flat space-y-1.5">
                 <div className="text-[var(--op-ink-muted)] text-xs">Sitio web</div>
                 <div className="break-words text-sm font-bold text-[var(--op-ink-primary)]">{business.domain || 'No registrado'}</div>
-                <div className="text-xs text-[var(--op-verified-ink)] font-bold">{identityStatus(business.domain)}</div>
+                <div className="text-xs text-[var(--op-verified-ink)] font-bold">{factEvidence.domain.label}</div>
+                {factEvidence.domain.sourceNote && <div className="text-xs text-[var(--op-ink-muted)]">{factEvidence.domain.sourceNote}</div>}
               </div>
 
               <div className="p-5 rounded-2xl bg-[var(--op-sheet)] border border-[var(--op-border-hairline)] shadow-flat space-y-1.5">
                 <div className="text-[var(--op-ink-muted)] text-xs">WhatsApp Comercial</div>
                 <div className="text-sm font-bold text-[var(--op-ink-primary)]">{business.whatsapp || 'No registrado'}</div>
-                <div className="text-xs text-[var(--op-verified-ink)] font-bold">{identityStatus(business.whatsapp)}</div>
+                <div className="text-xs text-[var(--op-verified-ink)] font-bold">{factEvidence.whatsapp.label}</div>
+                {factEvidence.whatsapp.sourceNote && <div className="text-xs text-[var(--op-ink-muted)]">{factEvidence.whatsapp.sourceNote}</div>}
               </div>
             </div>
           </section>
@@ -688,7 +703,7 @@ export default async function BusinessPassportPage({ params }: PageProps) {
               <div className="p-6 rounded-2xl bg-[var(--op-sheet)] border border-[var(--op-border-hairline)] shadow-flat space-y-1">
                 <div className="text-xs text-[var(--op-ink-muted)] font-mono uppercase">Tiempo Medio de Respuesta</div>
                 <div className="break-words text-2xl font-black font-mono text-[var(--op-ink-primary)]">
-                  {Number(business.median_response_hours) > 0 ? `${Number(business.median_response_hours)} hrs` : 'Sin datos'}
+                  {cases.length > 0 && Number(business.median_response_hours) > 0 ? `${Number(business.median_response_hours)} hrs` : 'Sin datos'}
                 </div>
                 <p className="text-xs text-[var(--op-ink-secondary)] pt-1">
                   Tiempo de respuesta registrado; no constituye una garantía.
@@ -717,10 +732,16 @@ export default async function BusinessPassportPage({ params }: PageProps) {
                         </p>
                       </div>
                       <div className="text-right shrink-0">
-                        <span className="inline-flex items-center gap-1 text-xs font-bold text-[var(--op-verified-ink)] bg-[var(--op-verified-tint)] px-2.5 py-0.5 rounded-full border border-[var(--op-verified-border)]">
-                          <CheckCircle weight="fill" className="w-3.5 h-3.5 text-[var(--op-verified-ink)]" />
-                          {c.is_consumer_confirmed ? 'Resolución confirmada' : 'Sin confirmación del comprador'}
-                        </span>
+                        {c.is_consumer_confirmed ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-bold text-[var(--op-verified-ink)] bg-[var(--op-verified-tint)] px-2.5 py-0.5 rounded-full border border-[var(--op-verified-border)]">
+                            <CheckCircle weight="fill" className="w-3.5 h-3.5 text-[var(--op-verified-ink)]" />
+                            Resolución confirmada
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-xs font-bold text-[var(--op-ink-secondary)] bg-[var(--op-shaded)] px-2.5 py-0.5 rounded-full border border-[var(--op-border-hairline)]">
+                            Sin confirmación del comprador
+                          </span>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -740,6 +761,9 @@ export default async function BusinessPassportPage({ params }: PageProps) {
                   Registros y fuentes públicas
                 </h2>
               </div>
+              <span className="text-xs font-mono font-bold text-[var(--op-verified-ink)] bg-[var(--op-verified-tint)] px-3 py-1 rounded-md border border-[var(--op-verified-border)]">
+                {officialRecords.length > 0 ? `${officialRecords.length} ${officialRecords.length === 1 ? 'registro' : 'registros'}` : 'Sin registros vinculados'}
+              </span>
             </div>
 
             {officialRecords.length === 0 && <p className="rounded-xl border border-[var(--op-border-hairline)] bg-[var(--op-sheet)] p-5 text-sm text-[var(--op-ink-secondary)]">Este perfil todavía no tiene fuentes públicas vinculadas.</p>}
