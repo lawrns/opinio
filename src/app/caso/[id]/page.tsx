@@ -1,4 +1,5 @@
 import React from 'react';
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { query } from '@/lib/db';
 import { Navbar } from '@/components/Navbar';
@@ -10,6 +11,14 @@ interface PageProps {
 }
 
 export const revalidate = 0; // Dynamic case portal
+
+// Static, purpose-only metadata: the portal is a private record page, so its
+// title and description never carry case identifiers, merchant names, contact
+// details or submitted form values.
+export const metadata: Metadata = {
+  title: 'Seguimiento de caso | Opinio México',
+  description: 'Página de seguimiento de un caso de compra registrado en Opinio México.',
+};
 
 export default async function CasoDetailPage({ params }: PageProps) {
   const { id } = await params;

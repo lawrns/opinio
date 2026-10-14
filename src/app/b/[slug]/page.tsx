@@ -12,6 +12,7 @@ import { PassportActionButtons } from '@/components/passport/PassportActionButto
 import { TrustGauge } from '@/components/passport/TrustGauge';
 import { OfficialRecordCard } from '@/components/passport/OfficialRecordCard';
 import { query } from '@/lib/db';
+import { passportMetadata } from '@/lib/passport-metadata';
 
 interface BusinessDbRow {
   id: number;
@@ -99,13 +100,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     if (res.rows.length === 0) {
       return {
         title: 'Comercio no encontrado | Opinio México',
-        description: 'El comercio solicitado no existe o se encuentra en proceso de validación.',
+        description: 'Este comercio no está registrado en Opinio México.',
       };
     }
 
     const b = res.rows[0];
-    const title = `¿Es confiable ${b.brand_name}? Quejas PROFECO, RFC y Opiniones | Opinio México`;
-    const description = `Consulta si es seguro comprar en ${b.brand_name}. Consulta RFC (${b.rfc || 'En validación'}), estatus PROFECO, tiempo medio de respuesta y opiniones de compradores verificados en México.`;
+    const { title, description } = passportMetadata(b);
     const canonicalUrl = `${baseUrl}/b/${slug}`;
     const ogImageUrl = `${baseUrl}/b/${slug}/opengraph-image`;
 
@@ -150,8 +150,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   } catch (error) {
     console.error('[generateMetadata] Error querying business:', error);
     return {
-      title: 'Pasaporte de Confianza Comercial | Opinio México',
-      description: 'Verifica la autenticidad e historial de comercios en México antes de comprar.',
+      title: 'Comercio no disponible | Opinio México',
+      description: 'No pudimos cargar la información de este comercio en Opinio México.',
     };
   }
 }

@@ -5,6 +5,8 @@ import type { Metadata } from 'next';
 // stay crawlable (no robots.txt blocking) and keep passing discovery to the
 // public passports and the directory.
 export const metadata: Metadata = {
+  title: 'Buscar y verificar un comercio antes de comprar | Opinio México',
+  description: 'Busca comercios por nombre, dominio, RFC o categoría, filtra por calificación y pedidos, y abre su pasaporte de confianza en Opinio México.',
   robots: {
     index: false,
     follow: true,
