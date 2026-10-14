@@ -1,9 +1,21 @@
 # Issue #10 — Produce accurate, privacy-safe share previews (JEV-023)
 
-Status: implemented on `fix/opinio-seo-issue-10` (worktree
-`C:/Users/isaac/tmp/opinio-seo-worktrees/issue-10`, base integration head
-`989837e3e54407b96c80cbf43b2aa154b94c305f`). **Ticket worktree verified; integration pending** —
-this branch is not merged, published or released, and production was not touched.
+Status: **current local integration verified** — merged into `fix/opinio-seo-remediation` at
+`ba8915c382de5643357db8380488c0b3d18ff357` (ticket branch `fix/opinio-seo-issue-10`, base
+`989837e3e54407b96c80cbf43b2aa154b94c305f`). This document is the historical ticket proof: the branch
+evidence below was captured before the merge, and the merged-head acceptance run is recorded in the
+integration report. Nothing was pushed, published, released or deployed, and no production writes were
+performed by this ticket.
+
+Disclosure (recorded for accuracy, not as fix proof): an early probe iteration fetched emitted absolute
+URLs at their default public origin before the loopback site origin was pinned — 8 read-only GETs
+(7 to `/compartir/preview`, which answers 404 because the route is not deployed, and 1 to a merchant
+preview image, 200 PNG). No writes, credentials or private data were involved; the run was stopped
+immediately, a guard refusing non-loopback image URLs was added, and all acceptance evidence above is an
+isolated loopback rerun. This is not evidence that the production site is fixed. Note also that the wider
+remediation workstream did make earlier read-only production probes (for example the merchant pool probe
+in issue #2 and the consent probe in issue #8); those are logged with the issue #14 integration record,
+so no blanket "never connected to production" claim is made here.
 
 The audit finding (JEV-023) counted 299 crawled URLs without `og:title` or `og:image`,
 including the homepage, the directory and the utility/form families, and asked for previews
@@ -168,9 +180,9 @@ Runtime: private DB `opinio_issue_10` (1108 real catalogue businesses, 0 reviews
 ## 5. Environment / staging
 
 No staging configuration exists for this work. Verification is local-only against the isolated
-runtime (**ticket worktree verified; integration pending** — the branch is not merged, published or
-released). No push, deploy, merge or
-production change; no paid provider calls, account changes or outreach; the existing opt-in
+runtime (**current local integration verified** — merged locally at `ba8915c382de5643357db8380488c0b3d18ff357`
+and not released, published or deployed). No push, deploy or production change; no paid provider calls,
+account changes or outreach; the existing opt-in
 analytics path, CSP/referrer policies (issue #11), directory pagination (#5), image layout (#9) and
 the passport JSON-LD claims (#6/#8) are untouched.
 
