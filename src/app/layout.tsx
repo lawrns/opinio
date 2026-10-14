@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { DM_Sans, IBM_Plex_Mono } from "next/font/google";
 import { Analytics } from "@/components/Analytics";
+import { sharePreview } from "@/lib/share-preview";
 import "./globals.css";
 
 const brandSans = DM_Sans({
@@ -19,21 +20,20 @@ const dataMono = IBM_Plex_Mono({
 const envSiteUrl = process.env.NEXT_PUBLIC_SITE_URL;
 const canonicalSiteUrl = envSiteUrl && !envSiteUrl.includes('fertilitylistings') ? envSiteUrl : 'https://opinio.mx';
 
+// Site identity for pages without a reviewed family identity of their own
+// (private portals and widget embeds inherit this preview). The share preview
+// reuses the same strings, so the document and the card never diverge.
+const SITE_TITLE = "Opinio México — Pasaporte de Confianza Comercial";
+const SITE_DESCRIPTION = "Antes de comprar, conoce a quién le compras. Verifica identidad, cumplimiento y cómo responde cada comercio en México.";
+
 export const metadata: Metadata = {
   metadataBase: new URL(canonicalSiteUrl),
-  title: "Opinio México — Pasaporte de Confianza Comercial",
-  description: "Antes de comprar, conoce a quién le compras. Verifica identidad, cumplimiento y cómo responde cada comercio en México.",
+  title: SITE_TITLE,
+  description: SITE_DESCRIPTION,
   icons: {
     icon: "/opinio.svg",
   },
-  openGraph: {
-    title: "Opinio México — Pasaporte de Confianza Comercial",
-    description: "Consulta opiniones verificadas, evidencia de compra y resolución de casos antes de transferir o comprar.",
-    url: canonicalSiteUrl,
-    siteName: "Opinio.mx",
-    locale: "es_MX",
-    type: "website",
-  },
+  ...sharePreview({ title: SITE_TITLE, description: SITE_DESCRIPTION, url: "/" }),
 };
 
 export default function RootLayout({

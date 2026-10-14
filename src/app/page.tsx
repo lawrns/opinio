@@ -6,15 +6,24 @@ import { ConnectedPipeline } from '@/components/home/ConnectedPipeline';
 import { Brand } from '@/components/Brand';
 import { Footer } from '@/components/Footer';
 import { Navbar } from '@/components/Navbar';
+import { sharePreview } from '@/lib/share-preview';
 
+// JSON-LD graph identity (issue #8): the platform's own facts, published on the
+// production origin. Metadata URLs are relative and resolve against the root
+// `metadataBase`, so a local runtime with a loopback site origin emits
+// fetchable URLs without changing the structured-data identity.
 const baseUrl = 'https://opinio.mx';
 
+const HOME_TITLE = 'Opinio México — Pasaporte de Confianza Comercial';
+const HOME_DESCRIPTION = 'Antes de comprar, conoce a quién le compras. Verifica identidad, cumplimiento y resolución de comercios en México.';
+
 export const metadata: Metadata = {
-  title: 'Opinio México — Pasaporte de Confianza Comercial',
-  description: 'Antes de comprar, conoce a quién le compras. Verifica identidad, cumplimiento y resolución de comercios en México.',
+  title: HOME_TITLE,
+  description: HOME_DESCRIPTION,
   alternates: {
-    canonical: baseUrl,
+    canonical: '/',
   },
+  ...sharePreview({ title: HOME_TITLE, description: HOME_DESCRIPTION, url: '/' }),
 };
 
 // Opinio's own identity only: name, URL and logo agree with the visible brand
