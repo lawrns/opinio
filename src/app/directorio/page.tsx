@@ -37,6 +37,15 @@ function baseUrl(): string {
   return envUrl && !envUrl.includes('fertilitylistings') ? envUrl : 'https://opinio.mx';
 }
 
+// Approved directory identity (issue #4): states the page's purpose without a
+// hardcoded catalogue count or a verification claim, and stays page-scoped for
+// real catalogue pages. Head metadata and the in-body CollectionPage node share
+// the same strings.
+const DIRECTORY_IDENTITY = 'Directorio de tiendas en línea y comercios de México';
+const DIRECTORY_TITLE = `${DIRECTORY_IDENTITY} | Opinio México`;
+const DIRECTORY_DESCRIPTION = 'Consulta el directorio de tiendas en línea y comercios de México y accede a sus pasaportes con información registrada, fuentes y opiniones disponibles.';
+const directoryPageIdentity = (page: number) => `${DIRECTORY_IDENTITY} — página ${page} | Opinio México`;
+
 function directoryCanonicalUrl(rawPage: string | string[] | undefined): string {
   const selection = selectDirectoryPage(rawPage);
   return selection && selection.page > 1
@@ -47,16 +56,18 @@ function directoryCanonicalUrl(rawPage: string | string[] | undefined): string {
 export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
   const { page } = await searchParams;
   const canonical = directoryCanonicalUrl(page);
+  const selection = selectDirectoryPage(page);
+  const title = selection && selection.page > 1 ? directoryPageIdentity(selection.page) : DIRECTORY_TITLE;
 
   return {
-    title: 'Directorio de 1,199+ Tiendas en Línea y Comercios en México | Opinio México',
-    description: 'Índice de tiendas virtuales, e-commerce y marcas comerciales en México auditadas por Opinio. Consulta RFC, estatus PROFECO, opiniones y pasaporte de confianza.',
+    title,
+    description: DIRECTORY_DESCRIPTION,
     alternates: {
       canonical,
     },
     openGraph: {
-      title: 'Directorio de Tiendas en Línea en México — Opinio.mx',
-      description: 'Índice auditado de 1,199+ comercios y tiendas virtuales con pasaporte de confianza.',
+      title,
+      description: DIRECTORY_DESCRIPTION,
       url: canonical,
       siteName: 'Opinio.mx',
       locale: 'es_MX',
@@ -104,8 +115,8 @@ export default async function DirectorioPage({ searchParams }: PageProps) {
         '@type': 'CollectionPage',
         '@id': `${pageUrl}#collection`,
         url: pageUrl,
-        name: 'Directorio de Tiendas y Comercios en México | Opinio México',
-        description: `Directorio de más de ${index.totalBusinesses.toLocaleString('es-MX')} comercios auditados en México con pasaporte de confianza.`,
+        name: page > 1 ? directoryPageIdentity(page) : DIRECTORY_TITLE,
+        description: DIRECTORY_DESCRIPTION,
         isPartOf: {
           '@type': 'WebSite',
           '@id': `${baseUrl()}#website`,

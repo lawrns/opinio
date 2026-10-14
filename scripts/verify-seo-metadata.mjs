@@ -54,6 +54,12 @@ const UTILITY_TITLES = {
   casoNuevo: 'Registrar un caso de compra | Opinio México',
   casoPortal: 'Seguimiento de caso | Opinio México',
 };
+// Approved directory identity (issue #4): no hardcoded catalogue count and no
+// verification claim; head metadata, share copy and the CollectionPage node
+// state the same strings.
+const DIRECTORY_IDENTITY = 'Directorio de tiendas en línea y comercios de México';
+const DIRECTORY_TITLE = `${DIRECTORY_IDENTITY} | Opinio México`;
+const DIRECTORY_DESCRIPTION = 'Consulta el directorio de tiendas en línea y comercios de México y accede a sus pasaportes con información registrada, fuentes y opiniones disponibles.';
 const SITE_FALLBACK_TITLE = 'Opinio México — Pasaporte de Confianza Comercial';
 // Sample selector only: values that announce themselves as source placeholders
 // are not scope samples (the assertion below still checks the served page).
@@ -197,6 +203,28 @@ function titleContent(html) {
 
 function descriptionContent(html) {
   return metaContent(html, 'description');
+}
+
+function ogContent(html, property) {
+  for (const tag of html.match(/<meta\b[^>]*>/gi) || []) {
+    if (attribute(tag, 'property') === property) return decodeEntities(attribute(tag, 'content'));
+  }
+  return null;
+}
+
+function collectionPageNode(html) {
+  for (const block of html.match(/<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi) || []) {
+    const json = block.replace(/^[\s\S]*?>/, '').replace(/<\/script>\s*$/i, '');
+    try {
+      const parsed = JSON.parse(json);
+      const graph = Array.isArray(parsed?.['@graph']) ? parsed['@graph'] : [parsed];
+      const node = graph.find((entry) => entry?.['@type'] === 'CollectionPage');
+      if (node) return node;
+    } catch {
+      // ignore script blocks that are not JSON
+    }
+  }
+  return null;
 }
 
 function headMetadata(html) {
@@ -362,10 +390,49 @@ try {
   );
 
   const directory = await request('/directorio');
+  const directoryTitle = titleContent(directory.body);
+  const directoryDescription = descriptionContent(directory.body);
+  record(
+    'directory serves the accepted purpose identity without a catalogue count or audit claim',
+    directory.status === 200 &&
+      directoryTitle === DIRECTORY_TITLE &&
+      directoryDescription === DIRECTORY_DESCRIPTION &&
+      !/1,199|auditad/i.test(headMetadata(directory.body)),
+    `/directorio → title="${directoryTitle}", description="${directoryDescription}"`,
+  );
   record(
     'directory stays indexable with its canonical',
     directory.status === 200 && !isNoindex(directory.body) && canonicalHref(directory.body) === `${ORIGIN}/directorio`,
     `/directorio → ${directory.status}, canonical=${canonicalHref(directory.body)}`,
+  );
+  record(
+    'directory share copy matches the accepted identity',
+    ogContent(directory.body, 'og:title') === DIRECTORY_TITLE &&
+      ogContent(directory.body, 'og:description') === DIRECTORY_DESCRIPTION,
+    `og:title="${ogContent(directory.body, 'og:title')}"`,
+  );
+  const directoryCollection = collectionPageNode(directory.body);
+  record(
+    'directory CollectionPage metadata states the same identity',
+    Boolean(directoryCollection && directoryCollection.name === DIRECTORY_TITLE && directoryCollection.description === DIRECTORY_DESCRIPTION),
+    directoryCollection ? `CollectionPage name="${directoryCollection.name}"` : 'no CollectionPage node served',
+  );
+
+  const directoryPage2 = await request('/directorio?page=2');
+  const page2Title = titleContent(directoryPage2.body);
+  record(
+    'directory page 2 carries a page-scoped identity',
+    directoryPage2.status === 200 &&
+      page2Title === `${DIRECTORY_IDENTITY} — página 2 | Opinio México` &&
+      canonicalHref(directoryPage2.body) === `${ORIGIN}/directorio?page=2`,
+    `/directorio?page=2 → ${directoryPage2.status}, title="${page2Title}", canonical=${canonicalHref(directoryPage2.body)}`,
+  );
+
+  const directoryPage2Params = await request('/directorio?page=2&utm_source=smoke');
+  record(
+    'incidental directory parameters are not serialized into the canonical',
+    canonicalHref(directoryPage2Params.body) === `${ORIGIN}/directorio?page=2`,
+    `/directorio?page=2&utm_source=smoke → canonical=${canonicalHref(directoryPage2Params.body)}`,
   );
 
   const missing = await request(`/b/smoke-missing-${Date.now()}`);
