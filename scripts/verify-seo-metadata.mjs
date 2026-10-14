@@ -481,10 +481,15 @@ try {
     caseIds.push(first.id);
     const second = await createVerificationCase(client, catalogue[0].id, 'Smoke Verificación Dos', 'smoke-dos@example.invalid');
     caseIds.push(second.id);
+
+    const createdRows = await client.query(
+      'SELECT id, case_number FROM resolution_cases WHERE id = ANY($1::int[]) ORDER BY id',
+      [caseIds],
+    );
     record(
-      'local verification cases created through the public intake API',
-      true,
-      `cases ${first.case_number} and ${second.case_number} in the ticket database`,
+      'both verification cases exist in the ticket database after the public intake call',
+      createdRows.rows.length === 2,
+      `cases ${createdRows.rows.map((row) => row.case_number).join(', ')}`,
     );
 
     const portals = [];
@@ -504,15 +509,15 @@ try {
       });
     }
     record(
-      'case portal metadata is identical for different cases (static, purpose-only)',
-      portals.every((portal) => portal.status === 200 && portal.title && portal.description) &&
+      'case portal metadata is static across cases and outside the homepage family',
+      portals.every((portal) => portal.status === 200 && portal.title !== homepageTitle && portal.description !== homepageDescription) &&
         portals[0].title === portals[1].title &&
         portals[0].description === portals[1].description,
-      `titles "${portals[0].title}" / "${portals[1].title}"`,
+      `titles "${portals[0].title}" / "${portals[1].title}" (homepage "${homepageTitle}")`,
     );
     record(
       'case portal metadata leaks no case, customer or merchant data',
-      portals.every((portal) => portal.leaked.length === 0 && !/razón social|ámbito|cobertura|domicilio/i.test(portal.description)),
+      portals.every((portal) => portal.leaked.length === 0 && !/razón social|ámbito|cobertura|domicilio/i.test(portal.description ?? '')),
       portals.flatMap((portal) => portal.leaked).join(', ') || 'no identifiers in <head>',
     );
 

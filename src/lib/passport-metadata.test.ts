@@ -39,17 +39,18 @@ describe('same-brand merchant records', () => {
 });
 
 describe('unknown record scope', () => {
-  it.each(['NO PROPORCIONA', 'DATOS POR SUCURSAL. CONSULTAR', '', '   ', null, undefined])(
-    'stays out of the metadata for the non-informative source value %j',
-    (operating_area) => {
-      const { title, description } = passportMetadata({
-        brand_name: 'Marca',
-        legal_name: 'Marca, S.A. de C.V.',
-        category: 'Comercio Electrónico Especializado',
-        operating_area,
-      });
+  const baseFacts = {
+    brand_name: 'Marca',
+    legal_name: 'Marca, S.A. de C.V.',
+    category: 'Comercio Electrónico Especializado',
+  };
 
-      expect(`${title} ${description}`).not.toMatch(/ámbito/i);
+  it.each(['NO PROPORCIONA', 'DATOS POR SUCURSAL. CONSULTAR', '', '   ', null, undefined])(
+    'treats the uninformative source value %j as the same unknown state as no value at all',
+    (operating_area) => {
+      expect(passportMetadata({ ...baseFacts, operating_area })).toEqual(
+        passportMetadata({ ...baseFacts, operating_area: null }),
+      );
     },
   );
 });
