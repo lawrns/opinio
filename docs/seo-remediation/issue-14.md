@@ -379,8 +379,9 @@ committed per-ticket records (see section 9), which this table maps.
 - **Mobile horizontal overflow** on public surfaces is pre-existing (recorded by earlier tickets as
   out of scope); this record makes no claim that it was fixed and observed no regression from the
   changes above.
-- The **whole-branch two-axis review** of `fefc090…`→final head is the director's next step; this
-  record is input, not a substitute.
+- The **whole-branch two-axis review** of `fefc090…`→`554441bf…` was subsequently completed and
+  accepted (see the final section below); this record remains the ticket's own pre-review evidence and
+  is not itself the review.
 
 ## 8. Pre-existing, out-of-scope human risks (recorded, not modified)
 
@@ -402,6 +403,11 @@ committed per-ticket records (see section 9), which this table maps.
    (50+ reseñas verificadas)" is an **unsupported verification claim**, not evidence of genuine
    reviews. **Owner action required:** review widget content before any trusted embedding, outreach
    or release. Recorded as an unremediated content risk, not as harmless cosmetic copy.
+5. **Inherited merchant case-fallback risk (baseline, flagged by the final standards review):** the
+   private merchant case mapping keeps a pre-existing `Number(row.review_rating) || 5` fallback, which
+   can present a default rating when the linked review row carries none. It is preserved because the
+   #2 fix intentionally kept the row semantics unchanged, and it is recorded here as an owner
+   truthfulness item rather than fixed inside this workstream.
 
 ## 9. Evidence index
 
@@ -512,4 +518,37 @@ NEXT_PUBLIC_GA_MEASUREMENT_ID=G-FAKE14TEST node node_modules/next/dist/bin/next 
 ```
 
 Wording to keep: **"local integration branch verified at `976989d0…`; not pushed, published,
-released or deployed."** Issue #14 remains open for the director's merge and whole-branch review.
+released or deployed."** Issue #14 is closed after the final integration review — see the section
+below for the reviewed head, the closure comment and the disposition.
+
+## 12. Final integration review and issue disposition
+
+Reviewed source: `554441bf78a0be95a643fd778821556e029170dd` (integration branch
+`fix/opinio-seo-remediation`) against baseline `fefc09028acc1ca94eddf5decc15459c46a7e614`.
+Closure comment: <https://github.com/lawrns/opinio/issues/14#issuecomment-6161751935> — the issue is
+**closed as completed** on the local branch. Nothing was pushed, published, released, redeployed or
+written to production; the delivery is a local integration branch.
+
+Review outcome at that head (both axes complete over the frozen diff of 44 blocks / 7,651 lines):
+
+- **Standards axis: 0 hard violations, 6 judgement notes.** Dispositions: the documented
+  origin-fallback reuse is accepted; the alias-only `CATEGORY_SQL` duplication is retained for query
+  readability rather than abstracted; `recordFacts` is already a single bundled type; the
+  `unstable_cache` contract is documented; the inherited merchant `review_rating || 5` fallback is
+  flagged as an owner truthfulness item (section 8, item 5) instead of being fixed here. No
+  speculative generality or other smell was treated as a violation.
+- **Spec axis: 0 findings** across all thirteen tickets' acceptance criteria, including the corrected
+  `caso/[id]` ownership (issue #4 metadata, not #10) and the canonical-ownership policy.
+- Remaining uncertainty is labelled, not hidden: field CWV and historical GA4 data are not available
+  in the retained sources, the production population was not re-measured, and government-credential
+  authenticity remains unassessed. Human outreach was not performed — the authority-building output is
+  a brief only, with no backlinks bought or claimed.
+
+Application source at this head is identical to the tree observed for the verification matrix above
+(the issue #14 commits are documentation only), so no runtime re-verification was repeated: the
+observed evidence remains the ticket's runtime proof, and a repeated runtime would only be needed if
+behaviour changed.
+
+Scope note: this section is a documentation disposition written after the review; the review itself is
+recorded in the review artifacts, not in this document, and this documentation delta receives its own
+supplemental two-axis checks before final delivery.
