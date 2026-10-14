@@ -155,8 +155,12 @@ Assertions (script `C:/Users/isaac/tmp/seo6-prod/check-issue6-evidence.js`, 0 fa
   public-sources pointer; with no case it reads "Opinio no registra casos de atención de compradores…".
 - Post-cleanup `/b/luuna`: empty states only, no `Fuente registrada:`/`Verificado en el registro de Opinio`,
   no case docket, JSON-LD falling back to the empty branches with no unsupported claims.
-- Evidence manifest `MANIFEST.sha256` regenerated from the retained bytes after all captures and verified
-  (17 entries, 0 stale / 0 missing / 0 not-listed).
+- Evidence manifest `MANIFEST.sha256`: the 13 text/JSON artifacts (HTML snapshots, `results.json`,
+  differential captures/diff, production baselines) are hash-bound and verify with
+  `sha256sum -c MANIFEST.sha256` → 13 OK / 0 FAILED. The four `*.png` screenshots are retained review
+  captures and are explicitly **nonbinding**: this host's `sha256sum -c` reads binary files in text mode
+  (CRLF translation, confirmed with a minimal `a\r\nb` probe), so byte hashes of PNGs cannot be
+  reproduced by that checker.
 
 Suite: `node node_modules/vitest/vitest.mjs run` → 3 files / 36 tests passed;
 `node node_modules/typescript/bin/tsc --noEmit` → clean; ESLint on the changed files → clean.
