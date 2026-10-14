@@ -57,6 +57,18 @@ its identity metadata remains #4's scope):
 - Case history docket: an unconfirmed case renders a neutral badge with no confirmation icon; the
   verified-green check and the "Resolución confirmada" label appear only when the record's
   `is_consumer_confirmed` flag is actually true (existing colors/classes only, no new helper).
+- Merchant description: the stored text is preserved but rendered under a visible label — "Descripción
+  atribuida, registrada en Opinio (texto descriptivo; no es una credencial de verificación)" — so it is
+  not read as agency proof or as merchant-authored copy.
+- Header scope caption reads "Ámbito registrado:" (neutral contract) instead of "Cobertura:"; the raw
+  `operating_area` value is unchanged.
+- JSON-LD `Organization`: `@type` is `Organization` only; `description` is a record-backed neutral line
+  ("Perfil público de X en Opinio México; sector registrado: <categoría>."); the hardcoded
+  `areaServed: Country Mexico` is removed; breadcrumb item 2 links the indexable `/directorio`.
+- JSON-LD serialization follows the installed Next docs pattern
+  (`node_modules/next/dist/docs/01-app/02-guides/json-ld.md`):
+  `JSON.stringify(jsonLd).replace(/</g, '\\u003c')`, so company text containing `<` cannot close the
+  script element.
 
 `src/components/passport/OfficialRecordCard.tsx`: record date uses the shared day-first/ISO parser and
 falls back to the raw source value instead of "No disponible".
@@ -165,6 +177,20 @@ Assertions (script `C:/Users/isaac/tmp/seo6-prod/check-issue6-evidence.js`, 0 fa
   (`badge-confirmed/`): green badge with the check and "Resolución confirmada". Both assertion runs
   0 failures. Cleanup: resolution_cases 1→0, case_messages 1→0, business score columns restored to the
   captured pre-values, fixture rows removed; the post-cleanup render shows no case docket.
+- Attribution / Organization assertions on the populated + missing captures (101 checks, 0 failures):
+  the description label and "Ámbito registrado:" are present and "Cobertura:" is absent; the JSON-LD
+  parses, its Organization `@type` is `Organization` only, no `areaServed`, the description is the neutral
+  `sector registrado` line, the raw description boilerplate is absent from JSON-LD, and the breadcrumb
+  links `/directorio`.
+- Escaping boundary probe (throwaway local business row whose brand/description contain
+  `</script><script>window.__seo6_xss=1</script>`; no credentials, dates or affiliations): real DOM checks
+  → 0 failures: the payload did not execute, exactly one JSON-LD script element parses as one object with
+  the payload preserved as a string value, the script text has no unescaped `</script` and does contain
+  `\u003c`, the script element count matches the control page, and the payload renders as visible text.
+  The probe row was deleted (1→0) and the route 404s afterwards.
+- Cleanup for this cycle: probe business 1→0, resolution_cases 1→0, case_messages 1→0, identities 5→0,
+  official_records 2→0, audit notes 1→0; business columns restored to captured pre-values. The database is
+  catalogue-only (1108 businesses; every other count 0).
 - Evidence manifest `MANIFEST.sha256`: the 17 text/JSON artifacts (HTML snapshots, `results.json`,
   differential captures/diff, production baselines) are hash-bound and verify with
   `sha256sum -c MANIFEST.sha256` → 17 OK / 0 FAILED. The six `*.png` screenshots are retained review
@@ -191,6 +217,8 @@ recorded attributions (observed read-only), not independent confirmation by the 
   page rendered it "1 de febrero de 2026" and rendered `15/03/2026` as "No disponible".
 - `businesses.updated_at`, `official_records.retrieved_at` and `identities.verified_at` are import/update
   timestamps and are not used as verification or freshness dates.
+- The `<` escaping edge is proven with the throwaway probe row (real DOM), not a permanent unit test:
+  the consumer-visible boundary was exercised directly, so no source-string or bare-copy test was added.
 - Metadata: `generateMetadata` remains #4's scope (untouched; the standards review flagged its
   unsupported-claim wording so integration does not treat that surface as covered). In-body JSON-LD is
   #6's approved scope (director correction) and is now truthful: no "RFC validado"/"alertas críticas"

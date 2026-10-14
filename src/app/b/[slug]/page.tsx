@@ -256,7 +256,7 @@ export default async function BusinessPassportPage({ params }: PageProps) {
     '@context': 'https://schema.org',
     '@graph': [
       {
-        '@type': ['Organization', 'OnlineStore'],
+        '@type': 'Organization',
         '@id': `${canonicalUrl}#organization`,
         name: business.brand_name,
         ...(business.legal_name ? { legalName: business.legal_name } : {}),
@@ -264,11 +264,7 @@ export default async function BusinessPassportPage({ params }: PageProps) {
         logo: logoAbsoluteUrl,
         taxID: business.rfc || undefined,
         telephone: business.phone || undefined,
-        description: business.description || `Pasaporte de identidad y confianza comercial de ${business.brand_name} en Opinio México.`,
-        areaServed: {
-          '@type': 'Country',
-          name: 'Mexico',
-        },
+        description: `Perfil público de ${business.brand_name} en Opinio México; sector registrado: ${business.category}.`,
         ...(averageRating !== null && reviews.length > 0 ? {
           aggregateRating: {
             '@type': 'AggregateRating',
@@ -329,7 +325,7 @@ export default async function BusinessPassportPage({ params }: PageProps) {
             '@type': 'ListItem',
             position: 2,
             name: 'Directorio de Empresas',
-            item: `${baseUrl}/verificar`,
+            item: `${baseUrl}/directorio`,
           },
           {
             '@type': 'ListItem',
@@ -388,7 +384,7 @@ export default async function BusinessPassportPage({ params }: PageProps) {
     <div className="min-h-screen bg-[var(--op-canvas)] text-[var(--op-ink-primary)] flex flex-col font-sans selection:bg-[var(--op-verified-ink)] selection:text-[var(--op-sheet)]">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}
       />
       <Navbar />
 
@@ -430,7 +426,7 @@ export default async function BusinessPassportPage({ params }: PageProps) {
                     </p>
                   )}
                   <p className="text-xs text-[var(--op-ink-muted)] font-mono mt-0.5">
-                    Categoría: {business.category} • Cobertura: {business.operating_area || 'No declarada'}
+                    Categoría: {business.category} • Ámbito registrado: {business.operating_area || 'No declarado'}
                   </p>
                 </div>
 
@@ -439,9 +435,14 @@ export default async function BusinessPassportPage({ params }: PageProps) {
                 </a>
 
                 {business.description && (
-                  <p className="text-sm text-[var(--op-ink-secondary)] leading-relaxed max-w-2xl">
-                    {business.description}
-                  </p>
+                  <div className="max-w-2xl space-y-1">
+                    <p className="text-xs font-mono uppercase tracking-wider text-[var(--op-ink-muted)]">
+                      Descripción atribuida, registrada en Opinio (texto descriptivo; no es una credencial de verificación)
+                    </p>
+                    <p className="text-sm text-[var(--op-ink-secondary)] leading-relaxed">
+                      {business.description}
+                    </p>
+                  </div>
                 )}
 
                 {/* Standardized Metadata Chips */}
