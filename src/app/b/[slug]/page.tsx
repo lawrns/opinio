@@ -348,7 +348,7 @@ export default async function BusinessPassportPage({ params }: PageProps) {
             name: `¿Es confiable comprar en ${business.brand_name} en México?`,
             acceptedAnswer: {
               '@type': 'Answer',
-              text: `${business.brand_name} cuenta con un perfil público en Opinio México. Estado del RFC: ${business.rfc ? `${business.rfc} (${factEvidence.rfc.label})` : 'sin RFC publicado'}. Nivel de verificación registrado: ${verificationLevelLabel(business.verified_level)}. ${reviews.length > 0 ? `Tiene ${reviews.length} opiniones publicadas con promedio de ${averageRating?.toFixed(1)}/5.` : 'Todavía no tiene opiniones publicadas.'} ${cases.length > 0 ? `En atención a compradores hay ${cases.length} ${cases.length === 1 ? 'caso registrado' : 'casos registrados'}${resolutionRate !== null ? `, con ${resolutionRate}% de resoluciones confirmadas por el comprador` : ''}.` : 'No tiene casos de atención registrados.'}`,
+              text: `${business.brand_name} cuenta con un perfil público en Opinio México. Estado del RFC: ${business.rfc ? `${business.rfc} (${factEvidence.rfc.label})` : 'sin RFC publicado'}. Nivel de verificación registrado: ${verificationLevelLabel(business.verified_level)}. ${reviews.length > 0 ? `Tiene ${reviews.length} opiniones publicadas con promedio de ${averageRating?.toFixed(1)}/5.` : 'Todavía no tiene opiniones publicadas.'} ${cases.length > 0 ? `Opinio tiene registrados ${cases.length} ${cases.length === 1 ? 'caso' : 'casos'} de atención de compradores.` : 'Opinio no tiene casos de atención registrados.'}`,
             },
           },
           {
@@ -356,9 +356,7 @@ export default async function BusinessPassportPage({ params }: PageProps) {
             name: `¿Tiene quejas ${business.brand_name} ante la PROFECO?`,
             acceptedAnswer: {
               '@type': 'Answer',
-              text: cases.length > 0
-                ? `Opinio ha registrado ${cases.length} casos de atención para ${business.brand_name}; el más reciente tuvo una primera respuesta en ${cases[0].median_first_response_minutes} minutos.`
-                : `Opinio no tiene casos de atención registrados para ${business.brand_name}. Consulta los registros públicos disponibles en el pasaporte.`,
+              text: `${cases.length > 0 ? `Opinio registra ${cases.length} ${cases.length === 1 ? 'caso' : 'casos'} de atención de compradores para ${business.brand_name}.` : `Opinio no registra casos de atención de compradores para ${business.brand_name}.`} Los registros de casos de Opinio no son expedientes confirmados ante la PROFECO. Consulta las fuentes públicas vinculadas en este pasaporte.`,
             },
           },
           {

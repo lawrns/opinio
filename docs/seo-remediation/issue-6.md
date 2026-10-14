@@ -46,11 +46,14 @@ its identity metadata remains #4's scope):
 - Response-time stat is only shown when case records exist.
 - The purchase-safety recommendation is labelled "Consejo editorial de Opinio"; nav label "Dictamen AI"
   → "Dictamen".
-- In-body JSON-LD (`@graph`): the WebPage description is neutral, and the trust/case FAQ answers state
-  only supported facts — published RFC with its recorded status (`factEvidence`), readable verification
-  level, review count, registered case count and the case-derived `resolutionRate`. The stored
-  aggregates (`business.resolution_rate`, `business.median_response_hours`) and the `hasResolution` flag
-  are no longer used there.
+- In-body JSON-LD (`@graph`): the WebPage description is neutral, and the FAQ answers state only
+  supported facts — published RFC with its recorded status (`factEvidence`), readable verification
+  level, review count, and the registered case **count** ("Opinio registra N casos de atención…; no son
+  expedientes confirmados ante la PROFECO" plus a pointer to the linked public sources). No first-response
+  timing is claimed: a newly opened case carries a defaulted `median_first_response_minutes` that is not
+  proof that a response occurred. The stored aggregates (`business.resolution_rate`,
+  `business.median_response_hours`) and the `hasResolution` flag are no longer used there; the
+  body-recorded case aggregates in the visible sections are unchanged.
 
 `src/components/passport/OfficialRecordCard.tsx`: record date uses the shared day-first/ISO parser and
 falls back to the raw source value instead of "No disponible".
@@ -98,6 +101,12 @@ repeated here.)
   (source/fact/`record_date`/URL). Cross-checked against the repo definition `scripts/seed.ts` that
   produced them. **Not mapped: reviews and resolution cases** (hand-authored demo data). This fixture
   lives only in the isolated DB; capture script `C:/Users/isaac/tmp/seo6-prod/map-luuna-evidence.sql`.
+- Case-state fixture (exercised because the FAQ case wording changed): one case was created through the
+  app's own local flow (`POST /api/v1/cases` on the 3206 dev server against `opinio_issue_6`), captured
+  ("En atención a compradores hay 1 caso registrado", "Historial de casos", FAQ "Opinio registra 1 caso
+  de atención de compradores para Luuna."), then removed: exact rows resolution_cases 1→0,
+  case_messages 1→0, and the business row's `issues_per_thousand`/`updated_at` restored to their
+  pre-values. Locally created verification row, deleted after capture — not production data.
 - Cleanup after capture (exact rows only, performed for each capture cycle): identities 5→0,
   official_records 2→0, fixture `audit_logs` notes 1–2→0, reviews 0→0, cases 0→0; the business row's
   `rfc`/`clee`/`whatsapp` were reverted to the catalogue's NULLs. Post-cleanup the profile renders the
@@ -140,10 +149,14 @@ Assertions (script `C:/Users/isaac/tmp/seo6-prod/check-issue6-evidence.js`, 0 fa
 - `/b/aliexpress` (missing facts): no "Razón social" line; "Sin RFC publicado";
   "1 de 4 datos registrados"; empty states as above.
 - In-body JSON-LD on all three routes: parses to one object, carries the neutral WebPage description,
-  and contains no "RFC validado" / "alertas críticas"; on the populated fixture it carries
-  "Estado del RFC: CZE150414AB2 (Verificado en el registro de Opinio)".
+  and contains no "RFC validado" / "alertas críticas" / "primera respuesta"; on the populated fixture it
+  carries "Estado del RFC: CZE150414AB2 (Verificado en el registro de Opinio)", and in the case state
+  "Opinio registra 1 caso de atención de compradores para Luuna." with the PROFECO disclaimer and the
+  public-sources pointer; with no case it reads "Opinio no registra casos de atención de compradores…".
 - Post-cleanup `/b/luuna`: empty states only, no `Fuente registrada:`/`Verificado en el registro de Opinio`,
-  JSON-LD falls back to "Estado del RFC: sin RFC publicado" with no unsupported claims.
+  no case docket, JSON-LD falling back to the empty branches with no unsupported claims.
+- Evidence manifest `MANIFEST.sha256` regenerated from the retained bytes after all captures and verified
+  (17 entries, 0 stale / 0 missing / 0 not-listed).
 
 Suite: `node node_modules/vitest/vitest.mjs run` → 3 files / 36 tests passed;
 `node node_modules/typescript/bin/tsc --noEmit` → clean; ESLint on the changed files → clean.
@@ -155,9 +168,10 @@ recorded attributions (observed read-only), not independent confirmation by the 
 
 ## 4. Limits / notes
 
-- The populated render uses the local fixture described above; reviews and cases were not mapped, so
-  their counts on that local page differ from the production profile (which serves 8 reviews and 8 cases).
-  The review-list code path is unchanged; populated-reviews rendering was only observed read-only.
+- The populated render uses the local fixtures described above. Reviews were not mapped, so review counts
+  on that local page differ from the production profile (which serves 8 reviews); the review-list code
+  path is unchanged and populated-reviews rendering was only observed read-only. The case branch was
+  exercised with one locally created verification case, deleted after capture.
 - Ambiguous source dates are read day-first (`dd/mm/yyyy`), as the same dataset contains `15/03/2026`
   (impossible as `mm/dd`). Consequence: `02/01/2026` now renders "2 de enero de 2026"; the pre-change
   page rendered it "1 de febrero de 2026" and rendered `15/03/2026` as "No disponible".
@@ -176,7 +190,10 @@ recorded attributions (observed read-only), not independent confirmation by the 
 
 1. Start Postgres/DBs per `runtime.md`.
 2. Apply the fixture capture script (`map-luuna-evidence.sql`) to `opinio_issue_6`; start the dev server
-   (command in §3); run the collector + assertion script.
+   (command in §3); optionally create one case through the local flow (`POST /api/v1/cases`) to exercise
+   the case state; run the collector + assertion script (`CASE_COUNT=1` when a case exists).
 3. Remove the fixture rows (`DELETE` identities/official_records/audit notes for the business; revert
-   `rfc`/`clee`/`whatsapp` to NULL) and re-capture to confirm the empty states.
+   `rfc`/`clee`/`whatsapp` to NULL; if a case was created, delete its `case_messages` + `resolution_cases`
+   rows and restore `issues_per_thousand`/`updated_at` to the captured pre-values) and re-capture to
+   confirm the empty states.
 4. Re-run unit tests: `node node_modules/vitest/vitest.mjs run` in the worktree.
