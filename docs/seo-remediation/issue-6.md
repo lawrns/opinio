@@ -74,6 +74,9 @@ its identity metadata remains #4's scope):
   `areaServed: Country Mexico` is removed; `telephone` is emitted only when the stored value contains a
   digit, so catalogue placeholders ("NO PROPORCIONA", "DATOS POR SUCURSAL") are not published as phone
   claims; breadcrumb item 2 links the indexable `/directorio`.
+- JSON-LD `Review.author` is emitted only when the review row carries a non-empty `author_name`;
+  anonymous or unverified rows omit the `author` object entirely instead of fabricating
+  "Comprador verificado". Review content, counts and `aggregateRating` are unchanged.
 - JSON-LD serialization follows the installed Next docs pattern
   (`node_modules/next/dist/docs/01-app/02-guides/json-ld.md`):
   `JSON.stringify(jsonLd).replace(/</g, '\\u003c')`, so company text containing `<` cannot close the
@@ -200,6 +203,13 @@ Assertions (script `C:/Users/isaac/tmp/seo6-prod/check-issue6-evidence.js`, 0 fa
 - Cleanup for this cycle: probe business 1→0, resolution_cases 1→0, case_messages 1→0, identities 5→0,
   official_records 2→0, audit notes 1→0; business columns restored to captured pre-values. The database is
   catalogue-only (1108 businesses; every other count 0).
+- Review-author boundary proof (private local fixture review: rating 4, `unverified_experience`,
+  `author_name=''`, deleted after capture): the anonymous capture (`review-author-anonymous/`) → 0
+  failures — the review node stays present with its body and rating, `aggregateRating` reports
+  reviewCount 1 / ratingValue "4.0", **no `author` key** and no fabricated author string, and the review
+  stays visible in the body with the real count. After updating the same fixture row's `author_name`, the
+  named capture (`review-author-named/`) keeps the provided author. The row was deleted afterwards
+  (reviews 1→0) and the page returned to its empty state.
 - Evidence manifest `MANIFEST.sha256`: the 17 text/JSON artifacts (HTML snapshots, `results.json`,
   differential captures/diff, production baselines) are hash-bound and verify with
   `sha256sum -c MANIFEST.sha256` → 17 OK / 0 FAILED. The six `*.png` screenshots are retained review

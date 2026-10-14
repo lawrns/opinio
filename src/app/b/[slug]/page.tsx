@@ -275,10 +275,12 @@ export default async function BusinessPassportPage({ params }: PageProps) {
           },
           review: reviews.slice(0, 10).map((r) => ({
             '@type': 'Review',
-            author: {
-              '@type': 'Person',
-              name: r.author_name || 'Comprador verificado',
-            },
+            ...(r.author_name && r.author_name.trim() ? {
+              author: {
+                '@type': 'Person',
+                name: r.author_name,
+              },
+            } : {}),
             datePublished: r.created_at ? new Date(r.created_at).toISOString().split('T')[0] : undefined,
             reviewRating: {
               '@type': 'Rating',
