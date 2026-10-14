@@ -50,6 +50,14 @@ if (!process.env.DATABASE_URL) {
 const requireFromRoot = createRequire(join(ROOT, 'package.json'));
 const { Client } = requireFromRoot('pg');
 
+// Safety contract for this harness: it creates and deletes verification rows, so
+// it only runs against the isolated local runtime — a loopback host and a private
+// ticket database. A production credential passed through DATABASE_URL exits here
+// before any connection is attempted (no remote probe) and before the dev server
+// starts.
+const LOOPBACK_HOSTS = new Set(['127.0.0.1', '::1', 'localhost']);
+const PRIVATE_DATABASE = /^opinio_issue_[a-z0-9_]+$/;
+
 // Sample selector only: values that announce themselves as source placeholders
 // are not scope samples (the assertions still check the served page).
 const SOURCE_PLACEHOLDER = /^(no proporciona|sin datos|no disponible|datos por sucursal|consultar)/i;
@@ -67,6 +75,14 @@ const looseKey = (value) => (value || '').normalize('NFC').toLowerCase().replace
  */
 async function loadRecords() {
   const client = new Client({ connectionString: process.env.DATABASE_URL });
+  const { host, database } = client.connectionParameters;
+  if (!LOOPBACK_HOSTS.has(host ?? '') || !PRIVATE_DATABASE.test(database ?? '')) {
+    console.error(
+      `Refusing to run: DATABASE_URL must point at a loopback host (127.0.0.1, ::1 or localhost) ` +
+      `and a private opinio_issue_* database; got host="${host}" database="${database}".`,
+    );
+    process.exit(2);
+  }
   await client.connect();
   try {
     const { rows } = await client.query(

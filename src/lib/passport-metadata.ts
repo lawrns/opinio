@@ -26,19 +26,15 @@ export interface PassportMetadata {
   description: string;
 }
 
-type RecordScope =
-  | { kind: 'documented'; value: string }
-  | { kind: 'unknown'; value: null };
-
 const SCOPE_PLACEHOLDER = /^(no proporciona|sin datos|no disponible|datos por sucursal|consultar)/i;
 
-/** The recorded scope as the source states it, or unknown for placeholders. */
-function passportRecordScope(operatingArea?: string | null): RecordScope {
+/**
+ * The recorded scope as the source states it, or null when the source carries
+ * no scope at all (empty value or a placeholder such as "NO PROPORCIONA").
+ */
+function recordedScopeValue(operatingArea?: string | null): string | null {
   const value = (operatingArea ?? '').trim();
-  if (!value || SCOPE_PLACEHOLDER.test(value)) {
-    return { kind: 'unknown', value: null };
-  }
-  return { kind: 'documented', value };
+  return !value || SCOPE_PLACEHOLDER.test(value) ? null : value;
 }
 
 /**
@@ -48,12 +44,12 @@ function passportRecordScope(operatingArea?: string | null): RecordScope {
 export function passportMetadata(facts: PassportRecordFacts): PassportMetadata {
   const legalName = (facts.legal_name ?? '').trim();
   const category = (facts.category ?? '').trim();
-  const scope = passportRecordScope(facts.operating_area);
+  const recordedScope = recordedScopeValue(facts.operating_area);
 
   let distinction = legalName || category;
-  if (scope.kind === 'documented') {
-    const recordedScope = `ámbito registrado: ${scope.value}`;
-    distinction = distinction ? `${distinction} · ${recordedScope}` : recordedScope;
+  if (recordedScope) {
+    const scopeClause = `ámbito registrado: ${recordedScope}`;
+    distinction = distinction ? `${distinction} · ${scopeClause}` : scopeClause;
   }
   const title = `¿Es confiable ${facts.brand_name}? ${distinction || 'Pasaporte de Confianza'} | Opinio México`;
 
@@ -61,8 +57,8 @@ export function passportMetadata(facts: PassportRecordFacts): PassportMetadata {
   if (category) {
     description += ` Categoría: ${category}.`;
   }
-  if (scope.kind === 'documented') {
-    description += ` Ámbito registrado: ${scope.value}.`;
+  if (recordedScope) {
+    description += ` Ámbito registrado: ${recordedScope}.`;
   }
   description += ' Consulta su identidad, registros públicos y opiniones en Opinio México.';
 
