@@ -165,7 +165,7 @@ export default async function DirectorioPage({ searchParams }: PageProps) {
                 Directorio de Comercios y Tiendas en Línea en México
               </h1>
               <p className="mt-4 text-base leading-relaxed text-op-secondary">
-                Índice completo de <strong>{index.totalBusinesses.toLocaleString('es-MX')}</strong> negocios auditados con pasaporte de confianza, monitoreo PROFECO, validación fiscal SAT y reseñas verificadas.
+                Índice de <strong>{index.totalBusinesses.toLocaleString('es-MX')}</strong> comercios con pasaportes públicos. Consulta la información registrada y las fuentes y opiniones disponibles en cada perfil.
               </p>
               <p className="mt-3 text-sm text-op-muted">
                 {businesses.length > 0

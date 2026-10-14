@@ -213,12 +213,14 @@ Assertions (script `C:/Users/isaac/tmp/seo6-prod/check-issue6-evidence.js`, 0 fa
   stays visible in the body with the real count. After updating the same fixture row's `author_name`, the
   named capture (`review-author-named/`) keeps the provided author. The row was deleted afterwards
   (reviews 1→0) and the page returned to its empty state.
-- Evidence manifest `MANIFEST.sha256`: the 17 text/JSON artifacts (HTML snapshots, `results.json`,
-  differential captures/diff, production baselines) are hash-bound and verify with
-  `sha256sum -c MANIFEST.sha256` → 17 OK / 0 FAILED. The six `*.png` screenshots are retained review
-  captures and are explicitly **nonbinding**: this host's `sha256sum -c` reads binary files in text mode
-  (CRLF translation, confirmed with a minimal `a\r\nb` probe), so byte hashes of PNGs cannot be
-  reproduced by that checker.
+- Evidence manifest `MANIFEST.sha256`: the text/JSON artifacts (HTML snapshots, `results.json`,
+  differential captures/diff, production baselines, review captures) are hash-bound and verify with
+  `sha256sum -c MANIFEST.sha256` → **0 failures** (the bound set grew as review captures were added:
+  21 entries at the last refresh versus 17 earlier in this cycle, so the count is a snapshot, not a
+  fixed property). The `*.png` screenshots are retained review captures and are explicitly
+  **nonbinding**: this host's `sha256sum -c` reads binary files in text mode (CRLF translation,
+  confirmed with a minimal `a\r\nb` probe), so byte hashes of PNGs cannot be reproduced by that
+  checker.
 
 Suite: `node node_modules/vitest/vitest.mjs run` → 3 files / 36 tests passed;
 `node node_modules/typescript/bin/tsc --noEmit` → clean; ESLint on the changed files → clean.

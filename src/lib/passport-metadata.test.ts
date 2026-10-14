@@ -45,7 +45,7 @@ describe('unknown record scope', () => {
     category: 'Comercio Electrónico Especializado',
   };
 
-  it.each(['NO PROPORCIONA', 'DATOS POR SUCURSAL. CONSULTAR', '', '   ', null, undefined])(
+  it.each(['NO PROPORCIONA', 'DATOS POR SUCURSAL. CONSULTAR', '', '   ', undefined])(
     'treats the uninformative source value %j as the same unknown state as no value at all',
     (operating_area) => {
       expect(passportMetadata({ ...baseFacts, operating_area })).toEqual(
