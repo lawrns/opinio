@@ -9,7 +9,7 @@ import { SHARED_PREVIEW_IMAGE } from '@/lib/share-preview';
 // route keeps every family on the same, deployment-origin URL. It states the
 // platform's own identity only — no merchant data, no scores and no
 // verification claims.
-export async function GET() {
+export function GET() {
   return new ImageResponse(
     (
       <div

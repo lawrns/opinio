@@ -2,9 +2,8 @@
 
 Status: implemented on `fix/opinio-seo-issue-10` (worktree
 `C:/Users/isaac/tmp/opinio-seo-worktrees/issue-10`, base integration head
-`989837e3e54407b96c80cbf43b2aa154b94c305f`). Evidence is local-only: **local integration
-branch verified; not published/released**. Nothing was pushed, deployed, merged or closed;
-production was not touched.
+`989837e3e54407b96c80cbf43b2aa154b94c305f`). **Ticket worktree verified; integration pending** —
+this branch is not merged, published or released, and production was not touched.
 
 The audit finding (JEV-023) counted 299 crawled URLs without `og:title` or `og:image`,
 including the homepage, the directory and the utility/form families, and asked for previews
@@ -31,27 +30,30 @@ local server):
   fallback with no image.
 
 The ticket's own regression (`scripts/verify-share-previews.mjs`) run against a pristine checkout
-of the base commit scored **12/23 checks passed, exit 1** (artifact
+of the base commit scored **12/24 checks passed, exit 1** (artifact
 `evidence/seo-10/base-red/harness-red.txt`): every missing-image check, the homepage identity
-check, the utility identity/URL checks and the opinion-entry preview check were red.
+check, the utility identity/URL checks, the opinion-entry preview check and the unknown-slug card
+check were red (the base served a fabricated merchant card for a slug with no catalogue row).
 
 ## 2. Change
 
 | File | Change |
 | --- | --- |
-| `src/lib/share-preview.ts` (new) | One helper `sharePreview({ title, description, url })` returning the Open Graph + Twitter metadata for a family, built from the family's reviewed identity, plus the shared card descriptor (`/compartir/preview`, 1200×630, alt). URLs are relative on purpose: Next composes them with the root `metadataBase`, so the emitted absolute URLs always use the deployment's public origin. |
-| `src/app/compartir/preview/route.tsx` (new) | The shared preview card (`ImageResponse`, PNG 1200×630): the platform's own identity only — no merchant data, no score, no verification claim. Served as an explicit route, not as a file-based `opengraph-image` convention (see the precedence note below). |
+| `src/lib/share-preview.ts` (new) | One helper `sharePreview({ title, description, url })` returning the Open Graph + Twitter metadata for a family, built from the family's reviewed identity (share tags, not per-page artwork), plus the generic platform card descriptor (`/compartir/preview`, 1200×630, alt). URLs are relative on purpose: Next composes them with the root `metadataBase`, so the emitted absolute URLs always use the deployment's public origin. The returned fragment is typed from `Metadata` (`NonNullable<Metadata['openGraph' | 'twitter']>`), not from the deprecated `next` type exports. |
+| `src/app/compartir/preview/route.tsx` (new) | The shared preview card (`ImageResponse`, PNG 1200×630, synchronous `GET`): the platform's own identity only — no merchant data, no score, no verification claim. Served as an explicit route, not as a file-based `opengraph-image` convention (see the precedence note below). |
+| `src/app/b/[slug]/opengraph-image.tsx` | Per-merchant passport card rewritten to the accepted record identity: it renders the brand plus the `passportMetadata(facts)` description (razón social, catalogue category and the raw recorded scope, with source placeholders omitted), and nothing else. Removed the fabricated fallbacks (`Comercio Verificado`, `RFC: Registro en Cotejo`), the trust-score gauge, the stale `verified_level` mapping and the three blanket footer chips ("Cédula SAT Verificada", "Monitoreo PROFECO", "Opiniones con Ticket"). A slug with no catalogue row answers `404` instead of rendering an invented merchant, and the row query reads only `brand_name`/`legal_name`/`category`/`operating_area`. |
 | `src/app/layout.tsx` | Root metadata now uses `sharePreview` for the site identity (`SITE_TITLE`/`SITE_DESCRIPTION`, single literals) so pages without a family identity of their own (private portals, widget embeds, 404s) inherit a complete, leak-free preview with the shared card. The redundant second Open Graph description variant was dropped. |
 | `src/app/page.tsx` | Homepage canonical is now the relative `/` (resolved against `metadataBase`) instead of a hard-coded production origin, and the preview reuses the homepage's own title/description. The JSON-LD `@graph` is untouched (issue #8 keeps its production-absolute identity). |
 | `src/app/directorio/page.tsx` | `openGraph` block replaced by `sharePreview`; page 1 stays bare-canonical, page N keeps its self-canonical `?page=N`, title keeps the public ordinal and no incidental parameter is serialized. |
 | `src/app/verificar/layout.tsx` | Purpose title/description hoisted to single literals and reused for the preview; `og:url` is the parameter-free `/verificar`, so `q`/`categoria`/`accion` variants can never reach share metadata. `robots: noindex, follow` unchanged. |
 | `src/app/caso/nuevo/layout.tsx` | Same pattern with `/caso/nuevo`; the `?b=<merchant>` parameter never reaches share metadata. `robots: noindex, follow` unchanged. |
-| `src/app/escribir-opinion/[slug]/page.tsx` | `generateMetadata` now reuses its merchant title/description/self-canonical for the preview, so the entry page shares its merchant identity and is never cross-linked to the `/b/<slug>` passport. |
-| `scripts/verify-share-previews.mjs` (new) | Deterministic real-HTTP regression: boots `next dev --webpack` with the public site origin pinned to its own loopback port (so the emitted absolute image URLs are really fetched), asserts identity reuse, public URL identity, image usability (status/content-type/decode/dimensions of the emitted URL), parameter privacy on the variants and private surfaces, the case-portal fixture lifecycle, and the preserved indexing policy. Refuses to run unless `DATABASE_URL` is a loopback `opinio_issue_*` database. |
+| `src/app/escribir-opinion/[slug]/page.tsx` | `generateMetadata` now reuses its merchant title/description/self-canonical for the preview, so the entry page shares its merchant identity and is never cross-linked to the `/b/<slug>` passport. The unknown-slug branch no longer says "en proceso de validación" (an invented process) and uses the factual "Este comercio no está registrado en Opinio México." |
+| `scripts/verify-share-previews.mjs` (new) | Deterministic real-HTTP regression: the loopback + private-database refusal runs at module scope, before the dev server is spawned and before any connection; the server then boots `next dev --webpack` with the public site origin pinned to its own loopback port (so the emitted absolute image URLs are really fetched), asserting identity reuse, public URL identity, image usability (status/content-type/decode/dimensions of the emitted URL), the unknown-slug card `404`, parameter privacy on the variants and private surfaces, the case-portal fixture lifecycle, and the preserved indexing policy. |
 | `docs/seo-remediation/issue-10.md` | This record. |
 
-Passport (`/b/<slug>`) was already green and is deliberately unchanged: it keeps its per-merchant
-card and its reviewed identity from `passportMetadata` (issue #4).
+Passport (`/b/<slug>`) keeps its per-merchant card URL and its reviewed identity from
+`passportMetadata` (issue #4); the card body is now the recorded public identity only (see above),
+and the passport page metadata itself was already green and is unchanged.
 
 ### Precedence note: why the shared card is an explicit route
 
@@ -80,8 +82,8 @@ Runtime: private DB `opinio_issue_10` (1108 real catalogue businesses, 0 reviews
    ```
 
    - pristine base checkout (`git archive 989837e3`, artifact `evidence/seo-10/base-red/harness-red.txt`):
-     **12/23 passed, exit 1**.
-   - this branch (artifact `evidence/seo-10/branch-green/harness-green.txt`): **23/23 passed, exit 0**.
+     **12/24 passed, exit 1**.
+   - this branch (artifact `evidence/seo-10/branch-green/harness-green.txt`): **24/24 passed, exit 0**.
 
    Observed excerpts (branch run): `/` → `og:title` = document title, `og:url` = `canonical` =
    `http://127.0.0.1:3210`; `/directorio` → `og:url=http://127.0.0.1:3210/directorio`;
@@ -90,26 +92,39 @@ Runtime: private DB `opinio_issue_10` (1108 real catalogue businesses, 0 reviews
    `/caso/nuevo` (+`?b=…`) → `og:url=http://127.0.0.1:3210/caso/nuevo`;
    `/escribir-opinion/<slug>` → `og:url` = `canonical` = `…/escribir-opinion/<slug>`;
    `/b/<slug>` → reviewed record title/description + self-canonical + its own 1200×630 card;
-   every emitted image URL fetched: `200, image/png, 1200x630`; no query key, merchant parameter,
-   form value, case identifier or widget token in any `og:`/`twitter:` attribute; the verification
-   case created through `POST /api/v1/cases` was deleted (`resolution_cases 0 → 0`).
+   `/b/<unknown>/opengraph-image` → `404`; every emitted image URL fetched: `200, image/png, 1200x630`;
+   no query key, merchant parameter, form value, case identifier or widget token in any
+   `og:`/`twitter:` attribute; the verification case created through `POST /api/v1/cases` was
+   deleted (`resolution_cases 0 → 0`).
+
+   Guard ordering observed (same script, no server started): a fake remote
+   `DATABASE_URL` (`db.example.com/opinio_issue_10`) and the shared loopback database (`opinio`)
+   both exit `2` in ~0.1 s with the refusal message, before the dev server is spawned and before any
+   connection — the refusal is at module scope.
 
 2. Browser DOM evidence (read-only collector `qa/render-evidence.mjs`, system Chrome 154,
-   artifact `evidence/seo-10/dom/results.json`): 9 routes (`/`, `/directorio`,
-   `/directorio?page=2`, `/b/mercado-libre`, `/verificar?q=Luuna&accion=opinar`,
-   `/caso/nuevo?b=mercado-libre`, `/escribir-opinion/mercado-libre`,
-   `/merchant?business=mercado-libre`, `/widget/badge/wgt_mercado-libre_badge_2026`) → server 200
-   and browser 200, zero console errors; DOM shows the same titles/canonicals and the preview
-   attributes (e.g. `/verificar?q=Luuna&accion=opinar` → `og:url=http://127.0.0.1:3210/verificar`,
+   artifact `evidence/seo-10/dom/results.json`): 10 routes (`/`, `/directorio`,
+   `/directorio?page=2`, `/b/mercado-libre`, `/b/blade-shop-mexico`,
+   `/verificar?q=Luuna&accion=opinar`, `/caso/nuevo?b=mercado-libre`,
+   `/escribir-opinion/mercado-libre`, `/merchant?business=mercado-libre`,
+   `/widget/badge/wgt_mercado-libre_badge_2026`) → server 200 and browser 200, zero console errors;
+   DOM shows the same titles/canonicals and the preview attributes (e.g.
+   `/verificar?q=Luuna&accion=opinar` → `og:url=http://127.0.0.1:3210/verificar`,
    `twitter:card=summary_large_image`).
 
 3. Real browser image surface (`evidence/seo-10/dom/image-surface.mjs` →
-   `image-surface.json`): for all 9 routes the DOM `og:image`/`twitter:image` were loaded inside the
-   page and decoded at `naturalWidth=1200, naturalHeight=630`; the shared card is
-   `http://127.0.0.1:3210/compartir/preview` for the public families, the per-merchant card for the
-   passport, and the private surfaces keep the same public-origin card with no token.
-   The fetched cards are preserved at `evidence/seo-10/card.png` (51542 bytes) and
-   `evidence/seo-10/passport-card.png` (59817 bytes).
+   `image-surface.json`, real bytes saved under `dom/images/`): for all routes the DOM
+   `og:image`/`twitter:image` were loaded inside the page and decoded at
+   `naturalWidth=1200, naturalHeight=630`; every captured bitmap is a real PNG
+   (`89504e470d0a1a0a`, `content-type: image/png`, `200`), the shared card is 51542 bytes and the
+   per-merchant card 78468 bytes (distinct identity). The per-merchant card contents were observed
+   directly at the bitmap: `evidence/seo-10/passport-card.png` shows the brand, the razón social,
+   the catalogue category, the raw recorded scope and the `opinio.mx/b/<slug>` URL — no chips, no
+   score, no placeholder; `evidence/seo-10/passport-card-missing-facts.png` shows the
+   truth-missing state for a record without a legal name whose scope is the source placeholder
+   `NO PROPORCIONA` (only the recorded category is stated). Both were fetched with a share-crawler
+   user agent (`Twitterbot/1.0`): `200, image/png, 1200x630`; the unknown slug returned
+   `404` (`facebookexternalhit/1.1`).
 
 4. Production-origin identity (emitted strings only, artifact
    `evidence/seo-10/prod-origin-identity.json`, `fetched=false`): with the site origin left at the
@@ -144,7 +159,7 @@ Runtime: private DB `opinio_issue_10` (1108 real catalogue businesses, 0 reviews
   real local case, `/merchant?business=…`, `/widget/…`). Private routes keep inheriting the site
   identity only; no auth or indexing policy was added to them.
 - [x] **Verify rendered metadata for homepage, directory, passport and allowed utility families.**
-  HTTP harness (23/23) plus DOM collector and in-browser image rendering over the nine routes above,
+  HTTP harness (24/24) plus DOM collector and in-browser image rendering over the ten routes above,
   including the parameter variants; preserved policies re-verified in the same runs: search and
   case-entry stay `noindex, follow`, opinion entry stays indexable with its merchant self-canonical
   (not the passport), passport and directory stay indexable with their canonicals, and the sitemap
@@ -153,15 +168,17 @@ Runtime: private DB `opinio_issue_10` (1108 real catalogue businesses, 0 reviews
 ## 5. Environment / staging
 
 No staging configuration exists for this work. Verification is local-only against the isolated
-runtime ("local integration branch verified; not published/released"). No push, deploy, merge or
+runtime (**ticket worktree verified; integration pending** — the branch is not merged, published or
+released). No push, deploy, merge or
 production change; no paid provider calls, account changes or outreach; the existing opt-in
 analytics path, CSP/referrer policies (issue #11), directory pagination (#5), image layout (#9) and
 the passport JSON-LD claims (#6/#8) are untouched.
 
 ## 6. Limitations
 
-- Dev-mode evidence only (`next dev --webpack`); `next build`/standalone output, `tsc`, lint and
-  vitest are the integration/closure battery, not this record.
+- Dev-mode evidence only (`next dev --webpack`); `next build`/standalone output, lint and vitest are
+  the integration/closure battery, not this record. `npx tsc --noEmit` was run on the ticket tree
+  and exits 0.
 - Local catalogue is 1108 businesses; no local count is presented as a production figure, and no
   GA4/CrUX/field metric is claimed.
 - The homepage JSON-LD `@graph` intentionally stays on the production origin (issue #8 scope), so on
@@ -169,8 +186,9 @@ the passport JSON-LD claims (#6/#8) are untouched.
   canonical; in production both resolve to the same origin.
 - The audit's 299-URL count is a crawl figure for the deployed site; this record proves the emitted
   metadata families locally, not the crawl's page inventory.
-- Observation only (not changed here): the per-merchant passport card (`b/[slug]/opengraph-image.tsx`)
-  still renders the pre-existing footer chips ("Cédula SAT Verificada", "Monitoreo PROFECO",
-  "Opiniones con Ticket") and an `RFC: Registro en Cotejo` placeholder. They were out of this
-  ticket's scope (the card is issue #4-reviewed and issue #6 covered body/JSON-LD claims), and the
-  shared card added here deliberately carries no claims; flagging for the director.
+- The per-merchant passport card now states the recorded public identity only (brand + the accepted
+  `passportMetadata` description: razón social, catalogue category, raw recorded scope). It shows no
+  trust score, no verification level, no review count, no source chips and no placeholder values,
+  because the catalogue rows carry no records backing such claims; when a field is absent (or is a
+  source placeholder such as `NO PROPORCIONA`) it is omitted rather than invented. No new data
+  lookups, scoring or provenance layer were added for it.

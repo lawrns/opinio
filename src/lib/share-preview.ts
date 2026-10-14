@@ -5,15 +5,17 @@ import type { Metadata } from 'next';
  *
  * The audit found 299 URLs without `og:title` or `og:image`, and pages that
  * declared Open Graph blocks served the site fallback instead of their own
- * identity. Every public family builds its preview from the same reviewed
+ * identity. Every public family builds its share *tags* from the same reviewed
  * title/description it already serves in `<head>`, through this helper, so the
- * share card and the document can never drift apart.
+ * tagged identity cannot drift from the document identity.
  *
- * The preview image is the platform's own card — no merchant facts, scores or
- * verification claims — served by `src/app/compartir/preview/route.tsx`. URLs
- * stay relative on purpose: Next composes them with the root `metadataBase`, so
- * the emitted `og:image`/`og:url` always live on the deployment's public origin
- * and are really fetchable there.
+ * The image is not a per-page artwork: it is the generic platform card (the
+ * passport keeps its own per-merchant card), and it carries no merchant facts,
+ * scores or verification claims. It is served by
+ * `src/app/compartir/preview/route.tsx`. URLs stay relative on purpose: Next
+ * composes them with the root `metadataBase`, so the emitted
+ * `og:image`/`og:url` always live on the deployment's public origin and are
+ * really fetchable there.
  */
 
 /** The one public preview card every supported family shares. */
@@ -36,7 +38,10 @@ export interface SharePreviewIdentity {
 }
 
 /** The metadata fragment a family spreads into its `Metadata` export. */
-export type SharePreviewMetadata = Pick<Metadata, 'openGraph' | 'twitter'>;
+export interface SharePreviewMetadata {
+  openGraph: NonNullable<Metadata['openGraph']>;
+  twitter: NonNullable<Metadata['twitter']>;
+}
 
 /**
  * Open Graph and Twitter preview metadata for one page family, built from the

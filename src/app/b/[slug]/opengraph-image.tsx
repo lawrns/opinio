@@ -1,5 +1,6 @@
 import { ImageResponse } from 'next/og';
 import { query } from '@/lib/db';
+import { passportMetadata } from '@/lib/passport-metadata';
 
 export const runtime = 'nodejs';
 export const size = {
@@ -11,14 +12,16 @@ export const contentType = 'image/png';
 interface BusinessDbRow {
   brand_name: string;
   legal_name: string | null;
-  category: string;
-  rfc: string | null;
-  trust_score: number | string;
-  verified_level: string;
-  logo_url: string | null;
-  effective_reviews_count: number;
+  category: string | null;
+  operating_area: string | null;
 }
 
+// Per-merchant preview card for the public passport. It states the record's own
+// published identity — the accepted `passportMetadata` description built from
+// the stored brand, razón social, catalogue category and recorded scope — and
+// nothing else: no trust score, no verification or process chips, no source
+// claims and no placeholder values. A slug without a catalogue row answers 404
+// instead of rendering an invented merchant.
 export default async function Image({
   params,
 }: {
@@ -26,28 +29,14 @@ export default async function Image({
 }) {
   const { slug } = await params;
 
-  let business: BusinessDbRow | null = null;
-  try {
-    const res = await query<BusinessDbRow>(
-      `SELECT brand_name, legal_name, category, rfc, trust_score, verified_level, logo_url, effective_reviews_count FROM businesses WHERE slug = $1 LIMIT 1`,
-      [slug]
-    );
-    if (res.rows.length > 0) {
-      business = res.rows[0];
-    }
-  } catch (err) {
-    console.error('Error fetching business for OG image:', err);
-  }
+  const res = await query<BusinessDbRow>(
+    `SELECT brand_name, legal_name, category, operating_area FROM businesses WHERE slug = $1 LIMIT 1`,
+    [slug]
+  );
+  const business = res.rows[0];
+  if (!business) return new Response(null, { status: 404 });
 
-  const brandName = business?.brand_name || 'Comercio en México';
-  const category = business?.category || 'Comercio Verificado';
-  const rfc = business?.rfc || 'Registro en Cotejo';
-  const score = business ? Math.round(Number(business.trust_score) || 0) : 0;
-  const verifiedLevel = business?.verified_level === 'comercio_certificado'
-    ? 'Comercio Certificado'
-    : business?.verified_level === 'identidad_confirmada'
-    ? 'Identidad Confirmada'
-    : 'Información Pública';
+  const { description } = passportMetadata(business);
 
   return new ImageResponse(
     (
@@ -59,47 +48,31 @@ export default async function Image({
           flexDirection: 'column',
           justifyContent: 'space-between',
           backgroundColor: '#09090b',
-          padding: '60px 70px',
+          padding: '64px 72px',
           fontFamily: 'sans-serif',
-          color: '#ffffff',
-          position: 'relative',
+          color: '#f4f4f5',
         }}
       >
-        {/* Background Subtle Radial Accent */}
-        <div
-          style={{
-            position: 'absolute',
-            top: '-20%',
-            right: '-10%',
-            width: '600px',
-            height: '600px',
-            borderRadius: '300px',
-            background: 'radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, rgba(9, 9, 11, 0) 70%)',
-            display: 'flex',
-          }}
-        />
-
-        {/* Top Bar: Brand & Standard */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center' }}>
             <div
               style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '8px',
+                width: '44px',
+                height: '44px',
+                borderRadius: '10px',
                 backgroundColor: '#10b981',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontWeight: '900',
-                fontSize: '22px',
+                fontWeight: 900,
+                fontSize: '26px',
                 color: '#09090b',
-                marginRight: '12px',
+                marginRight: '14px',
               }}
             >
               O
             </div>
-            <div style={{ display: 'flex', fontSize: '20px', fontWeight: '800', letterSpacing: '-0.5px' }}>
+            <div style={{ display: 'flex', fontSize: '26px', fontWeight: 800, letterSpacing: '-0.5px' }}>
               <span>Opinio</span>
               <span style={{ color: '#10b981' }}>.mx</span>
             </div>
@@ -115,7 +88,7 @@ export default async function Image({
               border: '1px solid rgba(16, 185, 129, 0.3)',
               color: '#34d399',
               fontSize: '14px',
-              fontWeight: '700',
+              fontWeight: 700,
               letterSpacing: '0.5px',
             }}
           >
@@ -123,117 +96,40 @@ export default async function Image({
           </div>
         </div>
 
-        {/* Middle Hero: Business Identity & Score */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '20px 0' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', maxWidth: '720px' }}>
-            <div style={{ display: 'flex', fontSize: '15px', color: '#10b981', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '8px' }}>
-              {category}
-            </div>
-            <div
-              style={{
-                display: 'flex',
-                fontSize: '56px',
-                fontWeight: '900',
-                letterSpacing: '-1.5px',
-                lineHeight: 1.1,
-                marginBottom: '16px',
-                color: '#f4f4f5',
-              }}
-            >
-              {brandName}
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap' }}>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: '6px 14px',
-                  borderRadius: '8px',
-                  backgroundColor: '#18181b',
-                  border: '1px solid #27272a',
-                  color: '#a1a1aa',
-                  fontSize: '14px',
-                  fontFamily: 'monospace',
-                  marginRight: '12px',
-                }}
-              >
-                RFC: {rfc}
-              </div>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: '6px 14px',
-                  borderRadius: '8px',
-                  backgroundColor: '#18181b',
-                  border: '1px solid #27272a',
-                  color: '#34d399',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                }}
-              >
-                {verifiedLevel}
-              </div>
-            </div>
-          </div>
-
-          {/* Trust Gauge Badge */}
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
           <div
             style={{
               display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '200px',
-              height: '200px',
-              borderRadius: '24px',
-              backgroundColor: '#18181b',
-              border: '2px solid rgba(16, 185, 129, 0.4)',
+              fontSize: '56px',
+              fontWeight: 900,
+              letterSpacing: '-1.5px',
+              lineHeight: 1.1,
+              marginBottom: '18px',
             }}
           >
-            <div style={{ display: 'flex', fontSize: '64px', fontWeight: '900', color: score > 0 ? '#10b981' : '#71717a', lineHeight: 1 }}>
-              {score > 0 ? score : '—'}
-            </div>
-            <div style={{ display: 'flex', fontSize: '13px', color: '#a1a1aa', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '6px' }}>
-              Trust Score
-            </div>
-            <div style={{ display: 'flex', fontSize: '11px', color: '#71717a', marginTop: '2px' }}>
-              Escala 0–100 Opinio
-            </div>
+            {business.brand_name}
+          </div>
+          <div style={{ display: 'flex', fontSize: '24px', lineHeight: 1.4, color: '#a1a1aa', maxWidth: '1000px' }}>
+            {description}
           </div>
         </div>
 
-        {/* Bottom Bar: Verification Guarantees */}
         <div
           style={{
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            paddingTop: '24px',
             borderTop: '1px solid #27272a',
-            fontSize: '14px',
+            paddingTop: '22px',
+            fontSize: '18px',
             color: '#71717a',
           }}
         >
-          <div style={{ display: 'flex' }}>
-            <div style={{ display: 'flex', alignItems: 'center', marginRight: '30px' }}>
-              <div style={{ width: '8px', height: '8px', borderRadius: '4px', backgroundColor: '#10b981', marginRight: '8px', display: 'flex' }} />
-              <span>Cédula SAT Verificada</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', marginRight: '30px' }}>
-              <div style={{ width: '8px', height: '8px', borderRadius: '4px', backgroundColor: '#10b981', marginRight: '8px', display: 'flex' }} />
-              <span>Monitoreo PROFECO</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <div style={{ width: '8px', height: '8px', borderRadius: '4px', backgroundColor: '#10b981', marginRight: '8px', display: 'flex' }} />
-              <span>Opiniones con Ticket</span>
-            </div>
-          </div>
-          <div style={{ display: 'flex', color: '#a1a1aa', fontWeight: '600' }}>
-            opinio.mx/b/{slug}
-          </div>
+          <div style={{ display: 'flex' }}>Registro del catálogo público</div>
+          <div style={{ display: 'flex', color: '#34d399', fontWeight: 700 }}>opinio.mx/b/{slug}</div>
         </div>
       </div>
-    )
+    ),
+    size
   );
 }

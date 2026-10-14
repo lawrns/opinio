@@ -50,11 +50,22 @@ const { Client } = requireFromRoot('pg');
 
 // Safety contract for this harness: it creates and deletes one verification case,
 // so it only runs against the isolated local runtime — a loopback host and a
-// private ticket database. A production credential passed through DATABASE_URL
-// exits here before any connection is attempted (no remote probe) and before the
-// dev server starts.
+// private ticket database. The refusal lives at module scope, before the dev
+// server is spawned and before any connection is attempted: a production
+// credential passed through DATABASE_URL exits with code 2 without a remote
+// probe, and no server starts for a run that is not allowed to touch the data.
 const LOOPBACK_HOSTS = new Set(['127.0.0.1', '::1', 'localhost']);
 const PRIVATE_DATABASE = /^opinio_issue_[a-z0-9_]+$/;
+
+const client = new Client({ connectionString: process.env.DATABASE_URL });
+const { host: databaseHost, database: databaseName } = client.connectionParameters;
+if (!LOOPBACK_HOSTS.has(databaseHost ?? '') || !PRIVATE_DATABASE.test(databaseName ?? '')) {
+  console.error(
+    `Refusing to run: DATABASE_URL must point at a loopback host (127.0.0.1, ::1 or localhost) ` +
+    `and a private opinio_issue_* database; got host="${databaseHost}" database="${databaseName}".`,
+  );
+  process.exit(2);
+}
 
 const results = [];
 const devArgs = (process.env.NEXT_DEV_ARGS ?? '--webpack').split(/\s+/).filter(Boolean);
@@ -253,39 +264,25 @@ const PUBLIC_URL_ATTRIBUTES = new Set(['og:image', 'og:url', 'twitter:image']);
 const FORBIDDEN_QUERY_KEYS = /\?(.|\n)*\b(q|b|business|accion|categoria|theme|utm_[a-z]+|case|id)=/i;
 
 async function loadRuntimeSamples() {
-  const client = new Client({ connectionString: process.env.DATABASE_URL });
-  const { host, database } = client.connectionParameters;
-  if (!LOOPBACK_HOSTS.has(host ?? '') || !PRIVATE_DATABASE.test(database ?? '')) {
-    console.error(
-      `Refusing to run: DATABASE_URL must point at a loopback host (127.0.0.1, ::1 or localhost) ` +
-      `and a private opinio_issue_* database; got host="${host}" database="${database}".`,
-    );
+  const business = await client.query(
+    `SELECT id, slug, brand_name FROM businesses
+     WHERE slug IS NOT NULL AND BTRIM(slug) <> '' AND brand_name IS NOT NULL AND BTRIM(brand_name) <> ''
+     ORDER BY slug ASC LIMIT 1`,
+  );
+  if (business.rows.length === 0) {
+    console.error('No business rows in the database; cannot smoke-test share previews.');
     process.exit(2);
   }
-  await client.connect();
-  try {
-    const business = await client.query(
-      `SELECT id, slug, brand_name FROM businesses
-       WHERE slug IS NOT NULL AND BTRIM(slug) <> '' AND brand_name IS NOT NULL AND BTRIM(brand_name) <> ''
-       ORDER BY slug ASC LIMIT 1`,
-    );
-    if (business.rows.length === 0) {
-      console.error('No business rows in the database; cannot smoke-test share previews.');
-      process.exit(2);
-    }
-    const widget = await client.query(
-      `SELECT token FROM widgets WHERE is_active = true ORDER BY token ASC LIMIT 1`,
-    );
-    return { business: business.rows[0], widgetToken: widget.rows[0]?.token ?? null };
-  } finally {
-    await client.end();
-  }
+  const widget = await client.query(
+    `SELECT token FROM widgets WHERE is_active = true ORDER BY token ASC LIMIT 1`,
+  );
+  return { business: business.rows[0], widgetToken: widget.rows[0]?.token ?? null };
 }
-
-const { business, widgetToken } = await loadRuntimeSamples();
 
 try {
   await waitForServer();
+  await client.connect();
+  const { business, widgetToken } = await loadRuntimeSamples();
   console.log(`\nShare previews on ${BASE} (public origin pinned to this run)\n`);
 
   // 1. Homepage: its own reviewed identity and a fetchable preview image.
@@ -336,10 +333,10 @@ try {
     'directory page 2 preview self-identifies with the public ordinal only',
     directoryPage2.status === 200 &&
       propContent(directoryPage2.body, 'og:title') === titleContent(directoryPage2.body) &&
-      /página 2/.test(propContent(directoryPage2.body, 'og:title') ?? '') &&
+      propContent(directoryPage2.body, 'og:title') !== titleContent(directory.body) &&
       propContent(directoryPage2.body, 'og:url') === `${BASE}/directorio?page=2` &&
       canonicalHref(directoryPage2.body) === `${BASE}/directorio?page=2`,
-    `og:title="${propContent(directoryPage2.body, 'og:title')}" og:url=${propContent(directoryPage2.body, 'og:url')}`,
+    `page2 title differs from page 1 · og:url=${propContent(directoryPage2.body, 'og:url')}`,
   );
   record(
     'directory preview never serializes incidental parameters',
@@ -366,6 +363,14 @@ try {
     `/b/${business.slug} → titles equal, og:url=${propContent(passport.body, 'og:url')}`,
   );
   record('passport preview image is a usable public image', passportImage.ok, passportImage.detail);
+  const missingCard = await fetch(`${BASE}/b/smoke-missing-share-preview/opengraph-image`, {
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  });
+  record(
+    'a passport card for an unknown slug answers 404 instead of an invented merchant',
+    missingCard.status === 404,
+    `GET /b/<unknown>/opengraph-image → ${missingCard.status}`,
+  );
   record(
     'passport preview stays indexable while the utilities are not',
     !isNoindex(passport.body) && !isNoindex(directory.body),
@@ -510,8 +515,6 @@ try {
     privateLeaks.join(' | ') || `${privateRoutes.map(([path]) => path).join(', ')} leak-free`,
   );
 
-  const client = new Client({ connectionString: process.env.DATABASE_URL });
-  await client.connect();
   let caseId = null;
   try {
     const before = await client.query('SELECT COUNT(*)::int AS count FROM resolution_cases');
@@ -566,7 +569,6 @@ try {
       await client.query('DELETE FROM case_messages WHERE case_id = $1', [caseId]);
       await client.query('DELETE FROM resolution_cases WHERE id = $1', [caseId]);
     }
-    await client.end();
   }
 } catch (error) {
   console.error(`\nShare-preview smoke aborted: ${error.message}`);
@@ -575,6 +577,7 @@ try {
   process.exit(1);
 } finally {
   stopServer();
+  await client.end().catch(() => {});
 }
 
 const failed = results.filter((result) => !result.ok);

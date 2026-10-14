@@ -50,7 +50,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (res.rows.length === 0) {
     return {
       title: 'Comercio no encontrado | Opinio México',
-      description: 'El comercio solicitado no existe o se encuentra en proceso de validación.',
+      description: 'Este comercio no está registrado en Opinio México.',
     };
   }
 
