@@ -5,6 +5,8 @@ interface BrandLogoProps {
   src?: string | null;
   category?: string | null;
   sizeClass?: string;
+  /** Above-the-fold identity images (hero/passport header) must not be lazy-loaded. */
+  priority?: boolean;
 }
 
 function initialsOf(name: string): string {
@@ -17,6 +19,7 @@ export function BrandLogo({
   src,
   category,
   sizeClass = 'size-12',
+  priority = false,
 }: BrandLogoProps) {
   const accent = categoryStyle(category || '');
   if (src) {
@@ -25,7 +28,14 @@ export function BrandLogo({
         className={`relative flex ${sizeClass} shrink-0 items-center justify-center overflow-hidden rounded-xl border border-op-border bg-op-sheet`}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={src} alt="" className="max-h-[82%] max-w-[82%] object-contain" />
+        <img
+          src={src}
+          alt=""
+          loading={priority ? 'eager' : 'lazy'}
+          decoding="async"
+          fetchPriority={priority ? 'high' : undefined}
+          className="h-[82%] w-[82%] object-scale-down"
+        />
       </span>
     );
   }
