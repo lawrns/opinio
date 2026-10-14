@@ -8,8 +8,9 @@ local runtime (loopback HTTP/DOM/API, a private PostgreSQL database, real Chrome
 2026-10-14; historical snapshot values (provider/GSC numbers), the per-ticket lab pairs and the
 earlier incidents are explicitly reused from their earlier dates and sources and are labeled as
 such where they appear. Nothing was pushed, deployed, published or released; no production writes, no third-party account
-changes, no paid provider calls, no outreach. Issue #14 stays open until the director merges this
-record and runs the full two-axis review.
+changes, no paid provider calls, no outreach. This runtime record was captured before the final
+integration review; issue #14 is now closed. See section 12 for the reviewed head and closure
+evidence.
 
 Scope note: this ticket is verification and documentation, not new SEO work. No application source
 file was changed by #14 (the branch contains only this document). Where a result is an inference,
