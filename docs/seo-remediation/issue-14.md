@@ -3,9 +3,11 @@
 Status: **local integration branch verified; not published/released.** This record verifies the
 integration head `976989d0cf8da1cdcf709ac7145b77f1e8509c59` of `fix/opinio-seo-remediation`
 (baseline `fefc09028acc1ca94eddf5decc15459c46a7e614`, all twelve remediation tickets #2–#13 merged)
-from branch `fix/opinio-seo-issue-14`. Everything below is observed behavior on the isolated local
-runtime: loopback HTTP/DOM/API, a private PostgreSQL database, real Chrome 154 via system Chrome.
-Nothing was pushed, deployed, published or released; no production writes, no third-party account
+from branch `fix/opinio-seo-issue-14`. The acceptance battery below was produced on the isolated
+local runtime (loopback HTTP/DOM/API, a private PostgreSQL database, real Chrome 154) on
+2026-10-14; historical snapshot values (provider/GSC numbers), the per-ticket lab pairs and the
+earlier incidents are explicitly reused from their earlier dates and sources and are labeled as
+such where they appear. Nothing was pushed, deployed, published or released; no production writes, no third-party account
 changes, no paid provider calls, no outreach. Issue #14 stays open until the director merges this
 record and runs the full two-axis review.
 
@@ -24,11 +26,21 @@ a lab measurement or an unassessed item, it is labeled as such in place.
 | Browser | system Chrome 154.0.8037.98 via Playwright 1.59.1 |
 | Analytics | `NEXT_PUBLIC_GA_MEASUREMENT_ID=G-FAKE14TEST` (fake). The real `gtag.js` is the only external request allowed; every other external request is answered locally with 204 |
 
-Effective-connection guard: every QA script resolves the **effective** pg parameters
-(`Client.connectionParameters`) and the base URL hostname against an exact loopback set
-(`127.0.0.1`, `localhost`, `::1`) plus `opinio_issue_*` before connecting or spawning a server.
-Turbopack dev remains unusable on this host (externalized `pg` reparse point) and is never cited as
-an application defect.
+Observed guard coverage (bounded, not universal): the harnesses and proofs I ran that validate the
+**effective** pg parameters (`Client.connectionParameters`, loopback + `opinio_issue_*`) before
+connecting are `scripts/verify-seo-metadata.mjs`, `scripts/verify-share-previews.mjs` (committed)
+and the external `qa/issue14-{analytics,forms-api,badge-api}-proof.mjs` (written for #14).
+`qa/merchant-cases-populated-proof.mjs`, `qa/share-image-merged-proof.mjs`,
+`qa/case-badge-proof.mjs`, `qa/anonymous-author-proof.mjs` and `qa/script-boundary-proof.mjs`
+refuse on a raw-URL loopback/private regex instead; `scripts/verify-merchant-flow.mjs`,
+`scripts/verify-seo-indexing.mjs`, `scripts/verify-directory-pagination.mjs`,
+`qa/directory-browser-proof.mjs` and `qa/accent-surface-check.mjs` connect only to the explicit
+`DATABASE_URL` given on the command line; the remaining collectors make no database connection
+(`scripts/verify-security-headers.mjs`, `scripts/seo-image-layout-check.mjs`,
+`qa/attribution-proof.mjs`, `qa/issue3-indexing-proof.mjs`, `qa/issue7-*.mjs`,
+`qa/merged-homepage-proof.mjs`, `qa/faq-diff.mjs`). No script anywhere is claimed to have a guard
+it was not observed to have. Turbopack dev remains unusable on this host (externalized `pg` reparse
+point) and is never cited as an application defect.
 
 ## 2. Observed battery
 
@@ -91,9 +103,10 @@ DATABASE_URL=…/opinio_issue_14 BASE_URL=http://127.0.0.1:3219 CLONE=<worktree>
   static across cases and leak-free, then `resolution_cases 0 → 0`. Unit level: `passport-metadata`
   metamorphic table 11/11 (same-brand records stay distinguishable; placeholder scope values are
   treated as unknown; no invented geographic claim).
-- Local catalogue (1108) and the production sitemap scope (~1200 passport profiles / 1202 crawled
-  URLs) are **different populations** recorded side by side; no local row count is presented as a
-  production figure.
+- Local catalogue (1108) and the production shapes are **different populations** recorded side by
+  side: the production **sitemap** declared 1202 URLs (1200 passports + `/` + `/directorio`, from the
+  #3/#12 records), while the audit **crawl** separately fetched 1500 pages (1499 HTML) including the
+  ~1200 passport profiles. No local row count is presented as a production figure.
 - Caching: `/directorio` is `export const dynamic = 'force-dynamic'` with `unstable_cache` catalogue
   reads at `CATALOGUE_CACHE_SECONDS = 3600` — request-rendered with a one-hour data cache, not ISR
   and not a privacy cache. The lab before/after payload and latency pair (3.87 MB → 252 kB HTML,
@@ -125,9 +138,12 @@ BASE_URL=http://127.0.0.1:3214 WIDGET_TOKEN=wgt_amazon_ribbon_2026 SLUG=amazon \
 - Passport claims (#6): attribution **7/7** on the default-origin server — generic Organization type,
   no `areaServed`, neutral Organization description, no placeholder telephone, "ámbito registrado:"
   caption, directory breadcrumb to the real `/directorio`, passport breadcrumb to `/directorio`.
-  Script boundary **5/5** with the payload in emitted fields (`brand_name` + `category`): JSON-LD
-  contains `\u003c/script>` and no raw `</script>`, zero script execution and zero page errors, block
-  parses, fixture rendered, counts `1108 → 1109 → 1108`. Anonymous author **5/5**: a blank author
+  Script boundary **6/6** with the payload in emitted fields (`brand_name` + `category`) on a
+  **unique synthetic fixture row** (new slug, cleanup deletes only the captured row id — see §10):
+  JSON-LD contains `\u003c/script>` and no raw `</script>`, zero script execution and zero page
+  errors, block parses, fixture rendered, counts `1108 → 1109 → 1108`. The retained run is
+  `qa/issue14-script-boundary-safe-proof.mjs`; the earlier slug-based run is superseded and kept
+  only as the incident record in §10. Anonymous author **5/5**: a blank author
   omits JSON-LD `author` and displays no fabricated "Comprador verificado"; a real name is still
   published; derived metrics restored. Case badge: SQL fixture **4/4** (unconfirmed state neutral —
   no verified tint/check icon — confirmed state styled), and the API-driven ext proof **7/7**:
@@ -135,9 +151,12 @@ BASE_URL=http://127.0.0.1:3214 WIDGET_TOKEN=wgt_amazon_ribbon_2026 SLUG=amazon \
   200 → badge "Resolución confirmada" with check icon → exact case deleted, derived metrics restored.
   FAQ wording diff: 4→4 entries per route with exactly 2 changed (count-only claim removed).
   Source-state caveat: the local catalogue contains no review/identity/official-record rows, so the
-  missing/verified/pending/rejected record states are covered by `passport-evidence` unit cases
-  (13/13, including "surfaces pending, rejected and unrecognized record states instead of verified")
-  and by the missing-data behavior observed on rendered passports — not by local fixtures.
+  missing/verified/pending/rejected record states are covered in this run only by `passport-evidence`
+  unit cases (13/13, including "surfaces pending, rejected and unrecognized record states instead of
+  verified") and by the missing-data behavior observed on rendered passports — **no local fixture
+  supplies those record states**. The real-fixture proofs in the earlier #6 reports (author, badge,
+  escaping) are **retained historical artifacts**: the author, badge and escaping fixtures were
+  re-run for #14, the record-state ones were not.
 - Share previews (#10): committed harness **24/24 PASS, exit 0** (origin pinned to its own loopback
   port so every emitted image URL is really fetched): every public family reuses its accepted #4
   identity, parameter-free purpose URLs for search/case entry, page-ordinal canonicals for the
@@ -157,10 +176,15 @@ BASE_URL=http://127.0.0.1:3214 WIDGET_TOKEN=wgt_amazon_ribbon_2026 SLUG=amazon \
   cross-origin frame is refused (CSP violation logged in the console); widget routes carry
   `no-referrer` + `frame-ancestors *`, render in the embedder at 200 with the requested token, send
   no referrer, and the app probe from the widget frame reaches the embedder with origin-only Referer.
-  Widget *content* on a zero-review catalogue is the pre-existing demo copy (source constants:
-  `calculated_rating || 5.0` → `OpinioPrestigeRibbon` default 4.8, `review_count || 50`), observed
-  rendered as "Excelente 5.0/5 (50+ reseñas verificadas)"; it makes no genuine-review claim and is
-  explicitly out of scope for #14.
+  Widget *content* is a **pre-existing synthetic fallback and unsupported trust claim**: on this
+  zero-review catalogue the surfaces render a fallback rating (`calculated_rating || 5.0`; the
+  ribbon component's own default is 4.8) and `review_count || 50`, observed as "Excelente 5.0/5
+  (50+ reseñas verificadas)". That rendered string asserts verified reviews the data does not
+  contain; it is not evidence of genuine or verified reviews, it is an **UNREMEDIATED
+  widget-content risk**, and it is not authorized scope for this ticket: the response-header policy
+  (#11) and the public-passport claims (#6) are not permission to ship the full widget product.
+  The owner must review widget content before any trusted embedding, outreach or release. #14 does
+  not treat this as harmless cosmetic copy.
 
 ### 2.4 Public forms, private paths and analytics (#7 — JEV-011/JEV-013/JEV-018)
 
@@ -225,8 +249,16 @@ cd .next-qa14-standalone/standalone && PORT=3214 HOSTNAME=127.0.0.1 node server.
   `/b/smoke-missing-merchant-xyz` → **404**; CSS (71,650 B) and JS chunks served 200 only after the
   static copy into the standalone tree. Browser collector over 10 routes: server 200 / browser 200,
   one `h1` per rendered route, DOM/head parity, zero console errors except the intentional 404.
-  The full battery above (indexing, share images, forms, security, directory, merchant, analytics)
-  was re-run against this production-mode server with the same green results.
+  **Runs that actually targeted this standalone server** (`BASE_URL=http://127.0.0.1:3214`): the curl
+  HTTP matrix, `render-evidence` (10 routes), `issue3-indexing-proof`, `share-image-merged-proof`
+  (6/6), `forms-api` (8/8), `badge-api` (7/7), `analytics` (14/14), `directory-browser-proof` (6/6),
+  `merchant-cases-populated-proof` (7/7), `verify-security-headers` (+`--embed`, 26/26 and 39/39) and
+  the safe-boundary proof (6/6). **Dev-mode only** (by design — these boot their own `next dev` or
+  target a dev server): `verify-merchant-flow` (9/9 at 80 ms injected latency, dev-only),
+  `verify-seo-indexing`, `verify-seo-metadata`, `verify-share-previews` (each spawns its own dev
+  server), `verify-directory-pagination` (against the default-origin dev server),
+  `seo-image-layout-check`, the `issue7-*` flows, and the attribution/anonymous/badge-SQL/faq-diff/
+  homepage proofs. No claim is made that every harness ran against both modes.
 
 ## 3. Acceptance criteria mapping
 
@@ -274,7 +306,7 @@ committed per-ticket records (see section 9), which this table maps.
 
 | JEV | Owner verdict | Ticket | Disposition on this head (observed) | Residual uncertainty |
 | --- | --- | --- | --- | --- |
-| 001 | Confirmed | #2 | `/merchant` 500 removed; 9/9 merchant-flow checks at 80 ms injected DB latency, production mode re-checked | Original production root cause is [INFERENCE] (no server logs) |
+| 001 | Confirmed | #2 | `/merchant` 500 removed; 9/9 merchant-flow checks at 80 ms injected DB latency (dev-mode harness, dev-only) and the populated merchant/inbox path re-run in production mode (7/7) | Original production root cause is [INFERENCE] (no server logs) |
 | 002 | Review signal | #6 | Passport claims rewritten to recorded facts; attribution 7/7; helpfulness remains an editorial judgment | No ranking/helpfulness guarantee; provider "helpfulness" scores not re-run |
 | 003 | Confirmed | #2 | Same repair as 001 (one shared error destination) | Same as 001 |
 | 004 | Confirmed | #8 | Homepage `@graph` Organization + WebSite, no LocalBusiness, no unsupported properties (8/8, both modes) | No third-party validator call was made |
@@ -298,7 +330,7 @@ committed per-ticket records (see section 9), which this table maps.
 | 022 | Editorial review signal | #6 | Same as 002 | Editorial |
 | 023 | Automated observation retained | #10 | Per-family preview identity + image; 24/24 and 6/6, emitted images fetched and decoded 1200×630 | Not deployed, so no production crawler re-check |
 | 024 | Confirmed, utility scope | #3 | Utility families noindex; sitemap excludes them; robots.txt keeps them crawlable | Production crawl not re-run |
-| 025 | Confirmed policy gap | #3 | Canonical ownership defined per family (self-canonical, parameter-free utility URLs) | Production crawl not re-run |
+| 025 | Confirmed policy gap | #3 | Canonical ownership defined: search and case entry carry **no rel=canonical** at all (noindex,follow), and their share identity uses the parameter-free purpose URL as `og:url`; opinion entry, passports and the directory keep **self**-canonicals | Production crawl not re-run |
 | 026 | Confirmed, scoped | #4 | Duplicate meta descriptions addressed by scope-aware identity; collisions recorded with assessed/unassessed split | 15 production records unassessed (recorded in #4) |
 | 027 | Template judgment qualified | #4 | Weak meta descriptions replaced by purpose/merchant descriptions; 28/28 | Editorial |
 | 028 | Measured size, qualified | #5 | Decompressed 3.8 MB → 252 kB HTML on the bounded first page (brotli 145,508 → 15,620 B in #5's measurement) | Lab measurement; transfer size depends on CDN |
@@ -318,25 +350,32 @@ committed per-ticket records (see section 9), which this table maps.
 
 ## 7. Uncertainty and unassessed items (explicit)
 
-- **Field data absent:** no CrUX/field CWV for this property; all performance figures here and in the
-  per-ticket docs are lab observations on one host (Chrome 154, webpack dev or standalone). No INP,
-  LCP or CLS field claim is made.
-- **Historic analytics absent:** no historical GA4 export exists; analytics verification exercises the
+- **Field data not available in the retained sources:** no CrUX/field CWV data for this property was
+  available to this workstream (not an assertion that none exists anywhere); all performance figures
+  here and in the per-ticket docs are lab observations on one host (Chrome 154, webpack dev or
+  standalone). No INP, LCP or CLS field claim is made.
+- **Historical analytics not available in the retained sources:** no historical GA4 export was
+  available to this workstream (again, not an ontological claim); analytics verification exercises the
   *current* shipped transport with a fake id and local interception. Property-level GA4 settings and
   any deployed account configuration are unassessed.
 - **Credential authenticity:** government-credential and registry provenance is **UNASSESSED** —
   the passports display Opinio's recorded attributions, not independent confirmation by the named
   authorities; dates render from recorded fields, not import timestamps.
 - **Production is not observed:** no production page, header, sitemap or crawler behavior was
-  re-measured for this record; production figures quoted in the table (1200 profiles, 1202 crawled
-  URLs, provider snapshots, GSC rows) are the retained audit's values reused as-is.
-- **Local vs production populations differ** (1108 vs ~1200); no local count is presented as a
-  production fact, and no count-matching is forced.
+  re-measured for this record; production figures quoted here (production sitemap 1202 URLs = 1200
+  passports + 2 base routes, the audit crawl's 1500 pages / 1499 HTML, provider snapshots, GSC rows)
+  are the retained audit/#12/#13 values reused as-is.
+- **Local vs production populations differ** (1108 vs the production sitemap/crawl shapes above); no
+  local count is presented as a production fact, and no count-matching is forced.
 - **Search/authority gaps:** `especializadas` intent and landing-page attribution remain unassessed;
   the reported `0 referring domains` and the `null/No data` summary remain reported/unknown — they
   are neither evidence of absence nor presence.
-- **Widget demo copy** (rating/review-count fallbacks) is pre-existing and out of scope; it is not
-  used as evidence of reviews or as a claim about any merchant.
+- **Widget content risk (UNREMEDIATED):** the widget surfaces render synthetic rating/review-count
+  fallbacks ("Excelente 5.0/5", "50+ reseñas verificadas") on a zero-review catalogue (section 2.3).
+  This is an unsupported trust claim, not evidence of genuine reviews, and it requires owner review
+  of widget content before any trusted embedding, outreach or release; it is not dismissed here as
+  cosmetic copy. The header (#11) and public-passport (#6) work does not authorize the widget
+  product's claims.
 - **Mobile horizontal overflow** on public surfaces is pre-existing (recorded by earlier tickets as
   out of scope); this record makes no claim that it was fixed and observed no regression from the
   changes above.
@@ -358,8 +397,11 @@ committed per-ticket records (see section 9), which this table maps.
 3. **Mixed historical seed review counts and government-credential provenance are not independently
    certified**; the local catalogue used for verification contains no reviews, cases or identities,
    and demonstration seeds were deliberately not loaded.
-4. **Widget surfaces render demo rating/review-count fallbacks** on a zero-review catalogue (section
-   2.3, source constants cited). Cosmetic/trust copy only; no genuine-review claim is made.
+4. **Widget surfaces render synthetic rating/review-count fallbacks** on a zero-review catalogue
+   (`calculated_rating || 5.0`, `review_count || 50`; section 2.3): the rendered "Excelente 5.0/5
+   (50+ reseñas verificadas)" is an **unsupported verification claim**, not evidence of genuine
+   reviews. **Owner action required:** review widget content before any trusted embedding, outreach
+   or release. Recorded as an unremediated content risk, not as harmless cosmetic copy.
 
 ## 9. Evidence index
 
@@ -367,10 +409,12 @@ External tree (not part of the repository):
 `C:/Users/isaac/tmp/opinio-remediation/`
 
 - QA scripts used (throwaway, outside the repo): `qa/issue14-forms-api-proof.mjs`,
-  `qa/issue14-badge-api-proof.mjs`, `qa/issue14-analytics-proof.mjs` plus the reused
+  `qa/issue14-badge-api-proof.mjs`, `qa/issue14-analytics-proof.mjs` and
+  `qa/issue14-script-boundary-safe-proof.mjs`, plus the reused
   `qa/{render-evidence, merged-homepage-proof, attribution-proof, anonymous-author-proof,
-  script-boundary-proof, case-badge-proof, faq-diff, issue3-indexing-proof, directory-browser-proof,
-  merchant-cases-populated-proof, share-image-merged-proof}.mjs`.
+  case-badge-proof, faq-diff, issue3-indexing-proof, directory-browser-proof,
+  merchant-cases-populated-proof, share-image-merged-proof}.mjs`. The superseded
+  `qa/script-boundary-proof.mjs` is kept only as the §10 incident reference.
 - Raw logs and artifacts: `evidence/issue14/` (dev mode) and `evidence/issue14/standalone/`
   (production mode) — harness logs (`verify-merchant-flow.txt`, `verify-seo-indexing.txt`,
   `verify-seo-metadata.txt`, `verify-directory-pagination.txt`, `verify-share-previews.txt`,
@@ -396,8 +440,19 @@ External tree (not part of the repository):
 - **Incident (disclosed):** one early boundary-harness invocation passed `SLUG=amazon` into a harness
   whose `SLUG` parameter names the fixture slug; it deleted the local `amazon` catalogue row (and its
   four widget rows by cascade) in the private database. The row and widgets were restored
-  byte-identical from `opinio_template` and verified with per-table checksums before continuing; later
-  runs used the harness's own fixture slug. No production data and no other database was affected.
+  byte-identical from `opinio_template` and verified with per-table checksums before continuing. No
+  production data and no other database was affected.
+- **Boundary hardening (applied, external QA only — no repo code):** the retained boundary run uses
+  `qa/issue14-script-boundary-safe-proof.mjs`, whose contract is: insert a **new** synthetic row with
+  a unique slug (`qa-boundary-local-<timestamp>`), capture the inserted id with `RETURNING`, and at
+  cleanup delete **only** that id matched by the unique slug (`DELETE … WHERE id = $1 AND slug = $2`,
+  rowcount must be 1). There is no delete-by-slug beforehand, so an existing catalogue row can never
+  be removed regardless of host; a pre-existing row with the fixture slug makes the script refuse
+  before any write. Observed run: slug `qa-boundary-local-mv7namtp`, id 1143, counts
+  `1108 → 1109 → 1108`, deleted exactly 1, final state md5-identical to `opinio_template`. The older
+  `qa/script-boundary-proof.mjs` remains only as this incident's reference; if it is ever reused it
+  must first adopt the same unique-fixture/delete-by-id ownership rule (and must never delete
+  pre-existing rows, private host or not).
 - **Incident (infrastructure, disclosed):** the shared `opinio-seo-pg` container restarted during the
   session and its Windows port proxy stopped accepting new TCP connections (node `pg` got
   "Connection terminated unexpectedly" while `docker exec` still worked). Runtime-verification, the
@@ -445,6 +500,8 @@ BASE_URL=http://127.0.0.1:3214 WIDGET_TOKEN=wgt_amazon_ribbon_2026 SLUG=amazon \
 BASE_URL=http://127.0.0.1:3214 DATABASE_URL=…/opinio_issue_14 CLONE=<worktree> node qa/issue14-forms-api-proof.mjs
 node qa/issue14-badge-api-proof.mjs
 BASE_URL=http://127.0.0.1:3214 DATABASE_URL=…/opinio_issue_14 MEASUREMENT_ID=G-FAKE14TEST node qa/issue14-analytics-proof.mjs
+BASE_URL=http://127.0.0.1:3214 DATABASE_URL=…/opinio_issue_14 CLONE=<worktree> \
+  node qa/issue14-script-boundary-safe-proof.mjs   # unique fixture row, delete by captured id only
 
 # 4. compiler + production mode
 node node_modules/typescript/bin/tsc --noEmit
