@@ -54,6 +54,9 @@ its identity metadata remains #4's scope):
   proof that a response occurred. The stored aggregates (`business.resolution_rate`,
   `business.median_response_hours`) and the `hasResolution` flag are no longer used there; the
   body-recorded case aggregates in the visible sections are unchanged.
+- Case history docket: an unconfirmed case renders a neutral badge with no confirmation icon; the
+  verified-green check and the "Resolución confirmada" label appear only when the record's
+  `is_consumer_confirmed` flag is actually true (existing colors/classes only, no new helper).
 
 `src/components/passport/OfficialRecordCard.tsx`: record date uses the shared day-first/ISO parser and
 falls back to the raw source value instead of "No disponible".
@@ -155,9 +158,16 @@ Assertions (script `C:/Users/isaac/tmp/seo6-prod/check-issue6-evidence.js`, 0 fa
   public-sources pointer; with no case it reads "Opinio no registra casos de atención de compradores…".
 - Post-cleanup `/b/luuna`: empty states only, no `Fuente registrada:`/`Verificado en el registro de Opinio`,
   no case docket, JSON-LD falling back to the empty branches with no unsupported claims.
-- Evidence manifest `MANIFEST.sha256`: the 13 text/JSON artifacts (HTML snapshots, `results.json`,
+- Case-badge state proof (populated fixture + case fixture): a local case created through
+  `POST /api/v1/cases` was captured while unconfirmed (`badge-unconfirmed/`): neutral badge, no
+  `CheckCircle` svg, no verified-green variant in the docket; then transitioned through the actual local
+  API (`PATCH /api/v1/cases/2` with `{"is_consumer_confirmed":true}`) and captured again
+  (`badge-confirmed/`): green badge with the check and "Resolución confirmada". Both assertion runs
+  0 failures. Cleanup: resolution_cases 1→0, case_messages 1→0, business score columns restored to the
+  captured pre-values, fixture rows removed; the post-cleanup render shows no case docket.
+- Evidence manifest `MANIFEST.sha256`: the 17 text/JSON artifacts (HTML snapshots, `results.json`,
   differential captures/diff, production baselines) are hash-bound and verify with
-  `sha256sum -c MANIFEST.sha256` → 13 OK / 0 FAILED. The four `*.png` screenshots are retained review
+  `sha256sum -c MANIFEST.sha256` → 17 OK / 0 FAILED. The six `*.png` screenshots are retained review
   captures and are explicitly **nonbinding**: this host's `sha256sum -c` reads binary files in text mode
   (CRLF translation, confirmed with a minimal `a\r\nb` probe), so byte hashes of PNGs cannot be
   reproduced by that checker.
@@ -195,7 +205,9 @@ recorded attributions (observed read-only), not independent confirmation by the 
 1. Start Postgres/DBs per `runtime.md`.
 2. Apply the fixture capture script (`map-luuna-evidence.sql`) to `opinio_issue_6`; start the dev server
    (command in §3); optionally create one case through the local flow (`POST /api/v1/cases`) to exercise
-   the case state; run the collector + assertion script (`CASE_COUNT=1` when a case exists).
+   the case state, then transition it with `PATCH /api/v1/cases/<id>` `{"is_consumer_confirmed":true}` to
+   exercise the confirmed badge; run the collector + assertion script (`CASE_COUNT=1` when a case exists;
+   `check-case-badge.js <dir> unconfirmed|confirmed` for the badge states).
 3. Remove the fixture rows (`DELETE` identities/official_records/audit notes for the business; revert
    `rfc`/`clee`/`whatsapp` to NULL; if a case was created, delete its `case_messages` + `resolution_cases`
    rows and restore `issues_per_thousand`/`updated_at` to the captured pre-values) and re-capture to

@@ -729,10 +729,16 @@ export default async function BusinessPassportPage({ params }: PageProps) {
                         </p>
                       </div>
                       <div className="text-right shrink-0">
-                        <span className="inline-flex items-center gap-1 text-xs font-bold text-[var(--op-verified-ink)] bg-[var(--op-verified-tint)] px-2.5 py-0.5 rounded-full border border-[var(--op-verified-border)]">
-                          <CheckCircle weight="fill" className="w-3.5 h-3.5 text-[var(--op-verified-ink)]" />
-                          {c.is_consumer_confirmed ? 'Resolución confirmada' : 'Sin confirmación del comprador'}
-                        </span>
+                        {c.is_consumer_confirmed ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-bold text-[var(--op-verified-ink)] bg-[var(--op-verified-tint)] px-2.5 py-0.5 rounded-full border border-[var(--op-verified-border)]">
+                            <CheckCircle weight="fill" className="w-3.5 h-3.5 text-[var(--op-verified-ink)]" />
+                            Resolución confirmada
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-xs font-bold text-[var(--op-ink-secondary)] bg-[var(--op-shaded)] px-2.5 py-0.5 rounded-full border border-[var(--op-border-hairline)]">
+                            Sin confirmación del comprador
+                          </span>
+                        )}
                       </div>
                     </div>
                   ))}
