@@ -54,13 +54,16 @@ no image today — `TrustGraphHero` is used without a `business`; `BusinessCard`
 | Painted logo geometry, pre vs post | — | fingerprints `fp-before/*` vs `fp-after2/*`, 1107 images compared per device: max delta 0.07 px (one 7.48:1 logo, sub-pixel snap), 0 images changed by ≥ 0.5 px; painted-vs-natural deviation ≤ 0.008 (rounding). A measured bound on this runtime, not a universal equality |
 | Logo-sourced layout-shift entries (blocked → loaded replay) | 0 | 0 |
 | Card screenshots (`99minutos` 256×256, `bestday` 16×16, `genesys` 1915×256), desktop + mobile | `before-cards/*` | identical sha256 in the shipped revision `after/*` and `final-harness/*` (desktop `054051114064d6e9`, `c0f6a87eeae2ca89`, `db0339b5603c52a9`; mobile `ff079592fce0764d`, `726e5eccb8cb28b5`, `11e5d536fe656237`) |
-| Same-route viewport captures (`/directorio`, passport), desktop | `before/*` | identical in `after/*` and `final-harness/*` (`3d4668b42a5573be` directory, `9c553e9cb703069d` passport) |
+| Directory viewport capture (`/directorio`), desktop | `before/*` | identical in `after/*` and `final-harness/*` (`3d4668b42a5573be` in all three families) |
+| Passport viewport capture, desktop | `before/*` (`/b/mercado-libre`) | identical in `after/*` (`9c553e9cb703069d`, before vs after only); `final-harness/*` captured different passport routes (`/b/99minutos`, `/b/abba-joyas`), so the same-route comparison was not assessed there |
 
 Screenshot families and their caveats:
 
 - Compared families are the retained captures `before-cards/*` and `before/*` (pre-fix `fefc090`),
   `after/*` and `final-harness/*` (shipped revision: stable box + `object-scale-down`), plus the
-  fingerprint JSON `fp-before/*` vs `fp-after2/*`.
+  fingerprint JSON `fp-before/*` vs `fp-after2/*`. Route sets differ between families: `before/*`
+  and `after/*` sampled `/b/mercado-libre`, while `final-harness/*` sampled `/b/99minutos` and
+  `/b/abba-joyas`; captures are compared only where a same-route counterpart exists.
 - The superseded intermediate revision (`after-cards/*`, `object-contain`, which upscaled the
   16×16/30×30 sources) is retained as-is and is *not* the shipped revision: there `bestday` differs
   (`8c8295d5c55f23e5` desktop, `d90998754e6a07a1` mobile) while `99minutos` and `genesys` match.
