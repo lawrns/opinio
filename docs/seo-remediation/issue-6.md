@@ -26,6 +26,13 @@ Reader-facing consequence: visitors could not distinguish attributable facts, re
 state, missing data and no-review state. The goal is reader usefulness and attributable claims, not
 raising a model score.
 
+Independently reproduced by `runtime-verification` on the pre-#6 integration head `7a335ee6` (only #9
+merged): Organization `@type` `["Organization","OnlineStore"]`, hardcoded `areaServed` Country Mexico,
+the raw catalogue description with the agency claim in the Organization node, `telephone: "NO
+PROPORCIONA"` on sampled passports, the body caption "Cobertura:", and an unescaped `</script>` payload
+executing from the JSON-LD block (`evidence/issue6-pre-merge/`). All are fixed on this branch and
+re-verified in §3.
+
 ## 2. Change
 
 `src/app/b/[slug]/page.tsx` (passport body incl. in-body JSON-LD — `generateMetadata` is untouched;
@@ -64,7 +71,9 @@ its identity metadata remains #4's scope):
   `operating_area` value is unchanged.
 - JSON-LD `Organization`: `@type` is `Organization` only; `description` is a record-backed neutral line
   ("Perfil público de X en Opinio México; sector registrado: <categoría>."); the hardcoded
-  `areaServed: Country Mexico` is removed; breadcrumb item 2 links the indexable `/directorio`.
+  `areaServed: Country Mexico` is removed; `telephone` is emitted only when the stored value contains a
+  digit, so catalogue placeholders ("NO PROPORCIONA", "DATOS POR SUCURSAL") are not published as phone
+  claims; breadcrumb item 2 links the indexable `/directorio`.
 - JSON-LD serialization follows the installed Next docs pattern
   (`node_modules/next/dist/docs/01-app/02-guides/json-ld.md`):
   `JSON.stringify(jsonLd).replace(/</g, '\\u003c')`, so company text containing `<` cannot close the

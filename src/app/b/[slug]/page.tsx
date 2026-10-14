@@ -263,7 +263,7 @@ export default async function BusinessPassportPage({ params }: PageProps) {
         url: business.domain ? (business.domain.startsWith('http') ? business.domain : `https://${business.domain}`) : canonicalUrl,
         logo: logoAbsoluteUrl,
         taxID: business.rfc || undefined,
-        telephone: business.phone || undefined,
+        telephone: business.phone && /\d/.test(business.phone) ? business.phone : undefined,
         description: `Perfil público de ${business.brand_name} en Opinio México; sector registrado: ${business.category}.`,
         ...(averageRating !== null && reviews.length > 0 ? {
           aggregateRating: {
