@@ -105,12 +105,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     }
 
     const b = res.rows[0];
-    const { title, description } = passportMetadata({
-      brandName: b.brand_name,
-      legalName: b.legal_name,
-      category: b.category,
-      operatingArea: b.operating_area,
-    });
+    const { title, description } = passportMetadata(b);
     const canonicalUrl = `${baseUrl}/b/${slug}`;
     const ogImageUrl = `${baseUrl}/b/${slug}/opengraph-image`;
 

@@ -15,10 +15,10 @@
 // are omitted instead of being published as a value.
 
 export interface PassportRecordFacts {
-  brandName: string;
-  legalName?: string | null;
+  brand_name: string;
+  legal_name?: string | null;
   category?: string | null;
-  operatingArea?: string | null;
+  operating_area?: string | null;
 }
 
 export interface PassportMetadata {
@@ -26,15 +26,14 @@ export interface PassportMetadata {
   description: string;
 }
 
-export type RecordScope =
+type RecordScope =
   | { kind: 'documented'; value: string }
   | { kind: 'unknown'; value: null };
 
 const SCOPE_PLACEHOLDER = /^(no proporciona|sin datos|no disponible|datos por sucursal|consultar)/i;
-const SCOPE_LABEL = 'ámbito registrado';
 
 /** The recorded scope as the source states it, or unknown for placeholders. */
-export function passportRecordScope(operatingArea?: string | null): RecordScope {
+function passportRecordScope(operatingArea?: string | null): RecordScope {
   const value = (operatingArea ?? '').trim();
   if (!value || SCOPE_PLACEHOLDER.test(value)) {
     return { kind: 'unknown', value: null };
@@ -47,23 +46,25 @@ export function passportRecordScope(operatingArea?: string | null): RecordScope 
  * identity (razón social or catalogue category) and its recorded scope.
  */
 export function passportMetadata(facts: PassportRecordFacts): PassportMetadata {
-  const legalName = (facts.legalName ?? '').trim();
+  const legalName = (facts.legal_name ?? '').trim();
   const category = (facts.category ?? '').trim();
-  const scope = passportRecordScope(facts.operatingArea);
+  const scope = passportRecordScope(facts.operating_area);
 
-  const distinction = [
-    legalName || category || null,
-    scope.kind === 'documented' ? `${SCOPE_LABEL}: ${scope.value}` : null,
-  ].filter(Boolean);
+  let distinction = legalName || category;
+  if (scope.kind === 'documented') {
+    const recordedScope = `ámbito registrado: ${scope.value}`;
+    distinction = distinction ? `${distinction} · ${recordedScope}` : recordedScope;
+  }
+  const title = `¿Es confiable ${facts.brand_name}? ${distinction || 'Pasaporte de Confianza'} | Opinio México`;
 
-  const title = `¿Es confiable ${facts.brandName}? ${distinction.length ? distinction.join(' · ') : 'Pasaporte de Confianza'} | Opinio México`;
-
-  const description = [
-    `Pasaporte de confianza de ${facts.brandName}${legalName ? ` (razón social: ${legalName})` : ''}.`,
-    category ? `Categoría: ${category}.` : null,
-    scope.kind === 'documented' ? `Ámbito registrado: ${scope.value}.` : null,
-    'Consulta su identidad, registros públicos y opiniones en Opinio México.',
-  ].filter(Boolean).join(' ');
+  let description = `Pasaporte de confianza de ${facts.brand_name}${legalName ? ` (razón social: ${legalName})` : ''}.`;
+  if (category) {
+    description += ` Categoría: ${category}.`;
+  }
+  if (scope.kind === 'documented') {
+    description += ` Ámbito registrado: ${scope.value}.`;
+  }
+  description += ' Consulta su identidad, registros públicos y opiniones en Opinio México.';
 
   return { title, description };
 }

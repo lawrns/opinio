@@ -12,14 +12,14 @@ JEV-008/JEV-010/JEV-020/JEV-026/JEV-027: six duplicate-title groups in the crawl
 
 | File | Change |
 | --- | --- |
-| `src/lib/passport-metadata.ts` (new) | `passportMetadata(facts)` is the single export computing a passport title and description once; `passportRecordScope` reports the recorded scope as `documented` (verbatim value) or `unknown` (source placeholder/empty). |
-| `src/lib/passport-metadata.test.ts` (new) | Semantics tests: verbatim scope for every value shape, placeholder omission, no coverage/domicile classification, same-brand distinctness, no invented identity. No rendered-wording copies. |
-| `src/app/b/[slug]/page.tsx` | `generateMetadata` calls `passportMetadata`; the not-found and unavailable branches state the factual state ("Este comercio no está registrado en Opinio México." / "No pudimos cargar la información de este comercio en Opinio México.") instead of an imaginary validation process. Canonical, OG/Twitter wiring, keywords and the rest of the page are unchanged. |
+| `src/lib/passport-metadata.ts` (new) | `passportMetadata(facts)` is the single export computing a passport title and description once from four factual fields (`brand_name`, `legal_name`, `category`, `operating_area`), with conditional string appends; the caller passes the database row directly. The recorded scope is read as `documented` (verbatim value) or `unknown` (source placeholder/empty) by an internal helper. |
+| `src/lib/passport-metadata.test.ts` (new) | Semantics tests only (12 cases): same-brand records stay distinguishable in title and description, a non-informative source value stays out of the metadata, and an uncertain recorded value is never turned into coverage or a domicile. No rendered-wording copies, no passthrough echoes. |
+| `src/app/b/[slug]/page.tsx` | `generateMetadata` calls `passportMetadata(row)`; the not-found and unavailable branches state the factual state ("Este comercio no está registrado en Opinio México." / "No pudimos cargar la información de este comercio en Opinio México.") instead of an imaginary validation process. Canonical, OG/Twitter wiring, keywords and the rest of the page are unchanged. |
 | `src/app/verificar/layout.tsx` | Purpose title/description for the search family; `robots: { index: false, follow: true }` unchanged. |
 | `src/app/caso/nuevo/layout.tsx` | Purpose title/description for the case-entry family; `robots: { index: false, follow: true }` unchanged. |
 | `src/app/caso/[id]/page.tsx` | Static, purpose-only metadata for the private case portal (no case id, case number, customer name, contact or merchant name). No indexing/auth policy change. |
 | `src/app/directorio/page.tsx` | Director-approved directory identity: purpose title/description without the hardcoded catalogue count or the audit claim, a `— página N` scoped identity for real catalogue pages (validated page only), share copy aligned to the same strings, and the `CollectionPage` name/description aligned as metadata-only. #5's pagination and canonical contract untouched. |
-| `scripts/verify-seo-metadata.mjs` (new) | Deterministic HTTP regression (27 checks) over the served HTML for the utility families, passport identity/scope classes, every same-brand group in the database, the directory identity and paging, the canonical/indexing policy and the case-portal privacy rule. |
+| `scripts/verify-seo-metadata.mjs` (new) | Deterministic HTTP regression (28 semantic checks, no rendered-copy constants) over the served HTML: utility families no longer serve the homepage fallback and stay distinguishable, passports quote the recorded scope verbatim without a classification, placeholders stay omitted, same-brand groups stay distinguishable, the directory identity carries no count/audit claim and is consistent across head, share copy and structured data, #5's page-aware canonical holds, and the private case portal serves identical purpose-only metadata for two different cases. |
 
 ## Design decisions
 
@@ -31,12 +31,13 @@ JEV-008/JEV-010/JEV-020/JEV-026/JEV-027: six duplicate-title groups in the crawl
 6. **Directory identity is factual and count-free**: "Directorio de tiendas en línea y comercios de México" with a page-scoped variant for real catalogue pages; no hardcoded `1,199+` and no "auditadas por Opinio" claim.
 7. **Homepage metadata was reviewed and left as-is**: it is the platform's own brand identity already reviewed with #8, it is no longer shared with any utility family, and #10 will reuse it for share previews.
 8. **Factual unavailable states**: the passport not-found/unavailable branches no longer describe a validation process that the record does not evidence.
+9. **The regression is semantic.** `scripts/verify-seo-metadata.mjs` asserts behaviour at the HTTP seam — distinguishability, verbatim scope, placeholder omission, no invented classification, canonical/indexing policy, no count/audit claim, no private-data leakage — and never pins the rendered wording or keeps copy constants; the literal strings are verified by hand against the DOM artifacts and recorded in this document.
 
 ## Verification (observed)
 
 Runtime: private DB `opinio_issue_4` (1108 real PROFECO/AMVO-derived catalogue businesses, 0 reviews/cases), dev mode `next dev --webpack -H 127.0.0.1 --port 3204`.
 
-1. HTTP regression (`scripts/verify-seo-metadata.mjs`), merged branch, **`27/27 checks passed`**, exit 0:
+1. HTTP regression (`scripts/verify-seo-metadata.mjs`), merged branch, **`28/28 checks passed`**, exit 0 (semantic checks only; the literal wording below is documented from the DOM evidence, not pinned as a copy in the harness):
 
    ```
    DATABASE_URL='postgres://…@127.0.0.1:54732/opinio_issue_4' SMOKE_PORT=3204 \
@@ -67,11 +68,11 @@ Runtime: private DB `opinio_issue_4` (1108 real PROFECO/AMVO-derived catalogue b
 
    Both sides differ in the record's own facts (razón social and/or recorded scope); no record was merged and every canonical stayed its own.
 
-3. Hydrated DOM parity (Playwright 1.59.1 + system Chrome, read-only collector `qa/render-evidence.mjs`; artifacts `evidence/seo-4/render-v2/{results.json,*.png,*.html}`): 18 routes — `/directorio`, `/directorio?page=2`, `/verificar?q=luuna&accion=opinar`, `/caso/nuevo?b=luuna`, `/escribir-opinion/luuna`, the ten passports of the five audit pairs, `/b/99minutos`, `/b/ahal-cosmetica`, `/b/acapella` — returned `200` in server HTML and hydrated DOM with **0 metadata mismatches, 0 console errors and 0 failed requests**; the directory and every passport kept their canonicals.
+3. Hydrated DOM parity (Playwright 1.59.1 + system Chrome, read-only collector `qa/render-evidence.mjs`; artifacts `evidence/seo-4/render-v3/{results.json,*.png,*.html}`): 17 routes — `/directorio`, `/directorio?page=2`, `/verificar?q=luuna&accion=opinar`, `/caso/nuevo?b=luuna`, `/escribir-opinion/luuna`, the ten passports of the five audit pairs, `/b/99minutos` and `/b/acapella` — returned `200` in server HTML and hydrated DOM with **0 metadata mismatches and 0 console errors**; the directory and every passport kept their canonicals. The collector recorded one aborted client-side RSC prefetch (`/verificar?…&_rsc=…`, `net::ERR_ABORTED`) on the search route, i.e. the router cancelling a prefetch while it syncs the query into the URL — no server error and no broken resource. This DOM pass is where the rendered wording itself was verified by hand (titles and descriptions listed in this document are copied from those artifacts).
 
-4. Working forms at the DOM interface (`evidence/seo-4/journey-v2/journey.json`, 9/9 steps, no non-GET requests): typed `luuna` in the search box → the list filtered to 3 passport links → clicked the merchant → `/b/luuna` with title `¿Es confiable Luuna? Comercializadora Zebrands, S. de R.L. de C.V. · ámbito registrado: Ciudad de México | Opinio México`; `/caso/nuevo?b=luuna` preselected `Luuna (Comercializadora Zebrands, S. de R.L. de C.V.)`; each of the five pairs rendered two distinct document titles.
+4. Working forms at the DOM interface (`evidence/seo-4/journey-v3/journey.json`, 9/9 steps, no non-GET requests): typed `luuna` in the search box → the list filtered to 3 passport links → clicked the merchant → `/b/luuna` with title `¿Es confiable Luuna? Comercializadora Zebrands, S. de R.L. de C.V. · ámbito registrado: Ciudad de México | Opinio México`; `/caso/nuevo?b=luuna` preselected `Luuna (Comercializadora Zebrands, S. de R.L. de C.V.)`; each of the five pairs rendered two distinct document titles.
 
-5. Unit tests `node node_modules/vitest/vitest.mjs run src/lib/passport-metadata.test.ts` → **23/23 passed**; `tsc --noEmit` → exit 0.
+5. Unit tests `node node_modules/vitest/vitest.mjs run src/lib/passport-metadata.test.ts` → **12/12 passed** (semantic cases only); `tsc --noEmit` → exit 0.
 
 6. Cross-check of the approved #3 policy on the merged branch: `scripts/verify-seo-indexing.mjs` → **17/17 passed** (utility noindex+follow including parameter variants, opinion-entry merchant self-canonical, passport and directory indexability, `robots.txt` not blocking). Sitemap exact-set on the pristine catalogue: `1128` declared URLs — `1108/1108` passports matching the database inventory plus `20` non-passport URLs (`/`, `/directorio` and the `/directorio?page=N` pagination URLs added by #5). The same run with the five verification rows still present reads `1133` declared URLs with `1113/1113` passports; both figures belong to their database state.
 
@@ -96,3 +97,4 @@ Runtime: private DB `opinio_issue_4` (1108 real PROFECO/AMVO-derived catalogue b
 - Titles are longer than the previous single template by design (verbatim scope plus the published razón social). The observed distribution above is the honest cost; shortening them would require dropping recorded source facts or classifying them, both excluded by the review decision.
 - The served 404 for an unknown passport slug renders the not-found route (observed title: the site fallback), so the factual not-found/unavailable strings in `generateMetadata` are defensive branches rather than the served 404 metadata; the regression asserts the served 404 carries no canonical and no validation-process wording.
 - The crawl-derived inventory facts are parsed from the audited pages' rendered text; 15 of 1200 values over-captured surrounding page text and were excluded from the length statistics (the semantic counters are unaffected).
+- Fixture hygiene: the five verification rows were created, used for the pair proof, and deleted — `businesses 1108 → 1113 → 1108` with `resolution_cases`, `case_messages`, `reviews` and `identities` all `0` before and after; the local verification cases created by the regression are deleted in the same run (`resolution_cases 0 → 0`).

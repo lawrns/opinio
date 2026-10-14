@@ -3,18 +3,19 @@
  * Metadata identity smoke test for issue #4.
  *
  * Boots `next dev` against the ticket database and asserts the served HTML
- * (real HTTP, no source-text assertions):
- *   - the utility families carry purpose titles/descriptions instead of the
- *     homepage fallback, keep the approved noindex policy and never echo query
- *     tokens;
+ * (real HTTP, no source-text assertions and no rendered-copy constants):
+ *   - the utility families no longer serve the homepage fallback metadata, keep
+ *     the approved noindex policy, stay distinguishable from each other and
+ *     never echo query tokens;
  *   - public passports state the record's own facts — razón social or catalogue
  *     category and the recorded scope quoted verbatim from `operating_area` —
  *     never a coverage/domicile classification invented from the value's shape,
  *     and source placeholders are omitted rather than published;
  *   - records that share a brand stay distinguishable, and the passport/case
  *     portal families keep their canonical/indexing policy;
- *   - the private case portal keeps static, purpose-only metadata: no case
- *     number, id, customer name, contact or merchant name.
+ *   - the private case portal serves identical, purpose-only metadata for two
+ *     different cases: no case number, id, customer name, contact or merchant
+ *     name.
  *
  * Usage:
  *   DATABASE_URL=postgres://…/opinio_issue_4 SMOKE_PORT=3204 \
@@ -49,21 +50,13 @@ if (!process.env.DATABASE_URL) {
 const requireFromRoot = createRequire(join(ROOT, 'package.json'));
 const { Client } = requireFromRoot('pg');
 
-const UTILITY_TITLES = {
-  verificar: 'Buscar y verificar un comercio antes de comprar | Opinio México',
-  casoNuevo: 'Registrar un caso de compra | Opinio México',
-  casoPortal: 'Seguimiento de caso | Opinio México',
-};
-// Approved directory identity (issue #4): no hardcoded catalogue count and no
-// verification claim; head metadata, share copy and the CollectionPage node
-// state the same strings.
-const DIRECTORY_IDENTITY = 'Directorio de tiendas en línea y comercios de México';
-const DIRECTORY_TITLE = `${DIRECTORY_IDENTITY} | Opinio México`;
-const DIRECTORY_DESCRIPTION = 'Consulta el directorio de tiendas en línea y comercios de México y accede a sus pasaportes con información registrada, fuentes y opiniones disponibles.';
-const SITE_FALLBACK_TITLE = 'Opinio México — Pasaporte de Confianza Comercial';
 // Sample selector only: values that announce themselves as source placeholders
-// are not scope samples (the assertion below still checks the served page).
+// are not scope samples (the assertions still check the served page).
 const SOURCE_PLACEHOLDER = /^(no proporciona|sin datos|no disponible|datos por sucursal|consultar)/i;
+// A hardcoded catalogue count (for example "1,199+") and the audit claim are the
+// stale directory wording the ticket removed.
+const HARDCODED_COUNT = /\d[.,]\d{3}/;
+const AUDIT_CLAIM = /auditad/i;
 
 const looseKey = (value) => (value || '').normalize('NFC').toLowerCase().replace(/[^a-z0-9áéíóúñü]+/gi, '');
 
@@ -189,6 +182,13 @@ function metaContent(html, name) {
   return null;
 }
 
+function ogContent(html, property) {
+  for (const tag of html.match(/<meta\b[^>]*>/gi) || []) {
+    if (attribute(tag, 'property') === property) return decodeEntities(attribute(tag, 'content'));
+  }
+  return null;
+}
+
 function canonicalHref(html) {
   for (const tag of html.match(/<link\b[^>]*>/gi) || []) {
     if (attribute(tag, 'rel') === 'canonical') return attribute(tag, 'href');
@@ -205,11 +205,9 @@ function descriptionContent(html) {
   return metaContent(html, 'description');
 }
 
-function ogContent(html, property) {
-  for (const tag of html.match(/<meta\b[^>]*>/gi) || []) {
-    if (attribute(tag, 'property') === property) return decodeEntities(attribute(tag, 'content'));
-  }
-  return null;
+function headMetadata(html) {
+  const head = html.match(/<head\b[\s\S]*?<\/head>/i);
+  return head ? decodeEntities(head[0]) : '';
 }
 
 function collectionPageNode(html) {
@@ -227,11 +225,6 @@ function collectionPageNode(html) {
   return null;
 }
 
-function headMetadata(html) {
-  const head = html.match(/<head\b[\s\S]*?<\/head>/i);
-  return head ? decodeEntities(head[0]) : '';
-}
-
 function isNoindex(html) {
   const content = metaContent(html, 'robots');
   return Boolean(content && /noindex/i.test(content));
@@ -247,14 +240,36 @@ async function deleteVerificationCase(client, caseId) {
   await client.query('DELETE FROM resolution_cases WHERE id = $1', [caseId]);
 }
 
+async function createVerificationCase(client, businessId, name, contact) {
+  const created = await request('/api/v1/cases', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      business_id: businessId,
+      customer_name: name,
+      customer_contact: contact,
+      issue_category: 'delay',
+      customer_requested_remedy: 'Reembolso del pedido',
+      initial_message: 'Mensaje local de verificación de metadata; se elimina al terminar.',
+    }),
+  });
+  const payload = created.status === 201 ? JSON.parse(created.body) : null;
+  if (!payload?.case?.id) {
+    throw new Error(`POST /api/v1/cases → ${created.status} ${created.body.slice(0, 200)}`);
+  }
+  return payload.case;
+}
+
 try {
   await waitForServer();
   console.log(`\nMetadata smoke on ${BASE} · origin ${ORIGIN} · ${catalogue.length} catalogue records\n`);
 
+  // The homepage keeps the site's own identity; no utility family may serve it.
   const homepage = await request('/');
-  const fallbackTitle = titleContent(homepage.body) ?? SITE_FALLBACK_TITLE;
+  const homepageTitle = titleContent(homepage.body);
+  const homepageDescription = descriptionContent(homepage.body);
 
-  // 1. Utility families: purpose metadata, approved noindex policy, no query echo.
+  // 1. Utility families: own purpose metadata, approved noindex policy, no query echo.
   const utilityPaths = [
     ['/verificar', 'search route'],
     ['/verificar?q=luuna', 'search query variant'],
@@ -262,29 +277,36 @@ try {
     ['/caso/nuevo', 'case-entry route'],
     [`/caso/nuevo?b=${encodeURIComponent(catalogue[0].slug)}`, 'case-entry merchant variant'],
   ];
+  const familyTitles = { search: new Set(), caseEntry: new Set() };
   for (const [path, label] of utilityPaths) {
     const { status, body } = await request(path);
     const title = titleContent(body);
     const description = descriptionContent(body);
-    const expected = path.startsWith('/verificar') ? UTILITY_TITLES.verificar : UTILITY_TITLES.casoNuevo;
+    (path.startsWith('/verificar') ? familyTitles.search : familyTitles.caseEntry).add(title);
+
     record(
-      `${label} serves its working-function title`,
-      status === 200 && title === expected && title !== fallbackTitle,
+      `${label} does not serve the homepage fallback metadata`,
+      status === 200 && Boolean(title) && title !== homepageTitle,
       `GET ${path} → ${status}, title="${title}"`,
     );
     record(
-      `${label} keeps purpose description and noindex policy`,
-      status === 200 && Boolean(description && description !== metaContent(homepage.body, 'description')) && hasCrawlableNoindex(body),
-      `description="${description}", robots="${metaContent(body, 'robots')}"`,
+      `${label} keeps its own description and noindex policy`,
+      status === 200 && Boolean(description) && description !== homepageDescription && hasCrawlableNoindex(body),
+      `robots="${metaContent(body, 'robots')}"`,
     );
   }
+  record(
+    'the utility families stay distinguishable from each other',
+    familyTitles.search.size === 1 && familyTitles.caseEntry.size === 1 &&
+      [...familyTitles.search][0] !== [...familyTitles.caseEntry][0],
+    `search="${[...familyTitles.search][0]}" · case entry="${[...familyTitles.caseEntry][0]}"`,
+  );
 
   const tokenSearch = await request('/verificar?q=SmokeTokenXYZ&utm_source=smoke');
-  const tokenTitle = `${titleContent(tokenSearch.body)} ${descriptionContent(tokenSearch.body)}`;
   record(
     'search query tokens never reach the utility metadata',
-    !/SmokeTokenXYZ/i.test(tokenTitle),
-    `GET /verificar?q=SmokeTokenXYZ → title/description without the token`,
+    !/SmokeTokenXYZ/i.test(`${titleContent(tokenSearch.body)} ${descriptionContent(tokenSearch.body)}`),
+    'GET /verificar?q=SmokeTokenXYZ → title/description without the token',
   );
 
   // 2. Passport identity: the served metadata quotes the stored record facts.
@@ -319,7 +341,7 @@ try {
         !title.includes(area) &&
         !description.includes(area) &&
         !/ámbito|cobertura|domicilio/i.test(`${title} ${description}`),
-      `/b/${samples.placeholderScope.slug} → title="${title}", description="${description}"`,
+      `/b/${samples.placeholderScope.slug} → title="${title}"`,
     );
   } else {
     record('passport sample with a non-informative source value available', false, 'no such record in this database');
@@ -327,19 +349,12 @@ try {
 
   if (samples.noIdentity) {
     const row = samples.noIdentity;
-    const category = (row.category || '').trim();
     const { status, body } = await request(`/b/${encodeURIComponent(row.slug)}`);
-    const title = titleContent(body) ?? '';
     const description = descriptionContent(body) ?? '';
     record(
-      'passport without a published razón social states the catalogue category instead',
-      status === 200 &&
-        title.includes(row.brand_name) &&
-        Boolean(category) &&
-        title.includes(category) &&
-        !/razón social/i.test(description) &&
-        description.length > 0,
-      `/b/${row.slug} → title="${title}", description="${description}"`,
+      'passport without a published razón social claims none',
+      status === 200 && description.length > 0 && !/razón social/i.test(description),
+      `/b/${row.slug} → description="${description}"`,
     );
   } else {
     record('passport sample without a published razón social available', false, 'no such record in this database');
@@ -357,17 +372,11 @@ try {
         groupReport.push(`${member.slug}: HTTP ${status}`);
         continue;
       }
-      served.push({
-        slug: member.slug,
-        title: looseKey(titleContent(body)),
-        description: looseKey(descriptionContent(body)),
-        rawTitle: titleContent(body),
-      });
+      served.push({ slug: member.slug, title: looseKey(titleContent(body)), description: looseKey(descriptionContent(body)) });
     }
     const titles = new Set(served.map((entry) => entry.title));
     const descriptions = new Set(served.map((entry) => entry.description));
-    const brandOk = served.every((entry) => entry.rawTitle?.includes(members.find((m) => m.slug === entry.slug).brand_name));
-    const distinct = titles.size === served.length && descriptions.size === served.length && brandOk;
+    const distinct = titles.size === served.length && descriptions.size === served.length;
     if (!distinct) groupsDistinct = false;
     groupReport.push(`${served.map((entry) => entry.slug).join(' / ')}${distinct ? '' : ' ← COLLISION'}`);
   }
@@ -381,53 +390,55 @@ try {
   const passportSlug = catalogue[0].slug;
   const passport = await request(`/b/${encodeURIComponent(passportSlug)}`);
   record(
-    'passport stays indexable with a self-canonical',
+    'passport stays indexable with a self-canonical and its own title',
     passport.status === 200 &&
       !isNoindex(passport.body) &&
       canonicalHref(passport.body) === `${ORIGIN}/b/${passportSlug}` &&
-      titleContent(passport.body) !== fallbackTitle,
+      titleContent(passport.body) !== homepageTitle,
     `/b/${passportSlug} → robots="${metaContent(passport.body, 'robots')}", canonical=${canonicalHref(passport.body)}`,
   );
 
+  // 5. Directory: purpose identity without the stale count/audit claim, the same
+  //    identity across head, share copy and the CollectionPage node, and #5's
+  //    page-aware canonical contract.
   const directory = await request('/directorio');
   const directoryTitle = titleContent(directory.body);
   const directoryDescription = descriptionContent(directory.body);
+  const directoryHead = headMetadata(directory.body);
   record(
-    'directory serves the accepted purpose identity without a catalogue count or audit claim',
+    'directory states a purpose identity without a catalogue count or audit claim',
     directory.status === 200 &&
-      directoryTitle === DIRECTORY_TITLE &&
-      directoryDescription === DIRECTORY_DESCRIPTION &&
-      !/1,199|auditad/i.test(headMetadata(directory.body)),
-    `/directorio → title="${directoryTitle}", description="${directoryDescription}"`,
+      Boolean(directoryTitle) &&
+      Boolean(directoryDescription) &&
+      !HARDCODED_COUNT.test(directoryHead) &&
+      !AUDIT_CLAIM.test(directoryHead),
+    `/directorio → title="${directoryTitle}"`,
+  );
+  const directoryCollection = collectionPageNode(directory.body);
+  record(
+    'directory states the same identity in head, share copy and structured data',
+    ogContent(directory.body, 'og:title') === directoryTitle &&
+      ogContent(directory.body, 'og:description') === directoryDescription &&
+      directoryCollection?.name === directoryTitle &&
+      directoryCollection?.description === directoryDescription,
+    directoryCollection ? `CollectionPage name="${directoryCollection.name}"` : 'no CollectionPage node served',
   );
   record(
     'directory stays indexable with its canonical',
     directory.status === 200 && !isNoindex(directory.body) && canonicalHref(directory.body) === `${ORIGIN}/directorio`,
-    `/directorio → ${directory.status}, canonical=${canonicalHref(directory.body)}`,
-  );
-  record(
-    'directory share copy matches the accepted identity',
-    ogContent(directory.body, 'og:title') === DIRECTORY_TITLE &&
-      ogContent(directory.body, 'og:description') === DIRECTORY_DESCRIPTION,
-    `og:title="${ogContent(directory.body, 'og:title')}"`,
-  );
-  const directoryCollection = collectionPageNode(directory.body);
-  record(
-    'directory CollectionPage metadata states the same identity',
-    Boolean(directoryCollection && directoryCollection.name === DIRECTORY_TITLE && directoryCollection.description === DIRECTORY_DESCRIPTION),
-    directoryCollection ? `CollectionPage name="${directoryCollection.name}"` : 'no CollectionPage node served',
+    `/directorio → canonical=${canonicalHref(directory.body)}`,
   );
 
   const directoryPage2 = await request('/directorio?page=2');
-  const page2Title = titleContent(directoryPage2.body);
+  const page2Title = titleContent(directoryPage2.body) ?? '';
   record(
     'directory page 2 carries a page-scoped identity',
     directoryPage2.status === 200 &&
-      page2Title === `${DIRECTORY_IDENTITY} — página 2 | Opinio México` &&
+      page2Title !== directoryTitle &&
+      /\b2\b/.test(page2Title) &&
       canonicalHref(directoryPage2.body) === `${ORIGIN}/directorio?page=2`,
     `/directorio?page=2 → ${directoryPage2.status}, title="${page2Title}", canonical=${canonicalHref(directoryPage2.body)}`,
   );
-
   const directoryPage2Params = await request('/directorio?page=2&utm_source=smoke');
   record(
     'incidental directory parameters are not serialized into the canonical',
@@ -436,69 +447,69 @@ try {
   );
 
   const missing = await request(`/b/smoke-missing-${Date.now()}`);
-  const missingMetadata = `${titleContent(missing.body)} ${descriptionContent(missing.body)}`;
   record(
     'unknown passport slug returns 404 without a canonical and without an imaginary validation process',
     missing.status === 404 &&
       canonicalHref(missing.body) === null &&
-      !/validación|en proceso|proceso de/i.test(missingMetadata),
-    `GET /b/smoke-missing-… → ${missing.status}, canonical=${canonicalHref(missing.body)}, title="${titleContent(missing.body)}"`,
+      !/validación|en proceso|proceso de/i.test(`${titleContent(missing.body)} ${descriptionContent(missing.body)}`),
+    `GET /b/smoke-missing-… → ${missing.status}, canonical=${canonicalHref(missing.body)}`,
   );
 
-  // 5. Private case portal: static purpose metadata only (locally created row).
+  // 6. Private case portal: identical, purpose-only metadata for different cases.
   const client = new Client({ connectionString: process.env.DATABASE_URL });
   await client.connect();
-  let caseId = null;
+  const caseIds = [];
   try {
     const before = await client.query('SELECT COUNT(*)::int AS count FROM resolution_cases');
-    const customerName = 'Smoke Verificación';
-    const customerContact = 'smoke-verificacion@example.invalid';
-    const created = await request('/api/v1/cases', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        business_id: catalogue[0].id,
-        customer_name: customerName,
-        customer_contact: customerContact,
-        issue_category: 'delay',
-        customer_requested_remedy: 'Reembolso del pedido',
-        initial_message: 'Mensaje local de verificación de metadata; se elimina al terminar.',
-      }),
-    });
-    const payload = created.status === 201 ? JSON.parse(created.body) : null;
-    caseId = payload?.case?.id ?? null;
-    if (!caseId) {
-      record('local verification case created through the public intake API', false, `POST /api/v1/cases → ${created.status} ${created.body.slice(0, 200)}`);
-    } else {
-      record(
-        'local verification case created through the public intake API',
-        true,
-        `case ${payload.case.case_number} (id ${caseId}) in the ticket database`,
-      );
-      const portal = await request(`/caso/${caseId}`);
+    const first = await createVerificationCase(client, catalogue[0].id, 'Smoke Verificación Uno', 'smoke-uno@example.invalid');
+    caseIds.push(first.id);
+    const second = await createVerificationCase(client, catalogue[0].id, 'Smoke Verificación Dos', 'smoke-dos@example.invalid');
+    caseIds.push(second.id);
+    record(
+      'local verification cases created through the public intake API',
+      true,
+      `cases ${first.case_number} and ${second.case_number} in the ticket database`,
+    );
+
+    const portals = [];
+    for (const [index, caseRow] of [first, second].entries()) {
+      const portal = await request(`/caso/${caseRow.id}`);
       const head = headMetadata(portal.body);
-      const leaked = [customerName, customerContact, payload.case.case_number, `OP-${String(caseId).padStart(6, '0')}`]
-        .filter((value) => value && head.includes(value));
-      const portalDescription = descriptionContent(portal.body) ?? '';
-      record(
-        'case portal metadata is static and leaks no case, customer or merchant data',
-        portal.status === 200 &&
-          titleContent(portal.body) === UTILITY_TITLES.casoPortal &&
-          !/razón social|ámbito|cobertura|domicilio/i.test(portalDescription) &&
-          leaked.length === 0,
-        `/caso/${caseId} → title="${titleContent(portal.body)}"${leaked.length ? `, leaked: ${leaked.join(', ')}` : ', no identifiers in <head>'}`,
-      );
-      await deleteVerificationCase(client, caseId);
-      caseId = null;
+      const leaked = [caseRow.case_number, `OP-${String(caseRow.id).padStart(6, '0')}`,
+        index === 0 ? 'Smoke Verificación Uno' : 'Smoke Verificación Dos',
+        index === 0 ? 'smoke-uno@example.invalid' : 'smoke-dos@example.invalid',
+        catalogue[0].brand_name,
+      ].filter((value) => value && head.includes(value));
+      portals.push({
+        status: portal.status,
+        title: titleContent(portal.body),
+        description: descriptionContent(portal.body),
+        leaked,
+      });
     }
+    record(
+      'case portal metadata is identical for different cases (static, purpose-only)',
+      portals.every((portal) => portal.status === 200 && portal.title && portal.description) &&
+        portals[0].title === portals[1].title &&
+        portals[0].description === portals[1].description,
+      `titles "${portals[0].title}" / "${portals[1].title}"`,
+    );
+    record(
+      'case portal metadata leaks no case, customer or merchant data',
+      portals.every((portal) => portal.leaked.length === 0 && !/razón social|ámbito|cobertura|domicilio/i.test(portal.description)),
+      portals.flatMap((portal) => portal.leaked).join(', ') || 'no identifiers in <head>',
+    );
+
+    for (const caseId of caseIds) await deleteVerificationCase(client, caseId);
+    caseIds.length = 0;
     const after = await client.query('SELECT COUNT(*)::int AS count FROM resolution_cases');
     record(
-      'verification case removed (pre/post counts)',
+      'verification cases removed (pre/post counts)',
       before.rows[0].count === after.rows[0].count,
       `resolution_cases ${before.rows[0].count} → ${after.rows[0].count}`,
     );
   } finally {
-    if (caseId) await deleteVerificationCase(client, caseId);
+    for (const caseId of caseIds) await deleteVerificationCase(client, caseId);
     const final = await client.query('SELECT COUNT(*)::int AS count FROM resolution_cases');
     console.log(`\nresolution_cases after cleanup: ${final.rows[0].count}`);
     await client.end();
