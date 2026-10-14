@@ -2,6 +2,7 @@ import React from 'react';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { query } from '@/lib/db';
+import { sharePreview } from '@/lib/share-preview';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { ReviewFormWizard } from './ReviewFormWizard';
@@ -49,18 +50,25 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (res.rows.length === 0) {
     return {
       title: 'Comercio no encontrado | Opinio México',
-      description: 'El comercio solicitado no existe o se encuentra en proceso de validación.',
+      description: 'Este comercio no está registrado en Opinio México.',
     };
   }
 
   const business = res.rows[0];
+  const title = `Escribir una opinión sobre ${business.brand_name} | Opinio México`;
+  const description = `Comparte tu experiencia con ${business.brand_name}: qué compraste, cómo respondió y cómo resolvió. Tu opinión ayuda a otros compradores en México a decidir con evidencia.`;
+  const canonical = `${siteBaseUrl()}/escribir-opinion/${business.slug}`;
 
   return {
-    title: `Escribir una opinión sobre ${business.brand_name} | Opinio México`,
-    description: `Comparte tu experiencia con ${business.brand_name}: qué compraste, cómo respondió y cómo resolvió. Tu opinión ayuda a otros compradores en México a decidir con evidencia.`,
+    title,
+    description,
     alternates: {
-      canonical: `${siteBaseUrl()}/escribir-opinion/${business.slug}`,
+      canonical,
     },
+    // The share preview reuses the merchant identity and the self-canonical, so
+    // incidental parameters on the form URL stay out of the share metadata and
+    // the preview is never cross-linked to the /b/<slug> passport.
+    ...sharePreview({ title, description, url: canonical }),
   };
 }
 

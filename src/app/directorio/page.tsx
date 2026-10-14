@@ -19,6 +19,7 @@ import {
   normalizeCategory,
   selectDirectoryPage,
 } from '@/lib/directory-pagination';
+import { sharePreview } from '@/lib/share-preview';
 
 interface PageProps {
   searchParams: Promise<{ page?: string | string[] }>;
@@ -65,14 +66,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
     alternates: {
       canonical,
     },
-    openGraph: {
-      title,
-      description: DIRECTORY_DESCRIPTION,
-      url: canonical,
-      siteName: 'Opinio.mx',
-      locale: 'es_MX',
-      type: 'website',
-    },
+    ...sharePreview({ title, description: DIRECTORY_DESCRIPTION, url: canonical }),
   };
 }
 
