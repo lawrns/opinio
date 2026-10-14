@@ -279,8 +279,8 @@ cd .next-qa14-standalone/standalone && PORT=3214 HOSTNAME=127.0.0.1 node server.
   evidence anchor and residual uncertainty) and section 6 (rejected recipes + guardrails).
 - [x] **AC4 — provider snapshots reused; no new paid calls; no historic GA4 or nonexistent field CWV
   required.** No provider request was made by #14 (the audit ledger `17 requests / $0.302132` and the
-  #12/#13 snapshot reads are reused as-is). Historial GA4 exports and field CrUX data do not exist
-  for this property and are recorded as unknown, not fabricated.
+  #12/#13 snapshot reads are reused as-is). Historical GA4 exports and field CrUX data were not
+  available in the retained sources; availability elsewhere remains unassessed, not fabricated.
 - [x] **AC5 — only observed runtime results; no target score as proof; human outreach not claimed
   complete.** Every figure above is an observed HTTP/DOM/API/compiler result on the local runtime;
   the audit's 83/100 score is not used as proof, no score improvement is claimed, and the #13
