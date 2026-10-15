@@ -11,8 +11,12 @@ import {
   resenasFaqMainEntity,
 } from '@/lib/resenas-reputacion';
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://opinio.mx';
-const CANONICAL = `${SITE_URL.replace(/\/+$/, '')}${RESENAS_PATH}`;
+// Same guarded site-URL pattern as layout.tsx, directorio, sitemap and /b/
+// profiles: a stale fertilitylistings value in the env must never leak into
+// the canonical or og:url.
+const envUrl = process.env.NEXT_PUBLIC_SITE_URL;
+const SITE_URL = (envUrl && !envUrl.includes('fertilitylistings') ? envUrl : 'https://opinio.mx').replace(/\/+$/, '');
+const CANONICAL = `${SITE_URL}${RESENAS_PATH}`;
 
 export const metadata: Metadata = {
   title: 'Reseñas y reputación para tu negocio en México | Opinio.mx',
