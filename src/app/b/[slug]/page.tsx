@@ -13,6 +13,7 @@ import { TrustGauge } from '@/components/passport/TrustGauge';
 import { OfficialRecordCard } from '@/components/passport/OfficialRecordCard';
 import { query } from '@/lib/db';
 import { passportMetadata } from '@/lib/passport-metadata';
+import { buildBuyerFaq } from '@/lib/passport-buyer-faq';
 import { factStatus, formatRecordDate, latestRecordDateValue, verificationLevelLabel } from '@/lib/passport-evidence';
 
 interface BusinessDbRow {
@@ -252,6 +253,20 @@ export default async function BusinessPassportPage({ params }: PageProps) {
   const canonicalUrl = `${baseUrl}/b/${business.slug}`;
   const logoAbsoluteUrl = business.logo_url ? `${baseUrl}${business.logo_url}` : undefined;
 
+  // One source for the buyer Q&A: rendered visibly below and mirrored in the
+  // FAQPage structured data (SEO-GEO-001 finding 1, JEV-001).
+  const buyerFaq = buildBuyerFaq({
+    brandName: business.brand_name,
+    legalName: business.legal_name,
+    rfc: business.rfc,
+    rfcLabel: factEvidence.rfc.label,
+    domain: business.domain,
+    verificationLabel: verificationLevelLabel(business.verified_level),
+    reviewsCount: reviews.length,
+    averageRating,
+    casesCount: cases.length,
+  });
+
   const jsonLd = {
     '@context': 'https://schema.org',
     '@graph': [
@@ -340,44 +355,14 @@ export default async function BusinessPassportPage({ params }: PageProps) {
       {
         '@type': 'FAQPage',
         '@id': `${canonicalUrl}#faq`,
-        mainEntity: [
-          {
-            '@type': 'Question',
-            name: `¿Es confiable comprar en ${business.brand_name} en México?`,
-            acceptedAnswer: {
-              '@type': 'Answer',
-              text: `${business.brand_name} cuenta con un perfil público en Opinio México. Estado del RFC: ${business.rfc ? `${business.rfc} (${factEvidence.rfc.label})` : 'sin RFC publicado'}. Nivel de verificación registrado: ${verificationLevelLabel(business.verified_level)}. ${reviews.length > 0 ? `Tiene ${reviews.length} opiniones publicadas con promedio de ${averageRating?.toFixed(1)}/5.` : 'Todavía no tiene opiniones publicadas.'} ${cases.length > 0 ? `Opinio tiene registrados ${cases.length} ${cases.length === 1 ? 'caso' : 'casos'} de atención de compradores.` : 'Opinio no tiene casos de atención registrados.'}`,
-            },
+        mainEntity: buyerFaq.map((item) => ({
+          '@type': 'Question',
+          name: item.question,
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: item.answer,
           },
-          {
-            '@type': 'Question',
-            name: `¿Tiene quejas ${business.brand_name} ante la PROFECO?`,
-            acceptedAnswer: {
-              '@type': 'Answer',
-              text: `${cases.length > 0 ? `Opinio registra ${cases.length} ${cases.length === 1 ? 'caso' : 'casos'} de atención de compradores para ${business.brand_name}.` : `Opinio no registra casos de atención de compradores para ${business.brand_name}.`} Los registros de casos de Opinio no son expedientes confirmados ante la PROFECO. Consulta las fuentes públicas vinculadas en este pasaporte.`,
-            },
-          },
-          {
-            '@type': 'Question',
-            name: `¿Cuál es el RFC y razón social de ${business.brand_name}?`,
-            acceptedAnswer: {
-              '@type': 'Answer',
-              text: business.legal_name
-                ? `La razón social registrada de ${business.brand_name} es "${business.legal_name}"${business.rfc ? ` y su RFC es ${business.rfc}` : ''}.`
-                : business.rfc
-                  ? `El RFC publicado para ${business.brand_name} es ${business.rfc}. La razón social aún no está publicada en Opinio.`
-                  : `La razón social y el RFC de ${business.brand_name} aún no están publicados en Opinio.`,
-            },
-          },
-          {
-            '@type': 'Question',
-            name: `¿Cómo solicitar aclaraciones o reembolsos a ${business.brand_name}?`,
-            acceptedAnswer: {
-              '@type': 'Answer',
-              text: `Para aclaraciones, los consumidores pueden comunicarse a través de sus canales oficiales ${business.domain ? `en ${business.domain}` : ''} o solicitar una mediación independiente a través de Opinio registrando su comprobante de pago.`,
-            },
-          },
-        ],
+        })),
       },
     ],
   };
@@ -552,6 +537,21 @@ export default async function BusinessPassportPage({ params }: PageProps) {
               <div className="p-3.5 rounded-xl bg-[var(--op-canvas)] border border-[var(--op-border-hairline)]">
                 <div className="text-[var(--op-ink-muted)]">Opiniones publicadas</div>
                 <div className="font-bold text-[var(--op-ink-primary)] text-sm truncate mt-0.5">{reviews.length > 0 ? `${reviews.length} (${averageRating?.toFixed(1)}/5)` : 'Sin opiniones publicadas'}</div>
+              </div>
+            </div>
+
+            {/* Buyer questions answered visibly, from the same source as the FAQPage data */}
+            <div className="space-y-3 pt-4 border-t border-[var(--op-border-hairline)]">
+              <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--op-ink-primary)]">
+                Preguntas del comprador
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {buyerFaq.map((item) => (
+                  <article key={item.question} className="p-4 rounded-xl bg-[var(--op-canvas)] border border-[var(--op-border-hairline)] space-y-1.5">
+                    <h4 className="text-sm font-bold text-[var(--op-ink-primary)]">{item.question}</h4>
+                    <p className="text-sm text-[var(--op-ink-secondary)] leading-relaxed">{item.answer}</p>
+                  </article>
+                ))}
               </div>
             </div>
           </section>
