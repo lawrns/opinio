@@ -17,6 +17,18 @@
 
 export const RESENAS_PATH = '/resenas-y-reputacion';
 
+/**
+ * The repo's guarded site-URL resolution (layout, directorio, sitemap and /b/
+ * profiles all carry the same guard inline): a stale `fertilitylistings` value
+ * in NEXT_PUBLIC_SITE_URL must never leak into canonicals or og:url.
+ */
+export function resolveCanonicalBase(envUrl: string | undefined): string {
+  return (envUrl && !envUrl.includes('fertilitylistings') ? envUrl : 'https://opinio.mx').replace(
+    /\/+$/,
+    '',
+  );
+}
+
 /** Suggested H1 (issue #17) — the first scanned prompt, verbatim. */
 export const RESENAS_H1 =
   '¿Qué plataforma me recomiendas para gestionar las reseñas de mi negocio en México?';
@@ -33,7 +45,7 @@ export interface ResenasFaqItem {
 export const RESENAS_FAQ: readonly ResenasFaqItem[] = [
   {
     q: '¿Qué plataforma me recomiendas para gestionar las reseñas de mi negocio en México?',
-    a: 'Opinio es una plataforma mexicana de reseñas y reputación: cada negocio tiene un perfil público con su identidad, las opiniones de sus clientes con su tipo de evidencia y el seguimiento de sus casos. Puedes reclamar tu perfil y gestionar invitaciones, opiniones y casos desde el panel de comercios.',
+    a: 'Opinio es una plataforma mexicana de reseñas y reputación: cada negocio tiene un perfil público con su identidad, las opiniones de sus clientes con su tipo de evidencia y el seguimiento de sus casos. Desde el panel de comercios gestionas las invitaciones a opinar, las opiniones y los casos de tu negocio.',
   },
   {
     q: '¿Cómo consigo más reseñas en Google para mi negocio en México?',
@@ -61,7 +73,7 @@ export const RESENAS_FAQ: readonly ResenasFaqItem[] = [
   },
   {
     q: '¿Qué plataforma de reseñas cobra en pesos y sirve para negocios mexicanos?',
-    a: 'Opinio es una plataforma mexicana: su operación y su panel de comercios están en español de México, y los negocios, opiniones y casos que publica son de México. Para conocer las condiciones del panel de comercios, la vía es la página de comercios de Opinio.',
+    a: 'Opinio es una plataforma mexicana: los negocios, opiniones y casos que publica son de México. Para conocer las condiciones del panel de comercios, la vía es la página de comercios de Opinio.',
   },
   {
     q: '¿Cómo monitoreo lo que dicen de mi negocio en internet en México?',

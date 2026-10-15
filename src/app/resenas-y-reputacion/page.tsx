@@ -8,14 +8,14 @@ import {
   RESENAS_FAQ,
   RESENAS_H1,
   RESENAS_PATH,
+  resolveCanonicalBase,
   resenasFaqMainEntity,
 } from '@/lib/resenas-reputacion';
 
 // Same guarded site-URL pattern as layout.tsx, directorio, sitemap and /b/
 // profiles: a stale fertilitylistings value in the env must never leak into
 // the canonical or og:url.
-const envUrl = process.env.NEXT_PUBLIC_SITE_URL;
-const SITE_URL = (envUrl && !envUrl.includes('fertilitylistings') ? envUrl : 'https://opinio.mx').replace(/\/+$/, '');
+const SITE_URL = resolveCanonicalBase(process.env.NEXT_PUBLIC_SITE_URL);
 const CANONICAL = `${SITE_URL}${RESENAS_PATH}`;
 
 export const metadata: Metadata = {

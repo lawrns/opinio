@@ -6,7 +6,13 @@
  * promises, no competitor names) and the sitemap entry.
  */
 import { describe, it, expect } from 'vitest';
-import { RESENAS_FAQ, RESENAS_H1, resenasFaqMainEntity } from './resenas-reputacion';
+import {
+  RESENAS_FAQ,
+  RESENAS_H1,
+  RESENAS_PATH,
+  resolveCanonicalBase,
+  resenasFaqMainEntity,
+} from './resenas-reputacion';
 
 /** The twelve scanned prompts (issue #17), verbatim. */
 const PROMPTS = [
@@ -60,5 +66,24 @@ describe('GEO answer page: reseñas y reputación (issue #17)', () => {
     for (const competitor of ['Birdeye', 'Cinquo', 'Localboss', 'Trusti', 'NiceJob', 'Estrellitas', 'Retelio', 'KIUVO', 'TCMX']) {
       expect(blob).not.toContain(competitor);
     }
+  });
+
+  it('uses live site wording only (copy QA follow-up)', () => {
+    const blob = RESENAS_FAQ.map((f) => `${f.q} ${f.a}`).join(' ');
+    expect(blob).not.toContain('reclamar');
+    expect(blob).not.toContain('español');
+  });
+});
+
+describe('canonical under the legacy env value (QA #18)', () => {
+  it('resolves to opinio.mx when the env holds fertilitylistings', () => {
+    const base = resolveCanonicalBase('https://fertilitylistings.com');
+    expect(base).toBe('https://opinio.mx');
+    expect(`${base}${RESENAS_PATH}`).toBe('https://opinio.mx/resenas-y-reputacion');
+  });
+
+  it('keeps a real site URL (trailing slash trimmed) and defaults when unset', () => {
+    expect(resolveCanonicalBase('https://opinio.mx/')).toBe('https://opinio.mx');
+    expect(resolveCanonicalBase(undefined)).toBe('https://opinio.mx');
   });
 });
