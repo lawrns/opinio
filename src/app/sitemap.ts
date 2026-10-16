@@ -27,6 +27,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     { url: baseUrl },
     { url: `${baseUrl}/directorio` },
+    // GEO answer page for business-owner reviews/reputation prompts (issue #17).
+    { url: `${baseUrl}/resenas-y-reputacion` },
     // Every real directory page, so crawlers can traverse the whole public
     // catalogue through the paginated directory as well as through /b/ links.
     ...Array.from({ length: Math.max(0, totalPages - 1) }, (_, index) => ({
