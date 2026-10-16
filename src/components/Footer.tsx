@@ -20,7 +20,7 @@ export function Footer() {
           <nav aria-label="Enlaces de Opinio">
             <h2 className="text-sm font-semibold">Conoce Opinio</h2>
             <ul className="mt-3 text-sm text-op-secondary">
-              {[['/#metodologia', 'Cómo leemos la evidencia'], ['/#independencia', 'Nuestra independencia'], ['/resenas-y-reputacion', 'Reseñas y reputación'], ['/merchant', 'Panel para comercios']].map(([href, label]) => <li key={href}><Link className="inline-flex min-h-11 items-center hover:underline" href={href}>{label}</Link></li>)}
+              {[['/#metodologia', 'Cómo leemos la evidencia'], ['/#independencia', 'Nuestra independencia'], ['/resenas-y-reputacion', 'Reseñas y reputación'], ['/blog', 'Blog'], ['/merchant', 'Panel para comercios']].map(([href, label]) => <li key={href}><Link className="inline-flex min-h-11 items-center hover:underline" href={href}>{label}</Link></li>)}
             </ul>
           </nav>
         </div>
