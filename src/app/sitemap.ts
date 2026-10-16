@@ -2,6 +2,7 @@ import type { MetadataRoute } from 'next';
 import { query } from '@/lib/db';
 import { directoryPageHref } from '@/lib/directory-pagination';
 import { getDirectoryIndex } from '@/lib/directory-catalogue';
+import { blogSitemapEntries } from '@/lib/blog/sitemap-entries';
 
 interface BusinessSitemapRow {
   slug: string;
@@ -34,6 +35,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...Array.from({ length: Math.max(0, totalPages - 1) }, (_, index) => ({
       url: `${baseUrl}${directoryPageHref(index + 2)}`,
     })),
+    ...blogSitemapEntries(baseUrl),
     ...businesses.rows.map(({ slug, updated_at }) => ({
       url: `${baseUrl}/b/${slug}`,
       ...(updated_at ? { lastModified: updated_at } : {}),
