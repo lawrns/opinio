@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { toPublicCase } from '@/lib/case-access';
 
 interface CaseInput {
   business_id: number;
@@ -156,7 +157,7 @@ export async function POST(request: NextRequest) {
       {
         success: true,
         message: 'Caso de resolución abierto con éxito',
-        case: createdCase,
+        case: toPublicCase(createdCase),
       },
       { status: 201 }
     );

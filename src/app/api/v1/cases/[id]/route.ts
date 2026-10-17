@@ -5,6 +5,13 @@ import {
   ReviewCalculationItem,
   ResolutionMetricsInput,
 } from '@/lib/scoring';
+import {
+  CONSUMER_CONFIRMATION_PENDING_ERROR,
+  consumerConfirmationAttempt,
+  publicCaseColumnsSql,
+  toPublicCase,
+  toPublicMessages,
+} from '@/lib/case-access';
 
 interface CaseRow {
   id: number;
@@ -63,13 +70,14 @@ export async function GET(
     }
 
     const isNumeric = /^\d+$/.test(identifier);
+    // Public projection only: no buyer contact fields (see lib/case-access).
     const caseSql = isNumeric
-      ? `SELECT c.*, b.slug as business_slug, b.brand_name as business_brand_name, b.logo_url as business_logo_url
+      ? `SELECT ${publicCaseColumnsSql('c')}, b.slug as business_slug, b.brand_name as business_brand_name, b.logo_url as business_logo_url
          FROM resolution_cases c
          INNER JOIN businesses b ON b.id = c.business_id
          WHERE c.id = $1 OR c.case_number = $2
          LIMIT 1`
-      : `SELECT c.*, b.slug as business_slug, b.brand_name as business_brand_name, b.logo_url as business_logo_url
+      : `SELECT ${publicCaseColumnsSql('c')}, b.slug as business_slug, b.brand_name as business_brand_name, b.logo_url as business_logo_url
          FROM resolution_cases c
          INNER JOIN businesses b ON b.id = c.business_id
          WHERE c.case_number = $1
@@ -95,9 +103,11 @@ export async function GET(
     return NextResponse.json({
       success: true,
       case: {
-        ...caseData,
-        total_resolution_hours: caseData.total_resolution_hours ? Number(caseData.total_resolution_hours) : null,
-        messages: messagesRes.rows,
+        ...toPublicCase(caseData),
+        business_slug: caseData.business_slug,
+        business_brand_name: caseData.business_brand_name,
+        business_logo_url: caseData.business_logo_url ?? null,
+        messages: toPublicMessages(messagesRes.rows),
       },
     });
   } catch (error) {
@@ -125,6 +135,15 @@ export async function PATCH(
     }
 
     const body = (await request.json()) as CasePatchInput;
+
+    // No caller can prove it is the buyer yet, so the buyer confirmation is
+    // refused for everyone instead of being trusted from the request body.
+    if (consumerConfirmationAttempt(body)) {
+      return NextResponse.json(
+        { success: false, error: CONSUMER_CONFIRMATION_PENDING_ERROR },
+        { status: 403 }
+      );
+    }
     const isNumeric = /^\d+$/.test(identifier);
     const findSql = isNumeric
       ? `SELECT * FROM resolution_cases
@@ -147,14 +166,10 @@ export async function PATCH(
     const caseId = currentCase.id;
     const businessId = currentCase.business_id;
 
-    // Determine status & resolution state
-    let newStatus = body.status || currentCase.status;
-    let isConfirmed = body.is_consumer_confirmed ?? currentCase.is_consumer_confirmed;
-
-    if (body.is_consumer_confirmed === true || newStatus === 'resolved_consumer_confirmed') {
-      isConfirmed = true;
-      newStatus = 'resolved_consumer_confirmed';
-    }
+    // Determine status & resolution state. The confirmation flag is never
+    // taken from the request (see consumerConfirmationAttempt above).
+    const newStatus = body.status || currentCase.status;
+    const isConfirmed = currentCase.is_consumer_confirmed;
 
     const remedyOffered = body.remedy_offered !== undefined ? body.remedy_offered : currentCase.remedy_offered;
     const resolutionSummary = body.resolution_summary !== undefined ? body.resolution_summary : currentCase.resolution_summary;
@@ -273,9 +288,8 @@ export async function PATCH(
       success: true,
       message: 'Caso actualizado con éxito',
       case: {
-        ...updatedCase,
-        total_resolution_hours: updatedCase.total_resolution_hours ? Number(updatedCase.total_resolution_hours) : null,
-        messages: messagesRes.rows,
+        ...toPublicCase(updatedCase),
+        messages: toPublicMessages(messagesRes.rows),
       },
     });
   } catch (error) {
