@@ -10,7 +10,6 @@ export interface ReviewItem {
   title: string | null;
   body: string;
   author_name: string;
-  author_masked_contact: string | null;
   author_review_count?: number;
   verification_level: string;
   score_weight: number | string;

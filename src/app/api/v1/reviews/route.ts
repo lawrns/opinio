@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query, withTransaction } from '@/lib/db';
+import { toPublicReview } from '@/lib/public-reviews';
 import {
   calculateOpinioScore,
   ReviewCalculationItem,
@@ -286,7 +287,7 @@ export async function POST(request: NextRequest) {
       {
         success: true,
         message: 'Opinión registrada y pasaporte recalculado con éxito',
-        review: createdReview,
+        review: toPublicReview(createdReview),
         updated_metrics: newPassport,
       },
       { status: 201 }

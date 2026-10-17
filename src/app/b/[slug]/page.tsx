@@ -16,6 +16,7 @@ import { passportMetadata } from '@/lib/passport-metadata';
 import { buildBuyerFaq } from '@/lib/passport-buyer-faq';
 import { factStatus, formatRecordDate, latestRecordDateValue, verificationLevelLabel } from '@/lib/passport-evidence';
 import { publicCaseColumnsSql } from '@/lib/case-access';
+import { toPublicReview } from '@/lib/public-reviews';
 
 interface BusinessDbRow {
   id: number;
@@ -189,7 +190,7 @@ export default async function BusinessPassportPage({ params }: PageProps) {
     ),
     query<ReviewItem>(
       `SELECT
-        r.id, r.rating, r.title, r.body, r.author_name, r.author_masked_contact,
+        r.id, r.rating, r.title, r.body, r.author_name,
         r.verification_level, r.score_weight, r.product_name, r.created_at,
         COALESCE(ac.author_review_count, 1)::int as author_review_count,
         rr.responder_name, rr.response_text, rr.created_at as response_created_at
@@ -221,7 +222,8 @@ export default async function BusinessPassportPage({ params }: PageProps) {
   ]);
 
   const officialRecords = offRes.rows;
-  const reviews = revRes.rows;
+  // Defense in depth: the query selects no contact column; strip it anyway.
+  const reviews = revRes.rows.map(toPublicReview);
   const cases = caseRes.rows;
   const averageRating = reviews.length ? reviews.reduce((sum, review) => sum + Number(review.rating), 0) / reviews.length : null;
 

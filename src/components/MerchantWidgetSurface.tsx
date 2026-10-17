@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { ExternalLink, ShieldCheck } from 'lucide-react';
 import { WidgetWithBusiness } from '@/lib/merchant-data';
 import { Review } from '@/lib/types';
+import type { PublicReview } from '@/lib/public-reviews';
 import { cn } from '@/lib/utils';
 
 export function MerchantWidgetSurface({
@@ -13,7 +14,7 @@ export function MerchantWidgetSurface({
   business: WidgetWithBusiness;
   format: 'badge' | 'card' | 'reassurance' | 'ribbon';
   theme: string;
-  review?: Review | null;
+  review?: PublicReview<Review> | null;
 }) {
   const isDark = theme === 'dark';
   const isTransparent = theme === 'transparent';
