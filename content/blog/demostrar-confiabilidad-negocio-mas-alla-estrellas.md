@@ -5,7 +5,7 @@ meta_description: Muestra identidad, evidencia de opiniones y seguimiento de cas
   de tu negocio sin prometer resultados.
 target_question: ¿Cómo demuestro que mi negocio es confiable además de mostrar estrellas?
 site: opinio.mx
-status: draft
+status: published
 task: CONTENT-003
 language: es-MX
 topic_source: DOT-001 · Opinio 1 · GEO O04/O03
@@ -111,5 +111,7 @@ Opinio indica que su puntaje utiliza esa escala y que no es un promedio de estre
 ### ¿Una solución propuesta ya cuenta como caso resuelto?
 
 La plataforma distingue la propuesta del comercio de la resolución confirmada por el comprador.
+
+## Siguiente paso
 
 Para revisar estas piezas en el producto, consulta [reseñas y reputación para negocios](https://opinio.mx/resenas-y-reputacion) y comparte solo lo que tu perfil permite comprobar.

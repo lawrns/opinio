@@ -5,10 +5,34 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import matter from 'gray-matter';
 import { describe, it, expect, afterAll } from 'vitest';
 import { getAllPosts, getPostBySlug, parsePostFile } from './posts';
 
 const CONTENT_DIR = path.join(process.cwd(), 'content', 'blog');
+
+describe('CONTENT-003 FAQ closing sections', () => {
+  it.each([
+    {
+      slug: 'demostrar-confiabilidad-negocio-mas-alla-estrellas',
+      answer: 'La plataforma distingue la propuesta del comercio de la resolución confirmada por el comprador.',
+      cta: 'Para revisar estas piezas en el producto, consulta [reseñas y reputación para negocios](https://opinio.mx/resenas-y-reputacion) y comparte solo lo que tu perfil permite comprobar.',
+    },
+    {
+      slug: 'responder-resena-negativa-mostrar-resolucion',
+      answer: 'No se publica esa garantía. La plataforma permite mostrar evidencia y seguimiento; un perfil no garantiza el resultado de una compra.',
+      cta: 'Puedes revisar la gestión del perfil y los casos en [reseñas y reputación de Opinio](https://opinio.mx/resenas-y-reputacion).',
+    },
+  ])('keeps the unchanged CTA outside the final FAQ in $slug', ({ slug, answer, cta }) => {
+    const post = getPostBySlug(slug)!;
+    expect(post.faqs).toHaveLength(4);
+    expect(post.faqs.at(-1)!.a).toBe(answer);
+    expect(post.afterFaqMarkdown).toBe('## Siguiente paso\n\n' + cta);
+    expect(post.markdown).not.toContain(cta);
+    const raw = fs.readFileSync(path.join(CONTENT_DIR, slug + '.md'), 'utf8');
+    expect(matter(raw).data.status).toBe('published');
+  });
+});
 
 describe('the published article', () => {
   it('resolves title, slug, description and date from the draft frontmatter', () => {

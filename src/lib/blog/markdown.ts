@@ -26,6 +26,8 @@ export interface BlogContent {
   /** Body markdown with the FAQ section removed. */
   body: string
   faqs: BlogFaq[]
+  /** Sections after the FAQ, rendered after the accordion rather than discarded. */
+  afterFaq: string
 }
 
 /** Render a markdown document to HTML. */
@@ -70,13 +72,23 @@ function decodeEntities(text: string): string {
  * heading) are its answer. No FAQ section -> the whole document is the body.
  */
 export function splitFaqSection(markdown: string): BlogContent {
-  const heading = markdown.match(/^##[ \t]+preguntas frecuentes[ \t]*$/im)
-  if (!heading || heading.index === undefined) {
-    return { body: markdown.trim(), faqs: [] }
+  const parts: Record<'before' | 'faq' | 'after', string[]> = { before: [], faq: [], after: [] }
+  let part: keyof typeof parts = 'before'
+  for (const token of parseMarkdownTokens(markdown)) {
+    if (token.type === 'heading' && token.depth === 2) {
+      if (part === 'before' && /^preguntas frecuentes$/i.test(inlinePlainText(token.text))) part = 'faq'
+      else if (part === 'faq') part = 'after'
+    }
+    parts[part].push(token.raw)
   }
-  const body = markdown.slice(0, heading.index).trimEnd()
-  const section = markdown.slice(heading.index)
-  return { body, faqs: extractFaqs(section) }
+  if (parts.faq.length === 0) {
+    return { body: markdown.trim(), faqs: [], afterFaq: '' }
+  }
+  return {
+    body: parts.before.join('').trimEnd(),
+    faqs: extractFaqs(parts.faq.join('')),
+    afterFaq: parts.after.join('').trim(),
+  }
 }
 
 /** The FAQ pairs in a markdown fragment that starts at the section heading. */

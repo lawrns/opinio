@@ -5,7 +5,7 @@ meta_description: Guion para responder una reseña negativa, documentar una prop
   confirmada por el comprador en Opinio.
 target_question: ¿Cómo respondo una reseña negativa y muestro si el problema se resolvió?
 site: opinio.mx
-status: draft
+status: published
 task: CONTENT-003
 language: es-MX
 topic_source: DOT-001 · Opinio 2 · GEO O04
@@ -106,5 +106,7 @@ Comunica solo el estado que puedes respaldar: respuesta enviada, propuesta reali
 ### ¿Opinio asegura que el cliente quedará satisfecho?
 
 No se publica esa garantía. La plataforma permite mostrar evidencia y seguimiento; un perfil no garantiza el resultado de una compra.
+
+## Siguiente paso
 
 Puedes revisar la gestión del perfil y los casos en [reseñas y reputación de Opinio](https://opinio.mx/resenas-y-reputacion).

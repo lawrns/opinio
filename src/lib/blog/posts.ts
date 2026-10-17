@@ -29,6 +29,8 @@ export interface BlogPostSummary {
 export interface BlogPost extends BlogPostSummary {
   /** Body markdown: frontmatter, the repeated leading h1 and the FAQ section removed. */
   markdown: string
+  /** Closing sections shown after the FAQ accordion. */
+  afterFaqMarkdown: string
   /** Pairs from the "Preguntas frecuentes" section (plain text + inline HTML). */
   faqs: BlogFaq[]
 }
@@ -63,9 +65,9 @@ export function parsePostFile(fileName: string, raw: string): BlogPost {
   if (!date) fail(fileName, 'frontmatter is missing a date (YYYY-MM-DD)')
   if (!DATE_RE.test(date)) fail(fileName, `date "${date}" must be YYYY-MM-DD`)
 
-  const { body, faqs } = splitFaqSection(stripLeadingTitle(content, title))
+  const { body, faqs, afterFaq } = splitFaqSection(stripLeadingTitle(content, title))
 
-  return { slug, title, description, date, markdown: body, faqs }
+  return { slug, title, description, date, markdown: body, afterFaqMarkdown: afterFaq, faqs }
 }
 
 /** Every published post, newest first (ties broken by title). */
