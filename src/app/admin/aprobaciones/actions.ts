@@ -6,6 +6,7 @@ import { AccessDenied, Unauthenticated } from '@/lib/authz';
 import {
   ApprovalRejected,
   approveFirstOwner,
+  approveOwnershipTransfer,
   parseFirstOwnerApproval,
   requireAdministrator,
   revokeOwnerApproval,
@@ -14,8 +15,9 @@ import { currentMerchantUserId } from '@/lib/authz/session';
 import { merchantAuthEnabled } from '@/lib/auth/spike';
 
 /**
- * Administrator-only first-owner approval. The administrator check runs
- * first, so a direct call by anyone else changes nothing and learns nothing.
+ * Administrator-only first-owner approval or ownership transfer (`kind`). The
+ * administrator check runs first, so a direct call by anyone else changes
+ * nothing and learns nothing.
  */
 export async function approveFirstOwnerAction(formData: FormData): Promise<void> {
   if (!merchantAuthEnabled()) redirect('/');
@@ -35,10 +37,15 @@ export async function approveFirstOwnerAction(formData: FormData): Promise<void>
     });
     if (!found?.rows[0]) throw new ApprovalRejected('business_not_found');
     if (!request) throw new ApprovalRejected('invalid_request');
-    await approveFirstOwner(pool, userId, request);
-    outcome = 'aprobado';
+    if (formData.get('kind') === 'transfer') {
+      await approveOwnershipTransfer(pool, userId, request);
+      outcome = 'transferido';
+    } else {
+      await approveFirstOwner(pool, userId, request);
+      outcome = 'aprobado';
+    }
   } catch (error) {
-    outcome = failureOutcome(error, 'first-owner approval');
+    outcome = failureOutcome(error, 'ownership approval');
   }
   redirect(`/admin/aprobaciones?resultado=${outcome}`);
 }

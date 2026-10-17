@@ -12,6 +12,9 @@ export const metadata: Metadata = { title: 'Aprobaciones — Opinio', robots: { 
 
 const RESULT: Record<string, string> = {
   aprobado: 'Propietario aprobado.',
+  transferido: 'Transferencia aprobada. El acceso anterior, las invitaciones pendientes y las claves del comercio quedaron revocados.',
+  no_current_owner: 'Este comercio no tiene propietario; usa la aprobación de primer propietario.',
+  already_owner: 'Esa persona ya es la propietaria.',
   invalid_request:
     'Revisa los datos: método, lo verificado (dominio o teléfono +52…), autoridad y referencia (por ejemplo VER-1042) son obligatorios.',
   revocado: 'Aprobación revocada. El acceso del propietario terminó.',
@@ -36,7 +39,7 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
   );
 
   return (
-    <AuthShell title="Aprobar primer propietario">
+    <AuthShell title="Aprobar propietario">
       <p>
         Aprueba solo después de verificar, por un medio independiente del listado, que la persona controla el comercio
         (correo del dominio, DNS o llamada a un número verificado) y su autoridad documentada. Un listado reclamado, el
@@ -44,6 +47,15 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
       </p>
       {result && <p role="status" data-testid="approval-result">{result}</p>}
       <form action={approveFirstOwnerAction} className="space-y-4">
+        <fieldset className="space-y-1.5">
+          <legend className={labelClass}>Tipo de aprobación</legend>
+          <label className="flex items-center gap-2">
+            <input type="radio" name="kind" value="first_owner" defaultChecked /> Primer propietario
+          </label>
+          <label className="flex items-center gap-2">
+            <input type="radio" name="kind" value="transfer" /> Transferencia (revoca todo acceso actual del comercio)
+          </label>
+        </fieldset>
         <div className="space-y-1.5">
           <label htmlFor="businessSlug" className={labelClass}>Comercio (slug)</label>
           <input id="businessSlug" name="businessSlug" required className={inputClass} />

@@ -7,6 +7,7 @@ import { listMemberBusinesses } from '@/lib/authz';
 import { currentMerchantUserId } from '@/lib/authz/session';
 import { merchantAuthEnabled } from '@/lib/auth/spike';
 import { signOutAction } from '@/app/acceso/actions';
+import { PendingInvitationNotice } from './invitacion/AcceptInvitation';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Tu acceso — Opinio', robots: { index: false, follow: false } };
@@ -26,6 +27,7 @@ export default async function AccountPage() {
 
   return (
     <AuthShell title="Tu acceso">
+      <PendingInvitationNotice />
       {businesses.length === 0 ? (
         <p data-testid="access-pending">
           Tu acceso está pendiente. Un administrador de Opinio debe verificar de forma independiente que controlas el
