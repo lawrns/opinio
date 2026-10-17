@@ -1,4 +1,6 @@
 import React from 'react';
+import { isOperationEnabled } from '@/lib/containment';
+import { MerchantUnavailable } from '@/components/MerchantUnavailable';
 import { getMerchantBusinesses, getMerchantBusiness, getMerchantCases } from '@/lib/merchant-data';
 import { ResolutionInboxManager } from '@/components/ResolutionInboxManager';
 import { Inbox, Clock } from 'lucide-react';
@@ -11,6 +13,8 @@ interface PageProps {
 }
 
 export default async function MerchantInboxPage({ searchParams }: PageProps) {
+  // Contained until merchant auth exists (src/lib/containment.ts).
+  if (!isOperationEnabled('merchant_panel')) return <MerchantUnavailable />;
   const { business: businessSlug } = await searchParams;
   const allBusinesses = await getMerchantBusinesses();
   const currentBusiness = businessSlug

@@ -1,14 +1,19 @@
 import React, { Suspense } from 'react';
+import { isOperationEnabled } from '@/lib/containment';
+import { MerchantUnavailable } from '@/components/MerchantUnavailable';
 import { getMerchantBusinesses, getMerchantCasesForBusinesses } from '@/lib/merchant-data';
 import { MerchantShell } from '@/components/MerchantShell';
 
 export const dynamic = 'force-dynamic';
+export const metadata = { robots: { index: false, follow: false } };
 
 export default async function MerchantLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // Contained until merchant auth exists (src/lib/containment.ts).
+  if (!isOperationEnabled('merchant_panel')) return <MerchantUnavailable />;
   const allBusinesses = await getMerchantBusinesses();
   // One batched round trip for every listed business: the layout cannot read the
   // selected `?business=` value (only pages can), and querying per business

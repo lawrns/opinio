@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { isOperationEnabled } from '@/lib/containment';
+import { containedResponse } from '@/lib/containment-http';
 import { query, withTransaction } from '@/lib/db';
 
 interface OrderEventInput {
@@ -42,6 +44,8 @@ interface BusinessRow {
 }
 
 export async function POST(request: NextRequest) {
+  // Contained until merchant auth exists (src/lib/containment.ts).
+  if (!isOperationEnabled('order_events')) return containedResponse();
   try {
     const body = (await request.json()) as OrderEventInput;
 

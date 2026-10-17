@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { isOperationEnabled } from '@/lib/containment';
+import { containedResponse } from '@/lib/containment-http';
 import { query } from '@/lib/db';
 
 interface ResponseInput {
@@ -26,6 +28,8 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // Contained until merchant auth exists (src/lib/containment.ts).
+  if (!isOperationEnabled('review_response')) return containedResponse();
   try {
     const { id: rawId } = await params;
     const reviewId = parseInt(rawId?.trim() || '', 10);

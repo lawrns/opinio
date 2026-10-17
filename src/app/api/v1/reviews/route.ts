@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { isOperationEnabled } from '@/lib/containment';
 import { query, withTransaction } from '@/lib/db';
 import { toPublicReview } from '@/lib/public-reviews';
 import {
@@ -113,7 +114,14 @@ export async function POST(request: NextRequest) {
     let verifiedLevel: 'confirmed_payment' | 'confirmed_store_order' | 'reviewed_proof' | 'unverified_experience' = 'unverified_experience';
     let verifiedOrderId: number | null = null;
 
-    if (body.order_id && typeof body.order_id === 'number') {
+    // Contained (src/lib/containment.ts): an order_id or "reviewed_proof" in
+    // the request body is a claim, not proof, so it cannot raise the review's
+    // verification level until buyer proof exists.
+    const trustClaims = isOperationEnabled('review_claimed_verification');
+
+    if (!trustClaims) {
+      verifiedLevel = 'unverified_experience';
+    } else if (body.order_id && typeof body.order_id === 'number') {
       const orderRes = await query<{ id: number; status: string }>(
         'SELECT id, status FROM orders WHERE id = $1 AND business_id = $2 LIMIT 1',
         [body.order_id, body.business_id]
@@ -196,6 +204,12 @@ export async function POST(request: NextRequest) {
       );
 
       const review = insertRes.rows[0];
+
+      // Contained: a review without proof is published with its label but does
+      // not recalculate the stored trust score.
+      if (!trustClaims && verifiedLevel === 'unverified_experience') {
+        return { createdReview: review, newPassport: null };
+      }
 
       // 3. Recalculate Business Scores
       const [allReviewsRes, caseStatsRes] = await Promise.all([
@@ -286,7 +300,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: true,
-        message: 'Opinión registrada y pasaporte recalculado con éxito',
+        message: newPassport ? 'Opinión registrada y pasaporte recalculado con éxito' : 'Opinión registrada',
         review: toPublicReview(createdReview),
         updated_metrics: newPassport,
       },
