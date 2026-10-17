@@ -72,6 +72,7 @@ export default async function BlogPostPage({ params }: PageProps) {
   });
   const faqJsonLd = post.faqs.length > 0 ? buildBlogFaqPageJsonLd(post.faqs) : null;
   const html = renderMarkdown(post.markdown);
+  const afterFaqHtml = renderMarkdown(post.afterFaqMarkdown);
 
   return (
     <div className="flex min-h-screen flex-col bg-op-canvas text-op-ink">
@@ -118,6 +119,9 @@ export default async function BlogPostPage({ params }: PageProps) {
                 ))}
               </div>
             </div>
+          )}
+          {afterFaqHtml && (
+            <div className="op-article mt-12" dangerouslySetInnerHTML={{ __html: afterFaqHtml }} />
           )}
         </section>
       </main>

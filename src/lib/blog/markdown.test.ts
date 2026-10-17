@@ -37,6 +37,21 @@ function stripTags(html: string): string {
 }
 
 describe('splitFaqSection', () => {
+  it('preserves the following section separately from the FAQ answer', () => {
+    const source = 'Intro.\n\n## Preguntas frecuentes\n\n### ¿Una?\n\nSí.\n\n## Siguiente paso\n\n[Continuar](https://opinio.mx/resenas-y-reputacion).';
+    const result = splitFaqSection(source);
+    expect(result.body).toBe('Intro.');
+    expect(result.faqs.map(({ q, a }) => ({ q, a }))).toEqual([{ q: '¿Una?', a: 'Sí.' }]);
+    expect(result.afterFaq).toBe('## Siguiente paso\n\n[Continuar](https://opinio.mx/resenas-y-reputacion).');
+  });
+
+  it('uses markdown heading tokens rather than a heading-looking line inside code', () => {
+    const source = 'Intro.\n\n## Preguntas frecuentes\n\n### ¿Una?\n\nSí.\n\n~~~text\n## Solo un ejemplo\n~~~\n\nSigue siendo respuesta.\n\n## Siguiente paso\n\nContinuar.';
+    const result = splitFaqSection(source);
+    expect(result.faqs[0].a).toBe('Sí. Sigue siendo respuesta.');
+    expect(result.afterFaq).toBe('## Siguiente paso\n\nContinuar.');
+  });
+
   it('separates the body from the FAQ section', () => {
     const { body: articleBody, faqs } = splitFaqSection(stripLeadingTitle(body, 'título'));
     expect(faqs).toHaveLength(6);
