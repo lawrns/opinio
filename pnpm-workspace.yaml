@@ -1,3 +1,6 @@
 ignoredBuiltDependencies:
   - sharp
   - unrs-resolver
+# Rehydrates the test-only Postgres binary symlinks (auth test harness).
+onlyBuiltDependencies:
+  - "@embedded-postgres/linux-x64"
