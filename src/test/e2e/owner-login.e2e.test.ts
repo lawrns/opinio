@@ -419,15 +419,26 @@ describe('approved owner', () => {
     expect((await get('/admin/aprobaciones', cookies.owner)).status).toBe(404);
   });
 
-  // This proves B03 changes nothing about /merchant: an approved owner's
-  // session gets exactly what an anonymous visitor gets with the switch off.
-  // It does not prove /merchant is denied; that is #42 (CONTAIN-2), which must
-  // merge first. The strict denial test is added when B03 is restacked on it.
-  it('does not change the existing merchant dashboard (containment itself is #42)', async () => {
-    const anonymousOff = await fetch(`${off.origin}/merchant`, { redirect: 'manual' });
-    const ownerOn = await get('/merchant', cookies.owner);
-    expect(ownerOn.status).toBe(anonymousOff.status);
-    expect(ownerOn.headers.get('location')).toBe(anonymousOff.headers.get('location'));
+  // #42 (CONTAIN-2) is in the base: the merchant dashboard stays denied for
+  // everyone, including an approved owner and an administrator, until its own
+  // ticket reopens it. Merchant login opens nothing there.
+  it('keeps the existing merchant dashboard denied, even for an approved owner', async () => {
+    for (const who of ['owner', 'admin'] as const) {
+      for (const path of ['/merchant', '/merchant/inbox', '/merchant/requests', '/merchant/settings', `/merchant/inbox?business=tienda-b`]) {
+        const res = await get(path, cookies[who]);
+        expect(res.status, `${who} ${path}`).toBe(503);
+        const body = await res.text();
+        expect(body, `${who} ${path}`).toContain('Panel temporalmente no disponible');
+        expect(body, `${who} ${path}`).not.toMatch(/Tienda A|Tienda B|tienda-a|tienda-b|owner-a@|ventas@/);
+      }
+      const action = await fetch(`${app.origin}/merchant/settings`, {
+        method: 'POST',
+        redirect: 'manual',
+        headers: { cookie: cookies[who], origin: app.origin, 'Next-Action': 'any' },
+        body: 'x',
+      });
+      expect(action.status, `${who} server action`).toBe(503);
+    }
   });
 
   it('loses access on the next request after an administrator revokes the approval', async () => {
