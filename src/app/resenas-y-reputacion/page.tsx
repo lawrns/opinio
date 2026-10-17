@@ -36,7 +36,12 @@ const steps = [
   {
     Icon: ShieldCheck,
     title: 'Identidad verificable',
-    body: 'Tu perfil reúne los datos registrados del negocio: RFC, CLEE de INEGI, dominio y WhatsApp, con su fuente cuando existe.',
+    body: (
+      <>
+        <Link href="/blog/demostrar-confiabilidad-negocio-mas-alla-estrellas">Tu perfil reúne los datos registrados del negocio</Link>
+        : RFC, CLEE de INEGI, dominio y WhatsApp, con su fuente cuando existe.
+      </>
+    ),
   },
   {
     Icon: Star,
@@ -46,7 +51,12 @@ const steps = [
   {
     Icon: MessageSquare,
     title: 'Respuestas y casos',
-    body: 'Tu comercio puede responder opiniones y cada caso de atención queda con su seguimiento en el perfil.',
+    body: (
+      <>
+        <Link href="/blog/responder-resena-negativa-mostrar-resolucion">Tu comercio puede responder opiniones</Link>
+        {' '}y cada caso de atención queda con su seguimiento en el perfil.
+      </>
+    ),
   },
 ];
 
