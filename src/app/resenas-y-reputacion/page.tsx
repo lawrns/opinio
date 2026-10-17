@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { ChevronDown, MessageSquare, ShieldCheck, Star } from 'lucide-react';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
+import { Breadcrumbs } from '@/components/Breadcrumbs';
 import {
   RESENAS_DESCRIPTION,
   RESENAS_FAQ,
@@ -74,6 +75,10 @@ export default function ResenasYReputacionPage() {
       <main id="contenido" tabIndex={-1} className="flex-1">
         <section className="border-b border-op-border bg-op-shaded">
           <div className="mx-auto max-w-7xl px-4 pb-12 pt-14 sm:px-6 lg:px-8">
+            <Breadcrumbs siteUrl={SITE_URL} items={[
+              { name: 'Inicio', href: '/' },
+              { name: RESENAS_H1, href: RESENAS_PATH },
+            ]} />
             <p className="op-eyebrow mb-3">Para comercios</p>
             <h1 className="max-w-4xl text-3xl font-black tracking-[-0.03em] sm:text-4xl lg:text-5xl">
               {RESENAS_H1}
@@ -117,8 +122,10 @@ export default function ResenasYReputacionPage() {
             Preguntas de dueños de negocio
           </h2>
           <p className="mt-2 text-sm text-op-secondary">
-            Las dudas más comunes sobre reseñas y reputación en México, respondidas con cómo funciona
-            Opinio.
+            <Link href="/blog" className="underline underline-offset-4 hover:text-op-green-dark">
+              Las dudas más comunes sobre reseñas y reputación en México, respondidas con cómo funciona
+              Opinio.
+            </Link>
           </p>
           <div className="mt-6">
             {RESENAS_FAQ.map((item) => (

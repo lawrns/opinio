@@ -49,7 +49,7 @@ También existe el camino inverso, que se combina con el anterior: mantener tu p
 ## Qué hace diferente a una reseña pedida por WhatsApp en Opinio
 
 - **Cada opinión indica su tipo de evidencia.** No todas las opiniones pesan igual, y en Opinio eso se muestra.
-- **La cobertura mide invitaciones, no felicidad.** Es el porcentaje de pedidos registrados que recibió invitación a opinar. Opinio lo dice claro: cobertura no significa satisfacción.
+- **[La cobertura mide invitaciones, no felicidad.](https://opinio.mx/resenas-y-reputacion)** Es el porcentaje de pedidos registrados que recibió invitación a opinar. Opinio lo dice claro: cobertura no significa satisfacción.
 - **El puntaje va de 0 a 100 y no es un promedio de estrellas.** La falta de información no demuestra una mala experiencia; se muestra lo que está disponible.
 - **Invitas a todos, también a quien tuvo un problema.** Invitar únicamente a los contentos infla la muestra. Opinio está diseñado para invitar al 100% de clientes reales, sin importar si hubo un retraso o no.
 - **Los casos se cierran con el cliente, no por el comercio.** Ninguna queja se marca como resuelta sin la confirmación expresa del comprador.
