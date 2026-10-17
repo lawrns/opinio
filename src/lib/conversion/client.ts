@@ -1,7 +1,7 @@
 'use client';
 
 import { clearJourney, conversionContextForServer, recordLanding, trackIntent, windowEnv } from './browser';
-import type { ConversionJourney, StepId } from './contract';
+import { isOpaqueId, type ConversionJourney, type StepId } from './contract';
 import { ctaIdFor, journeyForCta } from './cta';
 
 /**
@@ -41,9 +41,53 @@ export function conversionContext(): Record<string, unknown> {
   return e ? conversionContextForServer(e) : { consent: 'denied' };
 }
 
-/** Denial or withdrawal: the local journey and its attribution are deleted. */
-export function clearConversionJourney(): void {
-  if (typeof window !== 'undefined') clearJourney({ storage: window.localStorage });
+const WITHDRAWAL_KEY = 'opinio.conversion-withdrawal';
+
+function storage(): Storage | null {
+  try {
+    return typeof window === 'undefined' ? null : window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
+/** Tells the server to stop and unlink a withdrawn journey; stays queued until it confirms (204). */
+async function sendWithdrawal(journeyId: string): Promise<void> {
+  try {
+    const response = await fetch('/api/v1/conversion/consent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ journeyId, consent: 'denied' }),
+      keepalive: true,
+    });
+    if (response.status === 204) storage()?.removeItem(WITHDRAWAL_KEY);
+  } catch {
+    // stays queued for the next load
+  }
+}
+
+/**
+ * Denial or withdrawal: the local journey and its attribution are deleted,
+ * and if one existed (it only does after a "granted"), the server is told to
+ * stop its undelivered events.
+ */
+export async function clearConversionJourney(): Promise<void> {
+  const store = storage();
+  if (!store) return;
+  const journeyId = clearJourney({ storage: store });
+  if (!journeyId) return;
+  try {
+    store.setItem(WITHDRAWAL_KEY, journeyId);
+  } catch {
+    // storage full or blocked: still try once
+  }
+  await sendWithdrawal(journeyId);
+}
+
+/** Retries an unconfirmed withdrawal. Runs on every load, whatever the current consent. */
+export async function retryPendingWithdrawal(): Promise<void> {
+  const pending = storage()?.getItem(WITHDRAWAL_KEY) ?? null;
+  if (isOpaqueId('journey', pending)) await sendWithdrawal(pending);
 }
 
 /** One delegated listener for reviewed `data-cta` placements (no DOM text or href is read). */

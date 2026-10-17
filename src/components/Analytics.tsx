@@ -4,7 +4,7 @@ import Script from 'next/script';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { usePathname } from 'next/navigation';
 import { analyticsPageLocation, analyticsReferrer, isPublicAnalyticsPath, stripLandingTracking } from '@/lib/analytics';
-import { bindCtaTracking, clearConversionJourney, recordConversionLanding } from '@/lib/conversion/client';
+import { bindCtaTracking, clearConversionJourney, recordConversionLanding, retryPendingWithdrawal } from '@/lib/conversion/client';
 
 declare global {
   interface Window {
@@ -94,10 +94,17 @@ export function Analytics({ measurementId }: { measurementId: string }) {
     recordConversionLanding();
   }, [consent, measurementId, pathname, publicPage, ready]);
 
+  // A withdrawal the server has not confirmed yet is retried on every load,
+  // whatever the consent is now (after a withdrawal it is denied).
+  useEffect(() => {
+    void retryPendingWithdrawal();
+  }, []);
+
   // CONVERSION-001 CTA intent, consented only; no journey is kept otherwise.
+  // Clearing a journey that existed (consent was granted) withdraws it server-side.
   useEffect(() => {
     if (consent !== 'granted') {
-      clearConversionJourney();
+      void clearConversionJourney();
       return;
     }
     return bindCtaTracking();

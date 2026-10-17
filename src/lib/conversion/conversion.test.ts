@@ -104,7 +104,7 @@ function fakePg(options: { sendOutcomes?: Array<'sent' | 'failed' | 'unconfigure
       return { rows: (options.reviews ?? []).filter((r) => r.status === 'published' && r.created_at >= String(params[0]) && !stages.has(`review:${r.id}:milestone_review_published`)) };
     }
     if (sql.startsWith('SELECT e.event_id')) {
-      return { rows: [...stages.values()].filter((s) => ['pending', 'failed'].includes(String(s.delivery_state))).map((s) => ({ ...s, ...identities.get(`${s.entity_type}:${s.entity_id}`) })) };
+      return { rows: [...stages.values()].filter((s) => ['pending', 'failed'].includes(String(s.delivery_state))).map((s) => { const i = identities.get(`${s.entity_type}:${s.entity_id}`); return { ...s, journey_id: i?.journey_id, first_touch: i?.first_touch, last_touch: i?.last_touch, identity_consent: i?.consent_state }; }) };
     }
     throw new Error(`unexpected SQL: ${sql.slice(0, 80)}`);
   };
@@ -251,10 +251,10 @@ describe('unavailable stages are explicit, never zero', () => {
   it('the review route records the milestone after the transaction, from the server context only', () => {
     const route = readFileSync('src/app/api/v1/reviews/route.ts', 'utf8');
     const tx = route.indexOf('await withTransaction(');
-    const hook = route.indexOf('await recordMilestone({');
+    const hook = route.indexOf('recordMilestone({');
     expect(tx).toBeGreaterThan(0);
     expect(hook).toBeGreaterThan(tx);
-    expect(route.slice(hook, hook + 400)).toMatch(/context: parseConversionContext\(body\.conversion\)/);
+    expect(route.slice(tx, hook)).toMatch(/const context = parseConversionContext\(body\.conversion\);/);
   });
 
   it('the schema CHECK lists match the code allowlists', () => {

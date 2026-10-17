@@ -12,7 +12,7 @@
 import { query } from '@/lib/db';
 import type { AttributionSnapshot } from './attribution';
 import type { ConversionContext } from './context';
-import { CONVERSION_MILESTONES, pick, type ConversionJourney, type ConversionMilestone } from './contract';
+import { CONVERSION_MILESTONES, isOpaqueId, pick, type ConversionJourney, type ConversionMilestone } from './contract';
 import { buildConversionEvent, newOpaqueId } from './payload';
 
 export const CONVERSION_SEND_TIMEOUT_MS = 3000;
@@ -184,13 +184,41 @@ export async function maintainLedger(deps: Deps = defaultDeps()): Promise<{ reco
       if (res.status === 'recorded') recovered++;
     }
   }
-  const pending = await deps.query<StageRow & IdentityRow>(
+  const pending = await deps.query<StageRow & IdentityRow & { identity_consent: string }>(
     `SELECT e.event_id, e.analytics_id, e.stage, e.journey, e.occurred_at, e.consent_state, e.delivery_attempts,
-            i.journey_id, i.first_touch, i.last_touch
+            i.journey_id, i.first_touch, i.last_touch, i.consent_state AS identity_consent
        FROM conversion_stage_events e JOIN conversion_identities i ON i.entity_type = e.entity_type AND i.entity_id = e.entity_id
       WHERE e.delivery_state IN ('pending', 'failed') AND e.delivery_attempts < $1 ORDER BY e.occurred_at ASC LIMIT 200`,
     [MAX_DELIVERY_ATTEMPTS],
   );
-  for (const row of pending.rows) await deliver(row, row, deps);
+  // Consent is re-checked at every attempt: a row queued while granted is
+  // never sent once its identity is no longer granted (withdrawal).
+  for (const row of pending.rows) {
+    await deliver(row.identity_consent === 'granted' ? row : { ...row, consent_state: 'denied' }, row, deps);
+  }
   return { recovered, attempted: pending.rows.length };
+}
+
+/**
+ * Consent withdrawn for a browser journey: every undelivered row of its
+ * identities is stopped (`skipped_consent`, analytics ID removed), then the
+ * identities are unlinked (journey and touches erased). A row being sent right
+ * now keeps its claim check, so it cannot be flipped back. Returns the number
+ * of rows stopped. Never sends anything.
+ */
+export async function withdrawJourney(journeyId: string, deps: Pick<Deps, 'query'> = defaultDeps()): Promise<number> {
+  if (!isOpaqueId('journey', journeyId)) return 0;
+  const stopped = await deps.query<{ event_id: string }>(
+    `UPDATE conversion_stage_events e SET delivery_state = 'skipped_consent', analytics_id = NULL, consent_state = 'denied'
+       FROM conversion_identities i
+      WHERE i.entity_type = e.entity_type AND i.entity_id = e.entity_id AND i.journey_id = $1
+        AND e.delivery_state IN ('pending', 'failed', 'sending')
+      RETURNING e.event_id`,
+    [journeyId],
+  );
+  await deps.query(
+    `UPDATE conversion_identities SET consent_state = 'denied', journey_id = NULL, first_touch = NULL, last_touch = NULL WHERE journey_id = $1`,
+    [journeyId],
+  );
+  return stopped.rows.length;
 }
