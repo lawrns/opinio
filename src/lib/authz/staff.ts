@@ -10,6 +10,7 @@ import type { Pool, PoolClient } from 'pg';
 import { AccessDenied, Unauthenticated, authorizeMerchant, recordAuditEvent } from '@/lib/authz';
 import { STAFF_INVITATION_TTL_MS, parseEmail } from '@/lib/authz/policy';
 import { generateSecret, hashSecret } from '@/lib/authz/secrets';
+import { allowStaffInvitationEmail } from '@/lib/auth/rate-limit';
 import { inTransaction } from '@/lib/authz/transaction';
 
 /** Pending invitations allowed per business at once. */
@@ -25,7 +26,8 @@ export type StaffRejection =
   | 'invalid_invitation'
   | 'wrong_identity'
   | 'not_found'
-  | 'not_staff';
+  | 'not_staff'
+  | 'rate_limited';
 
 export class StaffRejected extends Error {
   constructor(readonly reason: StaffRejection) {
@@ -86,6 +88,8 @@ export async function createStaffInvitation(
       [owner.businessId, now],
     );
     if (pending.rows[0].n >= MAX_PENDING_STAFF_INVITATIONS) throw new StaffRejected('too_many_pending');
+    // Each invitation sends an email: bound how many a business can send.
+    if (!(await allowStaffInvitationEmail(client, owner.businessId, now))) throw new StaffRejected('rate_limited');
 
     const token = generateSecret();
     const expiresAt = new Date(now.valueOf() + STAFF_INVITATION_TTL_MS);
@@ -146,11 +150,12 @@ export async function acceptStaffInvitation(
     );
     if (member.rowCount) throw new StaffRejected('already_member');
 
-    await client.query('UPDATE staff_invitations SET accepted_at = $2, accepted_user_id = $3 WHERE id = $1', [
-      invitation.id,
-      now,
-      input.userId,
-    ]);
+    const consumed = await client.query(
+      `UPDATE staff_invitations SET accepted_at = $2, accepted_user_id = $3
+        WHERE id = $1 AND accepted_at IS NULL AND revoked_at IS NULL`,
+      [invitation.id, now, input.userId],
+    );
+    if (consumed.rowCount !== 1) throw new StaffRejected('invalid_invitation');
     const { rows } = await client.query(
       `INSERT INTO business_memberships (business_id, user_id, role, granted_by_user_id, staff_invitation_id, created_at)
        VALUES ($1, $2, 'staff', $3, $4, $5) RETURNING id`,

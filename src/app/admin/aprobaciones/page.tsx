@@ -15,6 +15,7 @@ const RESULT: Record<string, string> = {
   transferido: 'Transferencia aprobada. El acceso anterior, las invitaciones pendientes y las claves del comercio quedaron revocados.',
   no_current_owner: 'Este comercio no tiene propietario; usa la aprobación de primer propietario.',
   already_owner: 'Esa persona ya es la propietaria.',
+  stale_access: 'Este comercio aún tiene accesos activos sin propietario. Revócalos antes de aprobar.',
   invalid_request:
     'Revisa los datos: método, lo verificado (dominio o teléfono +52…), autoridad y referencia (por ejemplo VER-1042) son obligatorios.',
   revocado: 'Aprobación revocada. El acceso del propietario terminó.',

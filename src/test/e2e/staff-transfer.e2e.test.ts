@@ -10,7 +10,7 @@ import { chromium } from 'playwright';
 import { Pool } from 'pg';
 import { grantAdministrator } from '../../../scripts/grant-admin.mjs';
 import { AccessDenied, Unauthenticated, authorizeMachineKey } from '@/lib/authz';
-import { approveFirstOwner, approveOwnershipTransfer, type FirstOwnerApproval } from '@/lib/authz/owners';
+import { approveFirstOwner, approveOwnershipTransfer, revokeOwnerApproval, type FirstOwnerApproval } from '@/lib/authz/owners';
 import { STAFF_INVITATION_TTL_MS } from '@/lib/authz/policy';
 import { generateMachineKey, hashSecret } from '@/lib/authz/secrets';
 import { StaffRejected, acceptStaffInvitation, createStaffInvitation, removeStaffMembership } from '@/lib/authz/staff';
@@ -32,6 +32,9 @@ const STAFF = 'staff-a@example.test';
 const OTHER = 'intruso@example.test';
 const NEW_OWNER = 'nuevo-owner@example.test';
 const OWNER_B = 'owner-b@example.test';
+const OWNER_D = 'owner-d@example.test';
+const STAFF_D = 'staff-d@example.test';
+const NEXT_D = 'next-d@example.test';
 
 let db: TestDatabase;
 let pool: Pool;
@@ -42,6 +45,7 @@ const cookies: Record<string, string> = {};
 const ids: Record<string, number> = {};
 let bizA = 0;
 let bizB = 0;
+let bizD = 0;
 let clientCounter = 0;
 let browserOrigin = '';
 
@@ -139,6 +143,7 @@ beforeAll(async () => {
   pool = new Pool({ connectionString: db.url, max: 6 });
   bizA = (await db.client.query("INSERT INTO businesses (slug, brand_name) VALUES ('tienda-a', 'Tienda A') RETURNING id")).rows[0].id;
   bizB = (await db.client.query("INSERT INTO businesses (slug, brand_name) VALUES ('tienda-b', 'Tienda B') RETURNING id")).rows[0].id;
+  bizD = (await db.client.query("INSERT INTO businesses (slug, brand_name) VALUES ('tienda-d', 'Tienda D') RETURNING id")).rows[0].id;
   const serverJs = buildApp('.next-e2e');
   const port = await freePort();
   browserOrigin = `http://localhost:${port}`;
@@ -155,7 +160,7 @@ beforeAll(async () => {
     port,
   );
 
-  for (const email of [ADMIN, OWNER, STAFF, OTHER, NEW_OWNER, OWNER_B]) cookies[email] = await login(email);
+  for (const email of [ADMIN, OWNER, STAFF, OTHER, NEW_OWNER, OWNER_B, OWNER_D, STAFF_D, NEXT_D]) cookies[email] = await login(email);
   expect(await grantAdministrator(db.client, ADMIN)).toBe('granted');
   await approveFirstOwner(pool, ids[ADMIN], approval(bizA, OWNER, 'VER-401'));
   await approveFirstOwner(pool, ids[ADMIN], approval(bizB, OWNER_B, 'VER-402'));
@@ -272,6 +277,19 @@ describe('concurrency', () => {
     expect(audits).toBe(1);
   });
 
+  it('rate-limits how many invitation emails a business can send', async () => {
+    const window = new Date('2026-01-01T00:00:00.000Z'); // its own rate-limit window
+    for (let i = 0; i < 10; i++) {
+      const inv = await createStaffInvitation(pool, { ownerUserId: ids[OWNER_B], businessId: bizB, email: `limite-${i}@example.test` }, window);
+      secrets.add(inv.token);
+    }
+    await expect(
+      createStaffInvitation(pool, { ownerUserId: ids[OWNER_B], businessId: bizB, email: 'limite-10@example.test' }, window),
+    ).rejects.toMatchObject({ reason: 'rate_limited' });
+    // Nothing was written for the refused one.
+    expect((await db.client.query("SELECT count(*)::int AS n FROM staff_invitations WHERE email = 'limite-10@example.test'")).rows[0].n).toBe(0);
+  });
+
   it('keeps one pending invitation per address under concurrent invites', async () => {
     const email = 'carrera@example.test';
     const made = await Promise.allSettled(
@@ -296,6 +314,11 @@ describe('approved transfer', () => {
     );
     const raced = await createStaffInvitation(pool, { ownerUserId: ids[OWNER], businessId: bizA, email: NEW_OWNER });
     secrets.add(raced.token);
+    // OTHER is staff of A and also of B: the transfer of A must leave B's membership alone.
+    const onB = await createStaffInvitation(pool, { ownerUserId: ids[OWNER_B], businessId: bizB, email: OTHER });
+    secrets.add(onB.token);
+    await acceptStaffInvitation(pool, { userId: ids[OTHER], token: onB.token });
+    expect(await activeMembership(bizB, OTHER)).toEqual(['staff']);
 
     // Non-administrators cannot transfer.
     for (const who of [OWNER, STAFF, OWNER_B]) {
@@ -322,9 +345,11 @@ describe('approved transfer', () => {
     await expect(authorizeMachineKey(pool, { key, scope: 'order_events' })).rejects.toBeInstanceOf(Unauthenticated);
     // The removed owner cannot reinvite themself or anyone.
     await expect(createStaffInvitation(pool, { ownerUserId: ids[OWNER], businessId: bizA, email: OWNER })).rejects.toBeInstanceOf(AccessDenied);
-    // B is untouched.
+    // B is untouched, including the dual member's staff access there.
     expect(await activeMembership(bizB, OWNER_B)).toEqual(['owner']);
     expect((await get(`/cuenta/negocios/${bizB}`, cookies[OWNER_B])).status).toBe(200);
+    expect(await activeMembership(bizB, OTHER)).toEqual(['staff']);
+    expect((await get(`/cuenta/negocios/${bizB}`, cookies[OTHER])).status).toBe(200);
     // The new owner manages A's (now empty) team.
     expect(await (await get(`/cuenta/negocios/${bizA}`, cookies[NEW_OWNER])).text()).toContain('data-testid="team"');
 
@@ -359,6 +384,71 @@ describe('approved transfer', () => {
   });
 });
 
+describe('approval revocation', () => {
+  it('ends all of the business’s authority, so a later first owner inherits nothing', async () => {
+    const { approvalId } = await approveFirstOwner(pool, ids[ADMIN], approval(bizD, OWNER_D, 'VER-410'));
+    const staffInvite = await createStaffInvitation(pool, { ownerUserId: ids[OWNER_D], businessId: bizD, email: STAFF_D });
+    secrets.add(staffInvite.token);
+    await acceptStaffInvitation(pool, { userId: ids[STAFF_D], token: staffInvite.token });
+    const pending = await createStaffInvitation(pool, { ownerUserId: ids[OWNER_D], businessId: bizD, email: 'pendiente-d@example.test' });
+    secrets.add(pending.token);
+    const { key, prefix } = generateMachineKey();
+    secrets.add(key);
+    await db.client.query(
+      "INSERT INTO business_machine_keys (business_id, label, key_prefix, key_hash, scopes, created_by_user_id) VALUES ($1, 'k', $2, $3, ARRAY['order_events'], $4)",
+      [bizD, prefix, hashSecret(key), ids[OWNER_D]],
+    );
+    expect((await get(`/cuenta/negocios/${bizD}`, cookies[STAFF_D])).status).toBe(200);
+
+    await revokeOwnerApproval(pool, ids[ADMIN], approvalId);
+    // Owner and staff are denied on the next request; the invitation and the key are dead.
+    for (const who of [OWNER_D, STAFF_D]) {
+      expect((await get(`/cuenta/negocios/${bizD}`, cookies[who])).status, who).toBe(404);
+      expect(await activeMembership(bizD, who), who).toEqual([]);
+    }
+    await expect(acceptStaffInvitation(pool, { userId: ids[STAFF_D], token: pending.token })).rejects.toMatchObject({ reason: 'invalid_invitation' });
+    await expect(authorizeMachineKey(pool, { key, scope: 'order_events' })).rejects.toBeInstanceOf(Unauthenticated);
+    const perItem = (await db.client.query(
+      "SELECT action, count(*)::int AS n FROM audit_logs WHERE business_id = $1 AND (details->>'by_revocation')::boolean IS TRUE GROUP BY action ORDER BY action",
+      [bizD],
+    )).rows;
+    expect(perItem).toEqual([
+      { action: 'machine_key.revoked', n: 1 },
+      { action: 'membership.revoked', n: 2 },
+      { action: 'staff_invitation.revoked', n: 1 },
+    ]);
+
+    // A new first owner starts with no inherited staff, invitations or keys.
+    await approveFirstOwner(pool, ids[ADMIN], approval(bizD, NEXT_D, 'VER-411'));
+    const active = (await db.client.query(
+      "SELECT u.email, m.role FROM business_memberships m JOIN users u ON u.id = m.user_id WHERE m.business_id = $1 AND m.status = 'active'",
+      [bizD],
+    )).rows;
+    expect(active).toEqual([{ email: NEXT_D, role: 'owner' }]);
+    expect((await get(`/cuenta/negocios/${bizD}`, cookies[STAFF_D])).status).toBe(404);
+    expect((await db.client.query('SELECT count(*)::int AS n FROM business_machine_keys WHERE business_id = $1 AND revoked_at IS NULL', [bizD])).rows[0].n).toBe(0);
+  });
+
+  it('refuses a first-owner approval while any access to the business is still active', async () => {
+    // Simulate stale access left by an older code path: a staff row with no owner.
+    const stale = (await db.client.query("INSERT INTO businesses (slug, brand_name) VALUES ('tienda-e', 'Tienda E') RETURNING id")).rows[0].id;
+    await db.client.query("INSERT INTO business_memberships (business_id, user_id, role) VALUES ($1, $2, 'staff')", [stale, ids[STAFF_D]]);
+    await expect(approveFirstOwner(pool, ids[ADMIN], approval(stale, NEXT_D, 'VER-412'))).rejects.toMatchObject({ reason: 'stale_access' });
+  });
+
+  it('serializes revocation with a raced invitation acceptance', async () => {
+    const { approvalId } = (await db.client.query("SELECT id AS \"approvalId\" FROM ownership_approvals WHERE business_id = $1 AND revoked_at IS NULL", [bizD])).rows[0];
+    const inv = await createStaffInvitation(pool, { ownerUserId: ids[NEXT_D], businessId: bizD, email: STAFF_D });
+    secrets.add(inv.token);
+    await Promise.allSettled([
+      revokeOwnerApproval(pool, ids[ADMIN], approvalId),
+      acceptStaffInvitation(pool, { userId: ids[STAFF_D], token: inv.token }),
+    ]);
+    // Whichever ran first, nobody keeps access to D.
+    expect((await db.client.query("SELECT count(*)::int AS n FROM business_memberships WHERE business_id = $1 AND status = 'active'", [bizD])).rows[0].n).toBe(0);
+  });
+});
+
 describe('credential leakage', () => {
   it('keeps invitation tokens out of pages, payloads and logs', async () => {
     const inv = await createStaffInvitation(pool, { ownerUserId: ids[NEW_OWNER], businessId: bizA, email: 'payload@example.test' });
@@ -379,7 +469,7 @@ describe('credential leakage', () => {
       expect(logs).not.toContain(s);
       expect(logs).not.toContain(hashSecret(s));
     }
-    for (const email of [ADMIN, OWNER, STAFF, OTHER, NEW_OWNER, OWNER_B]) expect(logs).not.toContain(email);
+    for (const email of [ADMIN, OWNER, STAFF, OTHER, NEW_OWNER, OWNER_B, OWNER_D, STAFF_D, NEXT_D]) expect(logs).not.toContain(email);
   });
 });
 

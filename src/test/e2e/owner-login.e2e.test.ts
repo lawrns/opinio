@@ -455,7 +455,9 @@ describe('approved owner', () => {
     expect((await get(`/cuenta/negocios/${bizA}`, cookies.owner)).status).toBe(404);
     expect(await (await get('/cuenta', cookies.owner)).text()).toContain('data-testid="access-pending"');
     const audit = (await db.client.query("SELECT details FROM audit_logs WHERE action = 'ownership.approval_revoked'")).rows;
-    expect(audit).toEqual([{ details: { approval_id: approval.id, revoked_memberships: 1 } }]);
+    expect(audit).toEqual([
+      { details: { approval_id: approval.id, revoked_memberships: 1, revoked_invitations: 0, revoked_keys: 0 } },
+    ]);
     // Revoking twice finds nothing to revoke.
     const again = await submit('/admin/aprobaciones', revokeId, { approvalId: String(approval.id) }, { cookie: cookies.admin });
     expect(new URL(again.headers.get('location')!, app.origin).searchParams.get('resultado')).toBe('approval_not_found');
@@ -552,7 +554,13 @@ describe('private payloads and analytics', () => {
     const loadedCount = await page.evaluate(() => window.dataLayer!.length);
 
     const marker = 'SENTINEL_TOKEN_NOT_A_SECRET';
-    for (const path of ['/acceso', `/acceso/confirmar#token=${marker}&email=sentinel%40example.test`, '/cuenta', `/cuenta/negocios/${bizA}`]) {
+    for (const path of [
+      '/acceso',
+      `/acceso/confirmar#token=${marker}&email=sentinel%40example.test`,
+      '/cuenta',
+      `/cuenta/negocios/${bizA}`,
+      `/cuenta/invitacion#token=${marker}`, // B04 staff invitation page
+    ]) {
       await page.evaluate((p) => window.history.pushState(null, '', p), path);
       await page.waitForTimeout(300);
       expect(await page.evaluate((id) => window[`ga-disable-${id}` as `ga-disable-${string}`], E2E_GA_ID), path).toBe(true);

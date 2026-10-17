@@ -68,5 +68,5 @@ Policy: [ADR 0004](../adr/0004-staff-and-transfer-policy.md). Code: `src/lib/aut
 | `revokeStaffInvitation`, `removeStaffMembership` | active owner | pending invitation withdrawn / staff access ends on the next request; owners are never removed here |
 | `approveOwnershipTransfer` | platform administrator | revokes every approval, membership (staff included), pending invitation and machine key of that business, each with its own audit row, then records the transfer and the new owner; the form warns the administrator first |
 
-Each runs in one transaction that locks the business row first, and is audited.
+Revoking an owner's approval (`revokeOwnerApproval`) ends the same authority as a transfer, and `approveFirstOwner` refuses a business that still has any active access. Each runs in one transaction that locks the business row first, and is audited. Invitation emails are limited to 10 per business per 15 minutes.
 

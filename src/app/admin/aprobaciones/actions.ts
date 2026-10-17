@@ -21,9 +21,10 @@ import { merchantAuthEnabled } from '@/lib/auth/spike';
  */
 export async function approveFirstOwnerAction(formData: FormData): Promise<void> {
   if (!merchantAuthEnabled()) redirect('/');
-  const userId = await currentMerchantUserId();
   let outcome: string;
   try {
+    // Inside the try: a database outage while checking the session is a handled failure, not a 500.
+    const userId = await currentMerchantUserId();
     await requireAdministrator(pool, userId);
     const slug = String(formData.get('businessSlug') ?? '').trim();
     const found = slug ? await pool.query('SELECT id FROM businesses WHERE slug = $1', [slug.slice(0, 120)]) : null;

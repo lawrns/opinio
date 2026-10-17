@@ -13,4 +13,8 @@ Implements the transfer and staff rules of [ADR 0003](0003-auth-policy-defaults.
 
 *Decision:* ADR 0003's "old business authority" means all authority granted under the previous owner, staff included, which fails closed: people the previous owner chose don't keep access the new owner never granted. Each revoked membership, invitation and key gets its own audit row, and the approval form warns the administrator before a transfer.
 
+**Approval revocation.** Revoking an owner's approval ends the same authority as a transfer (owner, staff, pending invitations, machine keys), audited per item, so a later first-owner approval inherits nothing. A first-owner approval is refused while any membership, key or pending invitation of the business is still active.
+
+**Invitation emails.** A business can send at most 10 invitation emails per 15-minute window. The raw token lives only in the email and in the open page's memory; the browser never stores it.
+
 **Races.** Every invitation, acceptance, removal, revocation, approval and transfer locks the business row first, so they apply one at a time per business. Single-use, revocation, expiry and the "inviter is still the owner" check are all evaluated under that lock. A removed or replaced owner has no membership to invite from, and their old invitations no longer validate.

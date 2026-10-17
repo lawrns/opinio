@@ -27,6 +27,7 @@ const TEAM_RESULT: Record<string, string> = {
   invalid_email: 'Revisa el correo.',
   already_member: 'Esa persona ya tiene acceso a este comercio.',
   too_many_pending: 'Hay demasiadas invitaciones pendientes. Retira alguna antes de invitar.',
+  rate_limited: 'Enviaste muchas invitaciones en poco tiempo. Intenta de nuevo en unos minutos.',
   not_found: 'Esa invitación ya no está pendiente.',
   not_staff: 'Solo puedes quitar a personas del equipo. El propietario cambia solo con una transferencia aprobada.',
   mail_unavailable: 'No pudimos enviar la invitación; no quedó activa.',

@@ -71,6 +71,8 @@ export const LOGIN_RATE_WINDOW_MS = 15 * 60 * 1000;
 export const LOGIN_LIMIT_PER_CLIENT = 10;
 export const LOGIN_LIMIT_PER_EMAIL_AND_CLIENT = 3;
 export const LOGIN_LIMIT_PER_EMAIL = 10;
+/** Staff invitation emails a business may send per window. */
+export const STAFF_INVITATION_EMAILS_PER_WINDOW = 10;
 
 /** RFC 5321 caps a forward path at 254 characters. */
 export const MAX_EMAIL_LENGTH = 254;

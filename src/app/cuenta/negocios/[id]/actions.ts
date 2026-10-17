@@ -2,7 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { pool } from '@/lib/db';
-import { AccessDenied, Unauthenticated } from '@/lib/authz';
+import { AccessDenied, AuthorityUnavailable, Unauthenticated } from '@/lib/authz';
 import { currentMerchantUserId } from '@/lib/authz/session';
 import {
   StaffRejected,
@@ -28,6 +28,7 @@ function back(formData: FormData, outcome: string): never {
 /** Signed-out callers go to /acceso, anyone not allowed gets a 404-like page; rejections keep their reason. */
 function failure(error: unknown, what: string): string {
   if (error instanceof Unauthenticated) redirect('/acceso');
+  if (error instanceof AuthorityUnavailable) return 'unavailable';
   if (error instanceof AccessDenied) redirect('/cuenta');
   if (error instanceof StaffRejected) return error.reason;
   const code = typeof error === 'object' && error && 'code' in error ? String(error.code) : 'unknown';
@@ -38,9 +39,10 @@ function failure(error: unknown, what: string): string {
 /** Owner only: invites an address as staff and emails it the single-use link. */
 export async function inviteStaffAction(formData: FormData): Promise<void> {
   if (!merchantAuthEnabled()) redirect('/');
-  const ownerUserId = await currentMerchantUserId();
   let outcome: string;
   try {
+    // Inside the try: a database outage while checking the session is a handled failure, not a 500.
+    const ownerUserId = await currentMerchantUserId();
     const invitation = await createStaffInvitation(pool, {
       ownerUserId,
       businessId: idField(formData, 'businessId'),
