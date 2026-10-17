@@ -544,7 +544,8 @@ describe('private payloads and analytics', () => {
       return r.abort();
     });
     await page.goto(`${app.origin}/`);
-    await page.waitForFunction(() => Array.isArray(window.dataLayer) && window.dataLayer.length > 0);
+    // Wait for the public page's own page_view, not just the bootstrap entries: gtag queues it a moment later.
+    await page.waitForFunction(() => JSON.stringify((window.dataLayer ?? []).map((a) => Array.from(a as ArrayLike<unknown>))).includes('page_view'));
     const entries = (from: number) =>
       page.evaluate((i) => JSON.stringify((window.dataLayer ?? []).slice(i).map((a) => Array.from(a as ArrayLike<unknown>))), from);
     expect(await entries(0)).toContain('page_view'); // positive control: the public page is measured
