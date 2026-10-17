@@ -46,7 +46,7 @@ const steps = [
   {
     Icon: Star,
     title: 'Opiniones con evidencia',
-    body: 'Cada opinión indica su tipo de evidencia y la cobertura muestra qué porcentaje de pedidos registrados recibió invitación a opinar.',
+    body: 'Cada opinión indica su tipo de evidencia y la cobertura compara las invitaciones registradas con los pedidos registrados.',
   },
   {
     Icon: MessageSquare,

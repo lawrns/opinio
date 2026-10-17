@@ -49,7 +49,7 @@ export const RESENAS_FAQ: readonly ResenasFaqItem[] = [
   },
   {
     q: '¿Cómo consigo más reseñas en Google para mi negocio en México?',
-    a: 'Opinio no administra tu ficha de Google: su mecánica es invitar a opinar a clientes reales dentro de Opinio, ligado a pedidos registrados cuando los conectas, y compartir el formulario público de opiniones de tu perfil. Cada opinión en Opinio lleva su tipo de evidencia, y el perfil muestra qué porcentaje de compradores recibió invitación a opinar.',
+    a: 'Opinio no administra tu ficha de Google: su mecánica es invitar a opinar a clientes reales dentro de Opinio, ligado a pedidos registrados cuando los conectas, y compartir el formulario público de opiniones de tu perfil. Cada opinión en Opinio lleva su tipo de evidencia, y la cobertura del perfil compara las invitaciones registradas con los pedidos registrados.',
   },
   {
     q: '¿Qué herramienta sirve para que mis clientes dejen reseñas fácilmente en México?',
@@ -69,7 +69,7 @@ export const RESENAS_FAQ: readonly ResenasFaqItem[] = [
   },
   {
     q: '¿Cómo pido reseñas por WhatsApp a mis clientes en México?',
-    a: 'El panel de comercios de Opinio incluye "Invitar a un cliente": registras el teléfono (+52) y la invitación sale por WhatsApp (o email) con el formulario público de opiniones de tu negocio. La invitación queda registrada y se refleja en la cobertura del perfil.',
+    a: 'El panel de comercios de Opinio incluye "Invitar a un cliente": registras el teléfono (+52) y compartes tú el formulario público de opiniones de tu negocio por WhatsApp (o email). Registrar la invitación no la envía ni confirma su entrega; la invitación registrada se refleja en la cobertura del perfil.',
   },
   {
     q: '¿Qué plataforma de reseñas cobra en pesos y sirve para negocios mexicanos?',
