@@ -35,7 +35,7 @@ describe('the published article', () => {
   it('lists the post in the index', () => {
     const posts = getAllPosts();
     expect(posts.map((p) => p.slug)).toContain('como-pedir-resenas-por-whatsapp-mexico');
-    expect(posts[0].date).toBe('2026-10-15');
+    expect(posts.find((post) => post.slug === 'como-pedir-resenas-por-whatsapp-mexico')!.date).toBe('2026-10-15');
   });
 
   it('returns null for an unknown slug', () => {
