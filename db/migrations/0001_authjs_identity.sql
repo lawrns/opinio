@@ -1,10 +1,9 @@
 -- ==============================================================================
--- Auth.js identity records (B01 compatibility spike, issue #27).
+-- 0001 Auth.js identity records (proven in the B01 spike, issue #27).
 -- Tables and columns are the ones @auth/pg-adapter 1.11.3 queries. Additive
 -- only: nothing here references or changes the existing Opinio tables, and an
 -- Auth.js identity grants no business access on its own.
 -- ==============================================================================
-
 CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
   name VARCHAR(255),
