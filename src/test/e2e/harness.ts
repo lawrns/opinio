@@ -37,6 +37,19 @@ export interface TestDatabase {
 }
 
 /**
+ * Every statement in a Postgres server log, in full. Log entries start with
+ * the default `%m [%p] ` timestamp prefix; multi-line SQL continues on
+ * tab-indented lines, which belong to the same statement.
+ */
+export function parseStatements(log: string): string[] {
+  return log
+    .split(/\n(?=\d{4}-\d\d-\d\d )/)
+    .map((entry) => entry.match(/(?:statement|execute [^:]*): ([\s\S]*)$/)?.[1])
+    .filter((s): s is string => s !== undefined)
+    .map((s) => s.replace(/\n\t/g, '\n').trimEnd());
+}
+
+/**
  * Starts an isolated Postgres 16, applies the given repo-relative SQL files,
  * then (with `migrate`) the auth migrations through scripts/migrate-auth.mjs.
  */
@@ -67,11 +80,15 @@ export async function startDatabase(
     await client.query(readFileSync(path.join(ROOT, file), 'utf8'));
   }
   if (options.migrate) await applyAuthMigrations(client);
-  if (options.logStatements) await client.query("ALTER DATABASE opinio_test SET log_statement = 'all'");
+  if (options.logStatements) {
+    await client.query("ALTER DATABASE opinio_test SET log_statement = 'all'");
+    // The setting reaches new sessions only; tests also log marker queries on this one.
+    await client.query("SET log_statement = 'all'");
+  }
   return {
     url,
     client,
-    statements: () => [...log.matchAll(/(?:statement|execute [^:]*): (.*)/g)].map((m) => m[1]),
+    statements: () => parseStatements(log),
     async stop() {
       await client.end().catch(() => {});
       await pg.stop();

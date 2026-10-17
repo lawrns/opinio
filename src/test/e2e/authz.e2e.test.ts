@@ -138,13 +138,25 @@ async function seed() {
 
 const auditCount = async () => Number((await one<{ n: string }>('SELECT count(*) AS n FROM audit_logs')).n);
 
-/** Statements the server ran while `fn` executed. */
+/**
+ * Statements the server ran while `fn` executed, bracketed by two marker
+ * queries: the window closes only once the end marker is in the log, so no
+ * fixed wait decides what is seen.
+ */
 async function statementsDuring(fn: () => Promise<unknown>): Promise<string[]> {
-  await new Promise((r) => setTimeout(r, 50));
-  const start = db.statements().length;
+  const id = randomBytes(6).toString('hex');
+  const [start, end] = [`authz_window_start_${id}`, `authz_window_end_${id}`];
+  await db.client.query(`SELECT '${start}'`);
   await fn();
-  await new Promise((r) => setTimeout(r, 150)); // let the log flush
-  return db.statements().slice(start);
+  await db.client.query(`SELECT '${end}'`);
+  for (let i = 0; i < 250 && !db.statements().some((s) => s.includes(end)); i++) {
+    await new Promise((r) => setTimeout(r, 20));
+  }
+  const all = db.statements();
+  const from = all.findIndex((s) => s.includes(start));
+  const to = all.findIndex((s) => s.includes(end));
+  if (from < 0 || to < from) throw new Error(`statement log markers missing for window ${id}`);
+  return all.slice(from + 1, to);
 }
 
 const touchesPrivateData = (statements: string[]) =>
@@ -434,8 +446,66 @@ describe('protected test surface over HTTP (built app)', () => {
     });
     expect(res.status).toBe(503);
     expect(await res.json()).toEqual({ error: 'unavailable' });
-    expect(down.logs()).not.toContain('SENTINEL_DB_PASSWORD');
-    expect(down.logs()).not.toContain(hashSecret(f.keyA));
+
+    // A merchant session that cannot be checked is an outage, not a sign-out.
+    const merchant = await fetch(`${down.origin}/api/spike/authz/businesses/${f.bizA}`, {
+      headers: { cookie: f.cookies.ownerA },
+    });
+    expect(merchant.status).toBe(503);
+    expect(await merchant.json()).toEqual({ error: 'unavailable' });
+    // With no session cookie there is nothing to check: still a plain 401.
+    expect((await fetch(`${down.origin}/api/spike/authz/businesses/${f.bizA}`)).status).toBe(401);
+
+    const logs = down.logs();
+    expect(logs).not.toContain('SENTINEL_DB_PASSWORD');
+    expect(logs).not.toContain(hashSecret(f.keyA));
+    expect(logs).not.toContain(hashSecret(f.cookies.ownerA.split('=')[1]));
+    // Auth.js's own error log is reduced to the error name and code: no cause, stack or address.
+    expect(logs).not.toMatch(/\[cause\]|\n\s+at |127\.0\.0\.1:9/);
+  });
+
+  it('denies a machine key on merchant and buyer surfaces', async () => {
+    const asBearer = { authorization: `Bearer ${f.keyA}` };
+    const merchant = await fetch(`${app.origin}/api/spike/authz/businesses/${f.bizA}`, { headers: asBearer });
+    expect(merchant.status).toBe(401);
+    const asSessionCookie = await fetch(`${app.origin}/api/spike/authz/businesses/${f.bizA}`, {
+      headers: { cookie: `authjs.session-token=${f.keyA}` },
+    });
+    expect(asSessionCookie.status).toBe(401);
+    for (const headers of [asBearer, { cookie: `${caseSessionCookieName(f.caseA, false)}=${f.keyA}` }]) {
+      const res = await fetch(`${app.origin}/api/spike/authz/cases/${f.caseA}`, { headers });
+      expect(res.status).toBe(401);
+      expect(await res.text()).not.toContain(BUYER_NAME);
+    }
+  });
+
+  it('cuts a case session and a machine key on the next request after revocation', async () => {
+    const raw = generateSecret();
+    const { id: sessionId } = await one<{ id: number }>(
+      "INSERT INTO case_sessions (case_id, session_hash, expires_at) VALUES ($1, $2, now() + interval '1 day') RETURNING id",
+      [f.caseA, hashSecret(raw)],
+    );
+    const read = () =>
+      fetch(`${app.origin}/api/spike/authz/cases/${f.caseA}`, { headers: { cookie: `${caseSessionCookieName(f.caseA, false)}=${raw}` } });
+    expect((await read()).status).toBe(200);
+    await db.client.query('UPDATE case_sessions SET revoked_at = now() WHERE id = $1', [sessionId]);
+    const denied = await read();
+    expect(denied.status).toBe(401);
+    expect(await denied.text()).not.toContain(BUYER_NAME);
+
+    const { key, prefix } = generateMachineKey();
+    const { id: keyId } = await one<{ id: number }>(
+      `INSERT INTO business_machine_keys (business_id, label, key_prefix, key_hash, scopes, created_by_user_id)
+       VALUES ($1, 'revocable', $2, $3, ARRAY['order_events'], $4) RETURNING id`,
+      [f.bizA, prefix, hashSecret(key), f.ownerA],
+    );
+    const post = () =>
+      fetch(`${app.origin}/api/spike/authz/order-events`, { method: 'POST', headers: { authorization: `Bearer ${key}` }, body: '{}' });
+    expect((await post()).status).toBe(200);
+    await db.client.query('UPDATE business_machine_keys SET revoked_at = now() WHERE id = $1', [keyId]);
+    const before = await auditCount();
+    expect((await post()).status).toBe(401);
+    expect(await auditCount()).toBe(before);
   });
 
   it('keeps every test surface closed when the switch is off', async () => {

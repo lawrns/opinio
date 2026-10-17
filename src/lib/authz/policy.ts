@@ -6,12 +6,12 @@ export const ACCESS_LINK_TTL_MS = 15 * 60 * 1000; // buyer and merchant links
 export const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000; // absolute, never extended
 export const STAFF_INVITATION_TTL_MS = 24 * 60 * 60 * 1000;
 
-/** Expired means the current time is at or beyond the expiry. */
-export function isExpired(expiresAt: Date, now: Date): boolean {
-  return now.valueOf() >= expiresAt.valueOf();
-}
+export const BUSINESS_ROLES = ['owner', 'staff'] as const;
+export type BusinessRole = (typeof BUSINESS_ROLES)[number];
 
-export type BusinessRole = 'owner' | 'staff';
+/** Principal types recorded as trusted audit actors (audit_logs.actor_type). */
+export const ACTOR_TYPES = ['merchant_user', 'administrator', 'buyer_case_session', 'machine_key', 'system'] as const;
+export type ActorType = (typeof ACTOR_TYPES)[number];
 
 /** What a business member may do. Owners hold every staff permission. */
 export type BusinessPermission =
@@ -31,8 +31,11 @@ const STAFF_PERMISSIONS: ReadonlySet<BusinessPermission> = new Set([
   'create_invitation',
 ]);
 
+/** Fails closed: a role other than exactly 'owner' or 'staff' allows nothing. */
 export function roleAllows(role: BusinessRole, permission: BusinessPermission): boolean {
-  return role === 'owner' || STAFF_PERMISSIONS.has(permission);
+  if (role === 'owner') return true;
+  if (role === 'staff') return STAFF_PERMISSIONS.has(permission);
+  return false;
 }
 
 /** Operations a business machine key can be scoped to. */

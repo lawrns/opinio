@@ -16,6 +16,7 @@ const LEGACY_TABLES = [
   'review_responses',
   'resolution_cases',
   'case_messages',
+  'official_records',
   'widgets',
   'audit_logs',
 ] as const;
@@ -51,6 +52,8 @@ async function seedLegacyData(client: Client) {
     VALUES (1, 'OP-LEGACY-1', 'Comprador Uno', 'legacy-buyer@example.test', 'delay', 'refund', 'resolved_consumer_confirmed', true),
            (2, 'OP-LEGACY-2', 'Comprador Dos', '5550000002', 'wrong_item', 'replacement', 'opened', false);
     INSERT INTO case_messages (case_id, sender_type, sender_name, message) VALUES (1, 'consumer', 'Comprador Uno', 'Llegó tarde');
+    INSERT INTO official_records (business_id, source_name, fact_title, fact_detail, record_date)
+    VALUES (1, 'SAT RFC Validador', 'RFC activo', 'Sintético', '2026-01-01');
     INSERT INTO widgets (business_id, token) VALUES (1, 'wgt_legacy_ribbon');
     INSERT INTO audit_logs (business_id, actor, action, details) VALUES (1, 'merchant', 'settings_updated', '{"field":"phone"}');
   `);
@@ -144,6 +147,40 @@ describe('auth migrations over existing data', () => {
     // A revoked row must carry its revocation time.
     await expect(c.query("UPDATE business_memberships SET status = 'revoked' WHERE status = 'active'")).rejects.toMatchObject({
       code: '23514',
+    });
+  });
+
+  it('binds an owner membership to an approval for the same business and person', async () => {
+    const c = db.client;
+    await c.query("INSERT INTO users (email) VALUES ('owner-b@example.test')");
+    // Approval: user 2 owns business 1, approved by user 1.
+    const {
+      rows: [approval],
+    } = await c.query(
+      `INSERT INTO ownership_approvals (business_id, subject_user_id, kind, evidence_method, approved_by_user_id)
+       VALUES (1, 2, 'first_owner', 'dns', 1) RETURNING id`,
+    );
+    // The same approval cannot back an owner of another business, or another person.
+    await expect(
+      c.query("INSERT INTO business_memberships (business_id, user_id, role, approval_id) VALUES (2, 2, 'owner', $1)", [
+        approval.id,
+      ]),
+    ).rejects.toMatchObject({ code: '23503' });
+    await expect(
+      c.query("INSERT INTO business_memberships (business_id, user_id, role, approval_id) VALUES (1, 3, 'owner', $1)", [
+        approval.id,
+      ]),
+    ).rejects.toMatchObject({ code: '23503' });
+    // Nor can an existing owner membership be re-pointed at it.
+    await c.query("UPDATE business_memberships SET status = 'revoked', revoked_at = now() WHERE user_id = 2 AND status = 'active'");
+    const {
+      rows: [owner],
+    } = await c.query(
+      "INSERT INTO business_memberships (business_id, user_id, role, approval_id) VALUES (1, 2, 'owner', $1) RETURNING id",
+      [approval.id],
+    );
+    await expect(c.query('UPDATE business_memberships SET business_id = 2 WHERE id = $1', [owner.id])).rejects.toMatchObject({
+      code: '23503',
     });
   });
 });

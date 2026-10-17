@@ -5,7 +5,6 @@ import {
   STAFF_INVITATION_TTL_MS,
   caseSessionCookieName,
   caseSessionCookieOptions,
-  isExpired,
   roleAllows,
 } from './policy';
 import { generateMachineKey, generateSecret, hashSecret } from './secrets';
@@ -17,12 +16,6 @@ describe('authority policy', () => {
     expect(STAFF_INVITATION_TTL_MS).toBe(86_400_000);
   });
 
-  it('treats the expiry instant as expired', () => {
-    const at = new Date('2026-10-17T12:00:00.000Z');
-    expect(isExpired(at, new Date(at.valueOf() - 1))).toBe(false);
-    expect(isExpired(at, at)).toBe(true);
-  });
-
   it('gives staff operational work only and owners everything', () => {
     for (const p of ['read_operational', 'reply', 'offer_remedy', 'create_invitation'] as const) {
       expect(roleAllows('staff', p)).toBe(true);
@@ -30,6 +23,12 @@ describe('authority policy', () => {
     for (const p of ['manage_settings', 'manage_widgets', 'manage_staff', 'manage_keys'] as const) {
       expect(roleAllows('staff', p)).toBe(false);
       expect(roleAllows('owner', p)).toBe(true);
+    }
+  });
+
+  it('denies every permission to a role it does not know', () => {
+    for (const role of ['admin', 'Owner', 'STAFF', '', 'revoked', null, undefined]) {
+      expect(roleAllows(role as never, 'read_operational')).toBe(false);
     }
   });
 

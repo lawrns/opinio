@@ -9,14 +9,15 @@ Issue [#28](https://github.com/lawrns/opinio/issues/28). Policy: [ADR 0001](../a
 | `0001_authjs_identity.sql` | Auth.js `users`, `accounts`, `sessions` (cookie stored as SHA-256), `verification_token` |
 | `0002_business_case_machine_authority.sql` | `ownership_approvals`, `business_memberships` (owner/staff, active/revoked), `staff_invitations`, `case_access_tokens`, `case_sessions`, `business_machine_keys`, and `audit_logs.actor_type`/`actor_id` |
 
-Both are additive. They change no existing row and backfill nothing: claimed listings, RFC/CLEE identities and supplied contacts mint no membership. The schema enforces that an owner membership references an approval, that a person has at most one active membership per business, that revoked rows carry a revocation time, and that machine scopes are only `order_events` and `invitations`. Every secret column holds a SHA-256 digest.
+Both are additive. They change no existing row and backfill nothing: claimed listings, RFC/CLEE identities and supplied contacts mint no membership. The schema enforces that an owner membership references an approval for that same business and person, that a person has at most one active membership per business, that revoked rows carry a revocation time, and that machine scopes are only `order_events` and `invitations`. Every secret column holds a SHA-256 digest.
 
 ```sh
 DATABASE_URL=postgres://… node scripts/migrate-auth.mjs          # dry run: lists pending, writes nothing
 DATABASE_URL=postgres://… node scripts/migrate-auth.mjs --apply  # applies under an advisory lock
+# a non-local host also needs --confirm-host=<that host>; the designated administrator runs it
 ```
 
-There is no default database. Running it against production needs the designated administrator.
+There is no default database. Running it against production needs the designated administrator. Nothing runs these migrations on deploy: no build step, Dockerfile, start script or CI hook calls them, so they must be applied by hand before code that needs them ships.
 
 ## Checks (`src/lib/authz`)
 
@@ -28,7 +29,7 @@ There is no default database. Running it against production needs the designated
 | `authorizeMachineKey` | `Authorization: Bearer opk_…` | one scope within the key's own business; a different claimed business is denied |
 | `recordAuditEvent` | any | appends a controlled action with `actor_type`/`actor_id`; details are IDs and flags only |
 
-Every call reads Postgres, so a revoked membership, session or key fails on the next request. A missing resource and another business's resource both raise `AccessDenied`, which `authzErrorResponse` returns as one 404. Database failures become a bare `AuthorityUnavailable` (503) that logs only the error code. Staff hold `read_operational`, `reply`, `offer_remedy` and `create_invitation`. Owners also hold `manage_settings`, `manage_widgets`, `manage_staff` and `manage_keys`.
+Every call reads Postgres, so a revoked membership, session or key fails on the next request. A missing resource and another business's resource both raise `AccessDenied`, which `authzErrorResponse` returns as one 404. Database failures become a bare `AuthorityUnavailable` (503) that logs only the error code. Auth.js swallows a failed session lookup as "no session", so when a session cookie was sent and none came back, `currentMerchantUserId` probes the store and raises the same 503; Auth.js's own error log is reduced to the error type and code. Staff hold `read_operational`, `reply`, `offer_remedy` and `create_invitation`. Owners also hold `manage_settings`, `manage_widgets`, `manage_staff` and `manage_keys`. Any other role value allows nothing.
 
 ## Test surfaces
 

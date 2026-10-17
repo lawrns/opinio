@@ -20,7 +20,9 @@ CREATE TABLE IF NOT EXISTS ownership_approvals (
   previous_owner_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
   approved_by_user_id INTEGER NOT NULL REFERENCES users(id),
   approved_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  CHECK (kind = 'transfer' OR previous_owner_user_id IS NULL)
+  CHECK (kind = 'transfer' OR previous_owner_user_id IS NULL),
+  -- Target of the membership FK below: an approval names one business and person.
+  UNIQUE (id, business_id, subject_user_id)
 );
 
 CREATE TABLE IF NOT EXISTS business_memberships (
@@ -29,14 +31,17 @@ CREATE TABLE IF NOT EXISTS business_memberships (
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   role VARCHAR(10) NOT NULL CHECK (role IN ('owner', 'staff')),
   status VARCHAR(10) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'revoked')),
-  approval_id INTEGER REFERENCES ownership_approvals(id),
+  approval_id INTEGER,
   granted_by_user_id INTEGER REFERENCES users(id),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   revoked_at TIMESTAMPTZ,
   revoked_by_user_id INTEGER REFERENCES users(id),
   CHECK ((status = 'revoked') = (revoked_at IS NOT NULL)),
-  -- An owner membership exists only through a recorded approval.
-  CHECK (role <> 'owner' OR approval_id IS NOT NULL)
+  -- An owner membership exists only through a recorded approval, and that
+  -- approval must be for this same business and person.
+  CHECK (role <> 'owner' OR approval_id IS NOT NULL),
+  FOREIGN KEY (approval_id, business_id, user_id)
+    REFERENCES ownership_approvals (id, business_id, subject_user_id)
 );
 -- At most one active membership per person and business.
 CREATE UNIQUE INDEX IF NOT EXISTS uq_business_memberships_active

@@ -10,7 +10,7 @@
  * never reveals whether the resource exists.
  */
 import { hashSecret } from '@/lib/authz/secrets';
-import { roleAllows, type BusinessPermission, type BusinessRole, type MachineScope } from '@/lib/authz/policy';
+import { roleAllows, type ActorType, type BusinessPermission, type BusinessRole, type MachineScope } from '@/lib/authz/policy';
 
 export type { BusinessPermission, BusinessRole, MachineScope } from '@/lib/authz/policy';
 
@@ -25,6 +25,12 @@ export type Principal =
   | { type: 'buyer_case_session'; sessionId: number; caseId: number }
   | { type: 'machine_key'; keyId: number; businessId: number }
   | { type: 'system' };
+
+// Compile-time: the principal union and ACTOR_TYPES name exactly the same actors.
+type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
+export type PrincipalTypesMatchActorTypes = Same<Principal['type'], ActorType> extends true ? true : never;
+const principalTypesMatchActorTypes: PrincipalTypesMatchActorTypes = true;
+void principalTypesMatchActorTypes;
 
 /** The caller has no valid credential (401). */
 export class Unauthenticated extends Error {
@@ -62,6 +68,11 @@ async function authorityQuery<R extends Record<string, unknown>>(db: Db, text: s
     console.error(`[authz] authority query failed (code ${code})`);
     throw new AuthorityUnavailable();
   }
+}
+
+/** Throws AuthorityUnavailable when the authority store cannot be queried. */
+export async function assertAuthorityReachable(db: Db): Promise<void> {
+  await authorityQuery(db, 'SELECT 1', []);
 }
 
 /** A private resource whose owning business is resolved from storage. */

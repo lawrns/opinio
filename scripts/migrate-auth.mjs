@@ -4,8 +4,11 @@
 //
 //   DATABASE_URL=postgres://... node scripts/migrate-auth.mjs          # dry run
 //   DATABASE_URL=postgres://... node scripts/migrate-auth.mjs --apply
+//   DATABASE_URL=postgres://...@db.example:5432/x node scripts/migrate-auth.mjs --apply --confirm-host=db.example
 //
 // Production use needs the designated administrator's approval (spec #26).
+// Applying to any host other than this machine also needs --confirm-host
+// naming that host, so a stray DATABASE_URL cannot be migrated by accident.
 import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -19,6 +22,22 @@ export function listMigrations(dir = MIGRATIONS_DIR) {
     .filter((f) => /^\d{4}_[a-z0-9_]+\.sql$/.test(f))
     .sort()
     .map((name) => ({ name, sql: readFileSync(path.join(dir, name), 'utf8') }));
+}
+
+const LOOPBACK = new Set(['localhost', '127.0.0.1', '[::1]', '::1']);
+
+/** Why `--apply` must not run against `databaseUrl` with `argv`, or null when it may. */
+export function applyRefusal(databaseUrl, argv) {
+  let host;
+  try {
+    host = new URL(databaseUrl).hostname;
+  } catch {
+    return 'DATABASE_URL is not a valid URL.';
+  }
+  if (LOOPBACK.has(host)) return null;
+  const confirmed = argv.find((a) => a.startsWith('--confirm-host='))?.slice('--confirm-host='.length);
+  if (confirmed === host) return null;
+  return `Refusing to apply to remote host ${host}: the designated administrator must pass --confirm-host=${host}.`;
 }
 
 /** Applies pending migrations with `client` (a connected pg Client). Returns the names applied. */
@@ -59,6 +78,11 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     process.exit(1);
   }
   const apply = process.argv.includes('--apply');
+  const refusal = apply ? applyRefusal(process.env.DATABASE_URL, process.argv) : null;
+  if (refusal) {
+    console.error(refusal);
+    process.exit(1);
+  }
   const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
   await client.connect();
   try {
