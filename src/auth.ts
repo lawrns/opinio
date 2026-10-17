@@ -13,18 +13,21 @@ export const SESSION_MAX_AGE_SECONDS = 7 * 24 * 60 * 60;
  * AUTH_EMAIL_SERVER at a local mail sink; no production sender is configured
  * or approved. Every entry point is gated by `authSpikeEnabled()`.
  *
- * The config is built lazily, per request: the Nodemailer provider throws
- * without a mail server, and `next build` (which has no mail settings) loads
- * this module while collecting route configuration.
+ * The config is built lazily, per request, and the Nodemailer provider is
+ * added only when a mail server is configured: the provider throws without
+ * one, and neither `next build` nor a session check needs mail settings.
+ * Without a mail server, existing sessions still verify and sign-in is off.
  */
 export const { handlers, auth, signIn, signOut } = NextAuth(() => ({
   adapter: strictAdapter(PostgresAdapter(pool)),
-  providers: [
-    Nodemailer({
-      server: process.env.AUTH_EMAIL_SERVER,
-      from: process.env.AUTH_EMAIL_FROM,
-      maxAge: EMAIL_LINK_MAX_AGE_SECONDS,
-    }),
-  ],
+  providers: process.env.AUTH_EMAIL_SERVER
+    ? [
+        Nodemailer({
+          server: process.env.AUTH_EMAIL_SERVER,
+          from: process.env.AUTH_EMAIL_FROM,
+          maxAge: EMAIL_LINK_MAX_AGE_SECONDS,
+        }),
+      ]
+    : [],
   session: { strategy: 'database', maxAge: SESSION_MAX_AGE_SECONDS },
 }));

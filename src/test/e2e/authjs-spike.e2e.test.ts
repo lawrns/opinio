@@ -126,7 +126,7 @@ const sessionCount = async () => Number((await db.client.query('SELECT count(*) 
 
 beforeAll(async () => {
   [db, mail] = await Promise.all([
-    startDatabase(['src/lib/schema.sql', 'src/lib/auth/schema.sql']),
+    startDatabase(['src/lib/schema.sql'], { migrate: true }),
     startMailSink(),
   ]);
   serverJs = buildApp('.next-e2e');

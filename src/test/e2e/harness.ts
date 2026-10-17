@@ -13,6 +13,7 @@ import EmbeddedPostgres from 'embedded-postgres';
 import { SMTPServer } from 'smtp-server';
 import { simpleParser } from 'mailparser';
 import { Client } from 'pg';
+import { applyAuthMigrations } from '../../../scripts/migrate-auth.mjs';
 
 export const ROOT = path.resolve(__dirname, '../../..');
 
@@ -30,20 +31,31 @@ export async function freePort(): Promise<number> {
 export interface TestDatabase {
   url: string;
   client: Client;
+  /** Statements the server executed so far (when started with `logStatements`). */
+  statements(): string[];
   stop(): Promise<void>;
 }
 
-/** Starts an isolated Postgres 16 and applies the given repo-relative SQL files. */
-export async function startDatabase(schemaFiles: string[]): Promise<TestDatabase> {
+/**
+ * Starts an isolated Postgres 16, applies the given repo-relative SQL files,
+ * then (with `migrate`) the auth migrations through scripts/migrate-auth.mjs.
+ */
+export async function startDatabase(
+  schemaFiles: string[],
+  options: { migrate?: boolean; logStatements?: boolean } = {},
+): Promise<TestDatabase> {
   const dir = mkdtempSync(path.join(tmpdir(), 'opinio-pg-'));
   const port = await freePort();
+  let log = '';
   const pg = new EmbeddedPostgres({
     databaseDir: path.join(dir, 'data'),
     user: 'opinio_test',
     password: 'opinio_test',
     port,
     persistent: false,
-    onLog: () => {},
+    onLog: (message: string) => {
+      if (options.logStatements) log += message;
+    },
   });
   await pg.initialise();
   await pg.start();
@@ -54,9 +66,12 @@ export async function startDatabase(schemaFiles: string[]): Promise<TestDatabase
   for (const file of schemaFiles) {
     await client.query(readFileSync(path.join(ROOT, file), 'utf8'));
   }
+  if (options.migrate) await applyAuthMigrations(client);
+  if (options.logStatements) await client.query("ALTER DATABASE opinio_test SET log_statement = 'all'");
   return {
     url,
     client,
+    statements: () => [...log.matchAll(/(?:statement|execute [^:]*): (.*)/g)].map((m) => m[1]),
     async stop() {
       await client.end().catch(() => {});
       await pg.stop();
