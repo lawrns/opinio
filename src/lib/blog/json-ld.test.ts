@@ -3,9 +3,21 @@
  * (same @id the home page defines) and the FAQPage node mirrors the article's
  * own pairs.
  */
+import fs from 'node:fs';
+import path from 'node:path';
+import matter from 'gray-matter';
 import { describe, it, expect } from 'vitest';
 import { buildArticleJsonLd, buildBlogFaqPageJsonLd } from './json-ld';
-import { getPostBySlug } from './posts';
+import { renderMarkdown } from './markdown';
+import { getAllPosts, getPostBySlug } from './posts';
+
+function visibleText(html: string): string {
+  return html.replace(/<[^>]*>/g, '')
+    .replace(/&quot;/g, '"')
+    .replace(/&#0?39;|&#x27;|&apos;/g, "'")
+    .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')
+    .replace(/\s+/g, ' ').trim();
+}
 
 describe('buildArticleJsonLd', () => {
   const input = {
@@ -34,15 +46,25 @@ describe('buildArticleJsonLd', () => {
 });
 
 describe('buildBlogFaqPageJsonLd from the article', () => {
-  it('mirrors every question and answer pair', () => {
-    const post = getPostBySlug('como-pedir-resenas-por-whatsapp-mexico')!;
+  it.each(getAllPosts().map(({ slug }) => slug))('matches only each question\'s own visible answer in %s', (slug) => {
+    const post = getPostBySlug(slug)!;
+    // Read each source question independently of the loader's FAQ extraction.
+    // The next h2 belongs outside the answers, even if schema and accordion
+    // accidentally acquire the same closing CTA text.
+    const { content } = matter(fs.readFileSync(path.join(process.cwd(), 'content/blog', slug + '.md'), 'utf8'));
+    const section = content.split(/^## Preguntas frecuentes\s*$/m)[1]?.split(/^## /m)[0];
+    expect(section).toBeDefined();
+    const expected = section!.split(/^### /m).slice(1).map((group) => {
+      const [question, ...answer] = group.trim().split('\n');
+      return { q: visibleText(renderMarkdown(question)), a: visibleText(renderMarkdown(answer.join('\n'))) };
+    });
+    expect(expected.length).toBeGreaterThan(0);
+    const visible = post.faqs.map(({ q, aHtml }) => ({ q, a: visibleText(aHtml) }));
+    expect(visible).toEqual(expected);
+
     const jsonLd = buildBlogFaqPageJsonLd(post.faqs);
     expect(jsonLd['@type']).toBe('FAQPage');
-    const mainEntity = jsonLd.mainEntity as Array<Record<string, unknown>>;
-    expect(mainEntity).toHaveLength(post.faqs.length);
-    mainEntity.forEach((question, index) => {
-      expect(question.name).toBe(post.faqs[index].q);
-      expect(question.acceptedAnswer).toEqual({ '@type': 'Answer', text: post.faqs[index].a });
-    });
+    const mainEntity = jsonLd.mainEntity as Array<{ name: string; acceptedAnswer: { text: string } }>;
+    expect(mainEntity.map(({ name, acceptedAnswer }) => ({ q: name, a: acceptedAnswer.text }))).toEqual(expected);
   });
 });
