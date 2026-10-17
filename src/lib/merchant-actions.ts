@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { query } from './db';
 import { Widget, ReviewResponse } from './types';
+import { CONSUMER_CONFIRMATION_PENDING_ERROR, consumerConfirmationAttempt } from './case-access';
 
 export async function postReviewResponseAction(formData: FormData) {
   const reviewId = Number(formData.get('review_id'));
@@ -59,6 +60,11 @@ export async function updateCaseRemedyAction(formData: FormData) {
 
   if (!caseId || !remedyOffered) {
     return { success: false, error: 'Debe especificar el remedio ofrecido al cliente.' };
+  }
+
+  // A business can never record the buyer's confirmation.
+  if (consumerConfirmationAttempt({ status })) {
+    return { success: false, status: 403, error: CONSUMER_CONFIRMATION_PENDING_ERROR };
   }
 
   try {

@@ -10,7 +10,6 @@ import {
   Check,
   Scale,
   MessageSquare,
-  CheckCircle2,
   ArrowLeft,
   Sparkles,
   Loader2
@@ -22,8 +21,6 @@ export interface CaseData {
   business_id: number;
   brand_name: string;
   business_slug: string;
-  customer_name: string;
-  customer_contact: string;
   issue_category: string;
   customer_requested_remedy: string;
   status: string;
@@ -42,7 +39,6 @@ export interface MessageData {
   sender_type: 'consumer' | 'merchant' | 'mediator';
   sender_name: string;
   message: string;
-  is_private: boolean;
   created_at: string;
 }
 
@@ -105,14 +101,10 @@ const REMEDY_LABELS: Record<string, string> = {
 };
 
 export function CasePortalClient({ initialCase, initialMessages }: Props) {
-  const [caseData, setCaseData] = useState<CaseData>(initialCase);
+  const [caseData] = useState<CaseData>(initialCase);
   const [messages, setMessages] = useState<MessageData[]>(initialMessages);
   const [newMessage, setNewMessage] = useState('');
-  const [senderName] = useState(initialCase.customer_name);
   const [sending, setSending] = useState(false);
-  const [confirming, setConfirming] = useState(false);
-  const [resolutionReceived, setResolutionReceived] = useState(false);
-  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const statusInfo = STATUS_DETAILS[caseData.status] || STATUS_DETAILS.opened;
@@ -130,7 +122,7 @@ export function CasePortalClient({ initialCase, initialMessages }: Props) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sender_type: 'consumer',
-          sender_name: senderName.trim() || caseData.customer_name,
+          sender_name: 'Comprador',
           message: newMessage.trim(),
         }),
       });
@@ -147,40 +139,6 @@ export function CasePortalClient({ initialCase, initialMessages }: Props) {
       setErrorMsg('No se pudo enviar el mensaje. Intenta de nuevo.');
     } finally {
       setSending(false);
-    }
-  };
-
-  const handleConfirmResolution = async () => {
-    if (confirming || !resolutionReceived || caseData.is_consumer_confirmed) return;
-
-    setConfirming(true);
-    setErrorMsg(null);
-
-    try {
-      const res = await fetch(`/api/v1/cases/${caseData.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          is_consumer_confirmed: true,
-          status: 'resolved_consumer_confirmed',
-          resolution_summary: caseData.resolution_summary || 'El consumidor confirmó de conformidad la solución acordada.',
-        }),
-      });
-
-      if (!res.ok) {
-        throw new Error('Error al confirmar la resolución.');
-      }
-
-      const data = await res.json();
-      setCaseData((previous) => ({ ...previous, ...data.case }));
-      if (Array.isArray(data.case.messages)) setMessages(data.case.messages);
-
-      setActionSuccess('¡Resolución confirmada con éxito! Tu confirmación ha quedado registrada en el Pasaporte de Confianza del comercio.');
-    } catch (err) {
-      console.error(err);
-      setErrorMsg('No se pudo confirmar la resolución. Intenta nuevamente.');
-    } finally {
-      setConfirming(false);
     }
   };
 
@@ -230,7 +188,7 @@ export function CasePortalClient({ initialCase, initialMessages }: Props) {
               Seguimiento de tu caso
             </h1>
             <p className="text-sm text-[var(--op-ink-secondary)] mt-1">
-              Incidencia registrada entre <strong className="text-[var(--op-ink-primary)]">{caseData.customer_name}</strong> y <strong className="text-[var(--op-ink-primary)]">{caseData.brand_name}</strong>.
+              Caso <strong className="text-[var(--op-ink-primary)]">{caseData.case_number}</strong> registrado con <strong className="text-[var(--op-ink-primary)]">{caseData.brand_name}</strong>.
             </p>
           </div>
 
@@ -304,14 +262,6 @@ export function CasePortalClient({ initialCase, initialMessages }: Props) {
         </div>
       </div>
 
-      {/* Action Notification Alert */}
-      {actionSuccess && (
-        <div role="status" className="rounded-2xl bg-[var(--op-verified-tint)] border border-[var(--op-verified-border)] p-4 text-sm text-[var(--op-verified-ink)] font-semibold flex items-start gap-2.5">
-          <CheckCircle2 className="h-4 w-4 text-[var(--op-verified-ink)] shrink-0 mt-0.5" />
-          <span>{actionSuccess}</span>
-        </div>
-      )}
-
       {errorMsg && (
         <div role="alert" className="rounded-2xl bg-[var(--op-danger-tint)] border border-[var(--op-danger-border)] p-4 text-sm text-[var(--op-danger-ink)] font-semibold flex items-start gap-2.5">
           <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-[var(--op-danger-ink)]" />
@@ -368,28 +318,13 @@ export function CasePortalClient({ initialCase, initialMessages }: Props) {
                   </p>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  <label className="flex cursor-pointer items-start gap-2 text-sm leading-relaxed"><input type="checkbox" checked={resolutionReceived} onChange={(event) => setResolutionReceived(event.target.checked)} className="mt-1 size-5 shrink-0 accent-[var(--op-verified-ink)]" /><span>Ya recibí la solución acordada y quiero cerrar el caso.</span></label>
-                  <button
-                    type="button"
-                    onClick={handleConfirmResolution}
-                    disabled={confirming || !resolutionReceived}
-                    className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-[var(--op-verified-ink)] px-5 py-3.5 text-xs font-bold text-[var(--op-sheet)] hover:bg-[var(--op-verified-ink)] transition-all shadow-xs disabled:opacity-50 active:scale-95"
-                  >
-                    {confirming ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        <span>Confirmando conformidad...</span>
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 className="h-4 w-4" />
-                        <span>Confirmar resolución de conformidad</span>
-                      </>
-                    )}
-                  </button>
-                  <p className="text-xs text-[var(--op-ink-muted)] text-center leading-relaxed">
-                    Al hacer clic, declaras que el comercio entregó la compensación, reemplazo o reembolso acordado.
+                <div role="status" className="p-4 rounded-2xl bg-[var(--op-warning-tint)] border border-[var(--op-warning-border)] text-center space-y-2">
+                  <Clock className="h-6 w-6 text-[var(--op-warning-ink)] mx-auto" />
+                  <div className="text-xs font-bold text-[var(--op-warning-ink)]">
+                    Confirmación del comprador pendiente de verificación
+                  </div>
+                  <p className="text-xs text-[var(--op-ink-secondary)] leading-relaxed">
+                    Estamos habilitando la verificación de identidad del comprador. Mientras tanto, ninguna resolución se registra como confirmada. Puedes seguir la conversación con el comercio en este caso.
                   </p>
                 </div>
               )}

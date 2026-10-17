@@ -24,6 +24,17 @@ interface InvitationRow {
   business_brand_name?: string;
 }
 
+interface PublicInvitationRow {
+  id: number;
+  business_id: number;
+  channel: string;
+  status: string;
+  sent_at: string;
+  completed_at: string | null;
+  business_slug: string;
+  business_brand_name: string;
+}
+
 interface OrderLookupRow {
   id: number;
   business_id: number;
@@ -201,23 +212,30 @@ export async function GET(request: NextRequest) {
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
+    // Served without authentication: public-safe columns only. No recipient
+    // contact, buyer name, order amount or invitation token (the token is the
+    // review credential).
     const sql = `
-      SELECT i.*, o.customer_name, o.amount as order_amount, b.slug as business_slug, b.brand_name as business_brand_name
+      SELECT i.id, i.business_id, i.channel, i.status, i.sent_at, i.completed_at,
+             b.slug as business_slug, b.brand_name as business_brand_name
       FROM invitations i
       INNER JOIN businesses b ON b.id = i.business_id
-      LEFT JOIN orders o ON o.id = i.order_id
       ${whereClause}
       ORDER BY i.sent_at DESC
       LIMIT $${paramIndex++} OFFSET $${paramIndex++}
     `;
     params.push(limit, offset);
 
-    const res = await query<InvitationRow>(sql, params);
-
-    const invitations = res.rows.map((row) => ({
-      ...row,
-      order_amount: row.order_amount ? Number(row.order_amount) : null,
-      review_url: `https://opinio.mx/opinar/${row.token}`,
+    const res = await query<PublicInvitationRow>(sql, params);
+    const invitations: PublicInvitationRow[] = res.rows.map((row) => ({
+      id: row.id,
+      business_id: row.business_id,
+      channel: row.channel,
+      status: row.status,
+      sent_at: row.sent_at,
+      completed_at: row.completed_at,
+      business_slug: row.business_slug,
+      business_brand_name: row.business_brand_name,
     }));
 
     return NextResponse.json({

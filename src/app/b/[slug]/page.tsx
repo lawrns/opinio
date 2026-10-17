@@ -15,6 +15,7 @@ import { query } from '@/lib/db';
 import { passportMetadata } from '@/lib/passport-metadata';
 import { buildBuyerFaq } from '@/lib/passport-buyer-faq';
 import { factStatus, formatRecordDate, latestRecordDateValue, verificationLevelLabel } from '@/lib/passport-evidence';
+import { publicCaseColumnsSql } from '@/lib/case-access';
 
 interface BusinessDbRow {
   id: number;
@@ -69,7 +70,6 @@ interface OfficialRecordDbRow {
 interface CaseDbRow {
   id: number;
   case_number: string;
-  customer_name: string;
   issue_category: string;
   customer_requested_remedy: string;
   status: string;
@@ -215,7 +215,7 @@ export default async function BusinessPassportPage({ params }: PageProps) {
       [business.id]
     ),
     query<CaseDbRow>(
-      `SELECT * FROM resolution_cases WHERE business_id = $1 ORDER BY created_at DESC`,
+      `SELECT ${publicCaseColumnsSql()} FROM resolution_cases WHERE business_id = $1 ORDER BY created_at DESC`,
       [business.id]
     )
   ]);

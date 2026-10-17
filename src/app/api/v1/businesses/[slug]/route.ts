@@ -6,6 +6,7 @@ import {
   ResolutionMetricsInput,
   CalculatedTrustPassport,
 } from '@/lib/scoring';
+import { publicCaseColumnsSql, toPublicCase, toPublicMessages } from '@/lib/case-access';
 
 interface BusinessRow {
   id: number;
@@ -96,8 +97,6 @@ interface CaseRow {
   review_id: number | null;
   order_id: number | null;
   case_number: string;
-  customer_name: string;
-  customer_contact: string;
   issue_category: string;
   customer_requested_remedy: string;
   status: string;
@@ -171,13 +170,13 @@ export async function GET(
           [businessId]
         ),
         query<CaseRow>(
-          'SELECT * FROM resolution_cases WHERE business_id = $1 ORDER BY created_at DESC',
+          `SELECT ${publicCaseColumnsSql()} FROM resolution_cases WHERE business_id = $1 ORDER BY created_at DESC`,
           [businessId]
         ),
         query<CaseMessageRow>(
           `SELECT m.* FROM case_messages m
            INNER JOIN resolution_cases c ON c.id = m.case_id
-           WHERE c.business_id = $1
+           WHERE c.business_id = $1 AND m.is_private = false
            ORDER BY m.created_at ASC`,
           [businessId]
         ),
@@ -206,10 +205,11 @@ export async function GET(
       messagesByCaseId.set(msg.case_id, arr);
     }
 
+    // Public endpoint: case projection without buyer contact fields, and only
+    // non-private messages with buyer names replaced (see lib/case-access).
     const casesWithMessages = casesRes.rows.map((c) => ({
-      ...c,
-      total_resolution_hours: c.total_resolution_hours ? Number(c.total_resolution_hours) : null,
-      messages: messagesByCaseId.get(c.id) || [],
+      ...toPublicCase(c),
+      messages: toPublicMessages(messagesByCaseId.get(c.id) || []),
     }));
 
     // 3. Live Scoring Engine Calculation

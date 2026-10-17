@@ -4,7 +4,8 @@ import { notFound } from 'next/navigation';
 import { query } from '@/lib/db';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
-import { CasePortalClient, CaseData, MessageData } from './CasePortalClient';
+import { publicCaseColumnsSql, toPublicCase, toPublicMessages } from '@/lib/case-access';
+import { CasePortalClient, CaseData } from './CasePortalClient';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -23,28 +24,38 @@ export const metadata: Metadata = {
 export default async function CasoDetailPage({ params }: PageProps) {
   const { id } = await params;
 
-  // Query case by numeric id or by case_number
+  // Query case by numeric id or by case_number. Public projection only: this
+  // page is served without authentication, so no buyer contact fields.
   const isNumeric = /^\d+$/.test(id);
   const caseQuery = isNumeric
-    ? `SELECT c.*, b.brand_name, b.slug as business_slug
+    ? `SELECT ${publicCaseColumnsSql('c')}, b.brand_name, b.slug as business_slug
        FROM resolution_cases c
        JOIN businesses b ON c.business_id = b.id
        WHERE c.id = $1 LIMIT 1`
-    : `SELECT c.*, b.brand_name, b.slug as business_slug
+    : `SELECT ${publicCaseColumnsSql('c')}, b.brand_name, b.slug as business_slug
        FROM resolution_cases c
        JOIN businesses b ON c.business_id = b.id
        WHERE c.case_number = $1 LIMIT 1`;
 
-  const caseRes = await query<CaseData>(caseQuery, [isNumeric ? parseInt(id, 10) : id]);
+  const caseRes = await query<CaseData & { business_slug: string; brand_name: string }>(caseQuery, [isNumeric ? parseInt(id, 10) : id]);
 
   if (caseRes.rows.length === 0) {
     notFound();
   }
 
-  const caseData = caseRes.rows[0];
+  const row = caseRes.rows[0];
+  const caseData: CaseData = { ...toPublicCase(row), brand_name: row.brand_name, business_slug: row.business_slug };
 
   // Query messages
-  const messagesRes = await query<MessageData>(
+  const messagesRes = await query<{
+    id: number;
+    case_id: number;
+    sender_type: 'consumer' | 'merchant' | 'mediator';
+    sender_name: string;
+    message: string;
+    is_private: boolean;
+    created_at: string;
+  }>(
     `SELECT id, case_id, sender_type, sender_name, message, is_private, created_at
      FROM case_messages
      WHERE case_id = $1
@@ -52,7 +63,7 @@ export default async function CasoDetailPage({ params }: PageProps) {
     [caseData.id]
   );
 
-  const messages = messagesRes.rows;
+  const messages = toPublicMessages(messagesRes.rows);
 
   return (
     <div className="min-h-screen bg-[var(--op-canvas)] text-[var(--op-ink-primary)] flex flex-col font-sans selection:bg-[var(--op-verified-ink)] selection:text-[var(--op-sheet)]">

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { CONSUMER_CONFIRMATION_PENDING_ERROR, consumerConfirmationAttempt } from '@/lib/case-access';
 
 interface MessageInput {
   sender_type: 'consumer' | 'merchant' | 'mediator';
@@ -41,7 +42,15 @@ export async function POST(
       );
     }
 
-    const body = (await request.json()) as MessageInput;
+    const body = (await request.json()) as MessageInput & { status?: unknown; is_consumer_confirmed?: unknown };
+
+    // Messages never change the buyer confirmation; refuse requests that try.
+    if (consumerConfirmationAttempt(body)) {
+      return NextResponse.json(
+        { success: false, error: CONSUMER_CONFIRMATION_PENDING_ERROR },
+        { status: 403 }
+      );
+    }
 
     if (!body.sender_type || !VALID_SENDER_TYPES.includes(body.sender_type)) {
       return NextResponse.json(
