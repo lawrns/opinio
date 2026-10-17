@@ -101,7 +101,7 @@ Opinio implementa un motor bayesiano determinista:
 * `PATCH /api/v1/cases/[id]`: Actualización y confirmación de satisfacción del consumidor.
 * `POST /api/v1/cases/[id]/messages`: Mensajería directa entre consumidor y comercio.
 * `POST /api/v1/order-events`: Ingesta de pedidos (Shopify, Tiendanube, API) para alimentar el denominador.
-* `POST /api/v1/invitations`: Despacho de invitaciones auditadas.
+* `POST /api/v1/invitations`: Registro de invitaciones auditadas.
 * `GET /api/v1/widgets/[token]`: Payload firmado y validado para incrustación en tiendas externas.
 
 ---
