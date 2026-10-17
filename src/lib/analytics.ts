@@ -3,6 +3,9 @@ export function isPublicAnalyticsPath(pathname: string): boolean {
     || pathname === '/directorio'
     || pathname === '/verificar'
     || pathname === '/caso/nuevo'
+    || pathname === '/blog'
+    || pathname === '/resenas-y-reputacion'
+    || /^\/blog\/[^/]+$/.test(pathname)
     || /^\/b\/[^/]+$/.test(pathname)
     || /^\/escribir-opinion\/[^/]+$/.test(pathname);
 }

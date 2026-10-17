@@ -1,8 +1,9 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, ArrowRight, Check, CircleNotch, Star, WarningCircle } from '@phosphor-icons/react';
+import { conversionContext, trackStepStarted } from '@/lib/conversion/client';
 
 interface Props {
   businessId: number;
@@ -27,7 +28,12 @@ export function ReviewFormWizard({ businessId, slug, brandName, legalName, categ
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
+  // CONVERSION-001 step start (intent only), consented journeys only.
+  useEffect(() => {
+    trackStepStarted('consumer_review', 'review_form_experience');
+  }, []);
   const moveTo = (nextStep: 1 | 2 | 3) => {
+    if (nextStep === 2) trackStepStarted('consumer_review', 'review_form_publish');
     setStep(nextStep);
     setErrorMsg(null);
     requestAnimationFrame(() => headingRef.current?.focus());
@@ -46,7 +52,9 @@ export function ReviewFormWizard({ businessId, slug, brandName, legalName, categ
       const response = await fetch('/api/v1/reviews', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ business_id: businessId, rating, title: title.trim() || undefined, body: body.trim(), author_name: authorName.trim(), verification_level: 'unverified_experience', product_name: productName.trim() || undefined }),
+        // `conversion` is the consented journey association only; the server
+        // records the milestone after its own commit and ignores any stage here.
+        body: JSON.stringify({ business_id: businessId, rating, title: title.trim() || undefined, body: body.trim(), author_name: authorName.trim(), verification_level: 'unverified_experience', product_name: productName.trim() || undefined, conversion: conversionContext() }),
       });
       const data = await response.json();
       if (!response.ok || !data.success) throw new Error('No pudimos publicar tu opinión. Tu texto sigue aquí; intenta de nuevo.');

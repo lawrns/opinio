@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isOperationEnabled } from '@/lib/containment';
+import { parseConversionContext } from '@/lib/conversion/context';
+import { recordMilestone } from '@/lib/conversion/ledger';
 import { query, withTransaction } from '@/lib/db';
 import { toPublicReview } from '@/lib/public-reviews';
 import {
@@ -19,6 +21,8 @@ interface ReviewInput {
   author_masked_contact?: string;
   verification_level?: 'confirmed_payment' | 'confirmed_store_order' | 'reviewed_proof' | 'unverified_experience';
   product_name?: string;
+  /** CONVERSION-001 browser association; re-validated server-side. */
+  conversion?: unknown;
 }
 
 interface ReviewRow {
@@ -295,6 +299,17 @@ export async function POST(request: NextRequest) {
       );
 
       return { createdReview: review, newPassport: passport };
+    });
+
+    // CONVERSION-001: the review and its passport update have committed. This
+    // milestone is not proof of a genuine customer or merchant activation.
+    // Never throws and never fails the request.
+    await recordMilestone({
+      entityType: 'review',
+      entityId: String(createdReview.id),
+      milestone: 'review_published',
+      journey: 'consumer_review',
+      context: parseConversionContext(body.conversion),
     });
 
     return NextResponse.json(

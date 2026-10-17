@@ -4,6 +4,7 @@ import Script from 'next/script';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { usePathname } from 'next/navigation';
 import { analyticsPageLocation, analyticsReferrer, isPublicAnalyticsPath } from '@/lib/analytics';
+import { bindCtaTracking, clearConversionJourney, recordConversionLanding } from '@/lib/conversion/client';
 
 declare global {
   interface Window {
@@ -89,7 +90,18 @@ export function Analytics({ measurementId }: { measurementId: string }) {
       window.gtag('event', 'page_view', context);
     }
     lastPage.current = pageLocation;
+    // CONVERSION-001: allowlisted landing touch (once per load), consented only.
+    recordConversionLanding();
   }, [consent, measurementId, pathname, publicPage, ready]);
+
+  // CONVERSION-001 CTA intent, consented only; no journey is kept otherwise.
+  useEffect(() => {
+    if (consent !== 'granted') {
+      clearConversionJourney();
+      return;
+    }
+    return bindCtaTracking();
+  }, [consent]);
 
   function chooseConsent(choice: 'granted' | 'denied') {
     window[`ga-disable-${measurementId}`] = choice !== 'granted';
