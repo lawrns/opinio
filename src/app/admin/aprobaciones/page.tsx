@@ -5,14 +5,17 @@ import { pool } from '@/lib/db';
 import { isPlatformAdministrator } from '@/lib/authz/owners';
 import { currentMerchantUserId } from '@/lib/authz/session';
 import { merchantAuthEnabled } from '@/lib/auth/spike';
-import { approveFirstOwnerAction } from './actions';
+import { approveFirstOwnerAction, revokeOwnerApprovalAction } from './actions';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Aprobaciones — Opinio', robots: { index: false, follow: false } };
 
 const RESULT: Record<string, string> = {
   aprobado: 'Propietario aprobado.',
-  invalid_request: 'Revisa los datos: método, autoridad y referencia (por ejemplo VER-1042) son obligatorios.',
+  invalid_request:
+    'Revisa los datos: método, lo verificado (dominio o teléfono +52…), autoridad y referencia (por ejemplo VER-1042) son obligatorios.',
+  revocado: 'Aprobación revocada. El acceso del propietario terminó.',
+  approval_not_found: 'No hay una aprobación vigente con ese número.',
   business_not_found: 'No existe un comercio con ese identificador.',
   applicant_not_signed_in: 'La persona debe entrar a Opinio con ese correo antes de aprobarla.',
   self_approval: 'No puedes aprobarte a ti mismo.',
@@ -25,6 +28,12 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
   if (!merchantAuthEnabled()) notFound();
   if (!(await isPlatformAdministrator(pool, await currentMerchantUserId()))) notFound();
   const result = RESULT[(await searchParams).resultado ?? ''];
+  const { rows: approvals } = await pool.query<{ id: number; slug: string; evidence_reference: string }>(
+    `SELECT a.id, b.slug, a.evidence_reference
+       FROM ownership_approvals a JOIN businesses b ON b.id = a.business_id
+      WHERE a.revoked_at IS NULL
+      ORDER BY a.id DESC LIMIT 50`,
+  );
 
   return (
     <AuthShell title="Aprobar primer propietario">
@@ -52,6 +61,10 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
           </select>
         </div>
         <div className="space-y-1.5">
+          <label htmlFor="evidenceSubject" className={labelClass}>Dominio o teléfono verificado</label>
+          <input id="evidenceSubject" name="evidenceSubject" required maxLength={253} placeholder="tienda.mx o +525512345678" className={inputClass} />
+        </div>
+        <div className="space-y-1.5">
           <label htmlFor="authorityBasis" className={labelClass}>Autoridad documentada</label>
           <select id="authorityBasis" name="authorityBasis" required className={inputClass}>
             <option value="legal_representative">Representante legal</option>
@@ -65,6 +78,24 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
         </div>
         <button type="submit" className={buttonClass}>Aprobar</button>
       </form>
+      {approvals.length > 0 && (
+        <section className="space-y-3" aria-labelledby="vigentes">
+          <h2 id="vigentes" className="text-base font-bold">Aprobaciones vigentes</h2>
+          <ul className="space-y-2">
+            {approvals.map((a) => (
+              <li key={a.id} className="flex items-center justify-between gap-3" data-testid={`approval-${a.id}`}>
+                <span>
+                  #{a.id} · {a.slug} · {a.evidence_reference}
+                </span>
+                <form action={revokeOwnerApprovalAction}>
+                  <input type="hidden" name="approvalId" value={a.id} />
+                  <button type="submit" className="font-bold underline">Revocar</button>
+                </form>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </AuthShell>
   );
 }

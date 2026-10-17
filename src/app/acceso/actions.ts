@@ -4,22 +4,22 @@ import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { signIn, signOut } from '@/auth';
 import { pool } from '@/lib/db';
-import { allowLoginLink } from '@/lib/auth/rate-limit';
+import { parseEmail } from '@/lib/authz/policy';
+import { allowLoginLink, clientAddress } from '@/lib/auth/rate-limit';
 import { merchantAuthEnabled } from '@/lib/auth/spike';
-
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
  * Sends a login link when the address is valid and within the rate limits.
  * Every outcome redirects to the same page, so the response never reveals
- * whether an address exists, was rate limited or failed to send.
+ * whether an address exists, was rate limited or failed to send. This is the
+ * only way to request a link: direct Auth.js sign-in POSTs are closed.
  */
 export async function requestLoginLink(formData: FormData): Promise<void> {
   if (!merchantAuthEnabled()) redirect('/');
-  const email = String(formData.get('email') ?? '').trim().toLowerCase();
-  if (EMAIL.test(email) && email.length <= 255) {
+  const email = parseEmail(formData.get('email'));
+  if (email) {
     try {
-      const client = ((await headers()).get('x-forwarded-for') ?? '').split(',')[0].trim() || 'unknown';
+      const client = clientAddress((await headers()).get('x-forwarded-for'));
       if (await allowLoginLink(pool, { email, client })) {
         await signIn('nodemailer', { email, redirect: false, redirectTo: '/cuenta' });
       }

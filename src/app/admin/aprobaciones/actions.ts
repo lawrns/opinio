@@ -3,7 +3,13 @@
 import { redirect } from 'next/navigation';
 import { pool } from '@/lib/db';
 import { AccessDenied, Unauthenticated } from '@/lib/authz';
-import { ApprovalRejected, approveFirstOwner, parseFirstOwnerApproval, requireAdministrator } from '@/lib/authz/owners';
+import {
+  ApprovalRejected,
+  approveFirstOwner,
+  parseFirstOwnerApproval,
+  requireAdministrator,
+  revokeOwnerApproval,
+} from '@/lib/authz/owners';
 import { currentMerchantUserId } from '@/lib/authz/session';
 import { merchantAuthEnabled } from '@/lib/auth/spike';
 
@@ -25,20 +31,37 @@ export async function approveFirstOwnerAction(formData: FormData): Promise<void>
       evidenceMethod: formData.get('evidenceMethod'),
       authorityBasis: formData.get('authorityBasis'),
       evidenceReference: formData.get('evidenceReference'),
+      evidenceSubject: formData.get('evidenceSubject'),
     });
     if (!found?.rows[0]) throw new ApprovalRejected('business_not_found');
     if (!request) throw new ApprovalRejected('invalid_request');
-    await approveFirstOwner(userId, request);
+    await approveFirstOwner(pool, userId, request);
     outcome = 'aprobado';
   } catch (error) {
-    if (error instanceof Unauthenticated || error instanceof AccessDenied) redirect('/acceso');
-    if (error instanceof ApprovalRejected) {
-      outcome = error.reason;
-    } else {
-      const code = typeof error === 'object' && error && 'code' in error ? String(error.code) : 'unknown';
-      console.error(`[authz] first-owner approval failed (code ${code})`);
-      outcome = 'unavailable';
-    }
+    outcome = failureOutcome(error, 'first-owner approval');
   }
   redirect(`/admin/aprobaciones?resultado=${outcome}`);
+}
+
+/** Administrator-only: revokes an approval and the owner membership it backs. */
+export async function revokeOwnerApprovalAction(formData: FormData): Promise<void> {
+  if (!merchantAuthEnabled()) redirect('/');
+  let outcome: string;
+  try {
+    const raw = formData.get('approvalId');
+    await revokeOwnerApproval(pool, await currentMerchantUserId(), typeof raw === 'string' && raw.length <= 12 ? Number(raw) : NaN);
+    outcome = 'revocado';
+  } catch (error) {
+    outcome = failureOutcome(error, 'approval revocation');
+  }
+  redirect(`/admin/aprobaciones?resultado=${outcome}`);
+}
+
+/** Non-administrators go to /acceso; rejections keep their reason; anything else logs a code only. */
+function failureOutcome(error: unknown, what: string): string {
+  if (error instanceof Unauthenticated || error instanceof AccessDenied) redirect('/acceso');
+  if (error instanceof ApprovalRejected) return error.reason;
+  const code = typeof error === 'object' && error && 'code' in error ? String(error.code) : 'unknown';
+  console.error(`[authz] ${what} failed (code ${code})`);
+  return 'unavailable';
 }

@@ -3,22 +3,20 @@
 import { useEffect, useState } from 'react';
 import { buttonClass } from '@/components/auth/AuthShell';
 
-/** Only these Auth.js callback parameters are passed on; the return path must be on this site. */
+/** Only the token and email are passed on; after login the server always lands on /cuenta. */
 function callbackParams(fragment: string): [string, string][] | null {
   const params = new URLSearchParams(fragment);
   const token = params.get('token');
   const email = params.get('email');
-  const next = params.get('callbackUrl');
   if (!token || !email) return null;
-  const out: [string, string][] = [['token', token], ['email', email]];
-  if (next && next.startsWith('/') && !next.startsWith('//')) out.push(['callbackUrl', next]);
-  return out;
+  return [['token', token], ['email', email]];
 }
 
 /**
  * Reads the login parameters from the URL fragment, removes them from the
- * address bar at once, and sends them to the server only when the person
- * presses the button. Mail scanners that open the link consume nothing.
+ * address bar at once, and sends them to the server in a same-origin POST
+ * body only when the person presses the button. Mail scanners that open the
+ * link consume nothing, and the token never enters a request URL.
  */
 export function ConfirmLogin() {
   const [fields, setFields] = useState<[string, string][] | null | undefined>(undefined);
@@ -38,9 +36,9 @@ export function ConfirmLogin() {
       </p>
     );
   }
-  // A plain GET form: the browser navigates only on a deliberate submit.
+  // The browser posts only on a deliberate submit.
   return (
-    <form method="get" action="/api/auth/callback/nodemailer">
+    <form method="post" action="/acceso/confirmar/entrar">
       {fields.map(([name, value]) => (
         <input key={name} type="hidden" name={name} value={value} />
       ))}

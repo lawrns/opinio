@@ -5,11 +5,14 @@
  * throwaway Postgres, captured SMTP.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { chromium, type Browser } from 'playwright';
 import { grantAdministrator } from '../../../scripts/grant-admin.mjs';
+import { allowLoginLink } from '@/lib/auth/rate-limit';
 import { hashSecret } from '@/lib/authz/secrets';
 import {
   buildApp,
   CookieJar,
+  E2E_GA_ID,
   freePort,
   startApp,
   startDatabase,
@@ -62,23 +65,34 @@ async function requestLink(email: string, headers: Record<string, string> = {}) 
   return submit('/acceso', await actionId('/acceso'), { email }, headers);
 }
 
-/** Full login: form → captured mail → confirmation page → button → session cookie. */
-async function login(email: string): Promise<string> {
+/** The emailed confirmation link for `email`, after requesting one. */
+async function emailedLink(email: string): Promise<URL> {
   const since = mail.messages.length;
   const res = await requestLink(email);
   expect(res.status).toBe(303);
   const message = await mail.waitFor(email, since);
-  const emailed = new URL(message.text.match(/https?:\/\/\S+\/acceso\/confirmar#\S+/)![0]);
-  const params = new URLSearchParams(emailed.hash.slice(1));
-  secrets.add(params.get('token')!);
+  const link = new URL(message.text.match(/https?:\/\/\S+\/acceso\/confirmar#\S+/)![0]);
+  secrets.add(new URLSearchParams(link.hash.slice(1)).get('token')!);
+  return link;
+}
 
-  const page = await fetch(`${app.origin}/acceso/confirmar`);
-  expect(page.status).toBe(200);
+/** What the confirmation page's button posts: the fragment's token and email, same-origin. */
+function exchange(fragment: string, headers: Record<string, string> = { origin: app.origin }) {
+  const params = new URLSearchParams(fragment);
+  const form = new FormData();
+  form.set('token', params.get('token') ?? '');
+  form.set('email', params.get('email') ?? '');
+  return fetch(`${app.origin}/acceso/confirmar/entrar`, { method: 'POST', redirect: 'manual', headers, body: form });
+}
 
+/** Full login: form → captured mail → confirmation page → button POST → session cookie. */
+async function login(email: string): Promise<string> {
+  const link = await emailedLink(email);
+  expect((await fetch(`${app.origin}/acceso/confirmar`)).status).toBe(200);
   const jar = new CookieJar();
-  const callback = await fetch(`${app.origin}/api/auth/callback/nodemailer?${params}`, { redirect: 'manual' });
-  jar.store(callback);
-  expect(new URL(callback.headers.get('location')!, app.origin).pathname).toBe('/cuenta');
+  const res = await exchange(link.hash.slice(1));
+  jar.store(res);
+  expect(new URL(res.headers.get('location')!, app.origin).pathname).toBe('/cuenta');
   const session = jar.get('authjs.session-token')!;
   secrets.add(session);
   return `authjs.session-token=${session}`;
@@ -99,9 +113,14 @@ const VALID = {
   businessSlug: 'tienda-a',
   applicantEmail: APPLICANT,
   evidenceMethod: 'dns',
+  evidenceSubject: 'tienda-a.example',
   authorityBasis: 'legal_representative',
   evidenceReference: 'VER-1001',
 };
+
+let browser: Browser;
+/** The browser uses AUTH_URL's host, so Auth.js redirects and host-only cookies stay on one origin. */
+let browserOrigin = '';
 
 beforeAll(async () => {
   [db, mail] = await Promise.all([startDatabase(['src/lib/schema.sql'], { migrate: true }), startMailSink()]);
@@ -116,12 +135,15 @@ beforeAll(async () => {
   const serverJs = buildApp('.next-e2e');
   const port = await freePort();
   const env = { DATABASE_URL: db.url, AUTH_SECRET: SECRET, AUTH_EMAIL_SERVER: mail.url, AUTH_EMAIL_FROM: 'Opinio <acceso@opinio.test>' };
-  app = await startApp(serverJs, { ...env, OPINIO_MERCHANT_AUTH: '1', AUTH_URL: `http://localhost:${port}` }, port);
+  browserOrigin = `http://localhost:${port}`;
+  app = await startApp(serverJs, { ...env, OPINIO_MERCHANT_AUTH: '1', AUTH_URL: browserOrigin }, port);
   off = await startApp(serverJs, env);
   servers.push(app, off);
+  browser = await chromium.launch();
 }, 300_000);
 
 afterAll(async () => {
+  await browser?.close();
   await Promise.all(servers.map((s) => s.stop()));
   await mail?.stop();
   await db?.stop();
@@ -155,9 +177,48 @@ describe('login link', () => {
         expect(html).not.toMatch(/googletagmanager|gtag\(/);
       }
     }
-    // The link still works for the person's own click.
-    const callback = await fetch(`${app.origin}/api/auth/callback/nodemailer?${emailed.hash.slice(1)}`, { redirect: 'manual' });
-    expect(new URL(callback.headers.get('location')!, app.origin).pathname).toBe('/cuenta');
+    // Nor can anything consume it through Auth.js's own GET callback: that route is closed.
+    const direct = await fetch(`${app.origin}/api/auth/callback/nodemailer?${emailed.hash.slice(1)}`, { redirect: 'manual' });
+    expect(direct.status).toBe(404);
+    expect(direct.headers.get('set-cookie')).toBeNull();
+    // A cross-site POST of the token gets nothing either.
+    for (const headers of [
+      { origin: 'https://evil.example' },
+      { origin: app.origin, 'sec-fetch-site': 'cross-site' },
+      { origin: 'null', 'sec-fetch-site': 'same-site' },
+      { origin: 'null' },
+      {},
+    ]) {
+      const res = await exchange(emailed.hash.slice(1), headers as Record<string, string>);
+      expect(res.headers.get('location'), JSON.stringify(headers)).toBe('/acceso/error');
+      expect(res.headers.get('set-cookie'), JSON.stringify(headers)).toBeNull();
+    }
+    // The link still works for the person's own press of the button: a same-origin POST.
+    const res = await exchange(emailed.hash.slice(1));
+    expect(new URL(res.headers.get('location')!, app.origin).pathname).toBe('/cuenta');
+    expect(res.headers.get('set-cookie')).toContain('authjs.session-token=');
+    // And only once.
+    expect(new URL((await exchange(emailed.hash.slice(1))).headers.get('location')!, app.origin).pathname).toBe('/acceso/error');
+  });
+
+  it('opens the emailed link in a real browser, strips the fragment and logs in on the button press', async () => {
+    const link = await emailedLink(APPLICANT);
+    const token = new URLSearchParams(link.hash.slice(1)).get('token')!;
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    const urls: string[] = [];
+    page.on('request', (r) => urls.push(r.url()));
+    await page.goto(`${browserOrigin}${link.pathname}${link.hash}`);
+    await page.getByRole('button', { name: 'Entrar a Opinio' }).waitFor({ timeout: 10_000 });
+    expect(page.url()).toBe(`${browserOrigin}/acceso/confirmar`); // fragment removed from the address bar
+    const post = page.waitForRequest((r) => r.url().endsWith('/acceso/confirmar/entrar'), { timeout: 10_000 });
+    await page.getByRole('button', { name: 'Entrar a Opinio' }).click();
+    expect((await post).method()).toBe('POST');
+    await page.waitForURL(`${browserOrigin}/cuenta`, { timeout: 10_000 });
+    expect((await context.cookies()).some((c) => c.name === 'authjs.session-token')).toBe(true);
+    // The token travelled only in the POST body: no request URL carried it.
+    expect(urls.filter((u) => u.includes(token))).toEqual([]);
+    await context.close();
   });
 
   it('answers every request identically and rate-limits sends', async () => {
@@ -169,23 +230,75 @@ describe('login link', () => {
     expect(new Set(outcomes).size).toBe(1);
     expect(outcomes[0]).toBe('303 /acceso/revisa-tu-correo');
 
-    // Per email: 3 links per 15-minute window, then silence with the same answer.
+    // One client asking for one email: 3 links per 15-minute window, then silence with the same answer.
     const email = 'limited@example.test';
+    const attacker = client('203.0.113.50');
     const since = mail.messages.length;
     for (let i = 0; i < 5; i++) {
-      const res = await requestLink(email);
+      const res = await requestLink(email, attacker);
       expect(res.headers.get('location')).toBe('/acceso/revisa-tu-correo');
     }
-    await new Promise((r) => setTimeout(r, 500));
-    expect(mail.messages.slice(since).filter((m) => m.to.includes(email))).toHaveLength(3);
+    const sentTo = async (from: number) => {
+      await new Promise((r) => setTimeout(r, 500));
+      return mail.messages.slice(from).filter((m) => m.to.includes(email)).length;
+    };
+    expect(await sentTo(since)).toBe(3);
+    // That stranger has not locked the person out: their own request still gets a link.
+    const own = mail.messages.length;
+    await requestLink(email, client('198.51.100.200'));
+    expect(await sentTo(own)).toBe(1);
+    // Across many clients one email still gets at most 10 per window (4 so far).
+    const spread = mail.messages.length;
+    for (let i = 0; i < 8; i++) await requestLink(email, client(`192.0.2.${i + 1}`));
+    expect(await sentTo(spread)).toBe(6);
 
-    // Per client address: 10 per window across different emails.
+    // Per client address: 10 per window across different emails. Entries a
+    // caller adds to the left of X-Forwarded-For are ignored; the proxy's
+    // last entry counts.
     const before = mail.messages.length;
-    for (let i = 0; i < 12; i++) await requestLink(`spray-${i}@example.test`, client('203.0.113.7'));
+    for (let i = 0; i < 12; i++) await requestLink(`spray-${i}@example.test`, client(`10.9.${i}.1, 203.0.113.7`));
     await new Promise((r) => setTimeout(r, 500));
     expect(mail.messages.length - before).toBe(10);
     const { rows } = await db.client.query('SELECT bucket FROM auth_rate_limits');
     expect(JSON.stringify(rows)).not.toContain('example.test');
+  });
+
+  it('sends nothing on direct Auth.js sign-in POSTs, however many', async () => {
+    const jar = new CookieJar();
+    const csrf = await fetch(`${app.origin}/api/auth/csrf`);
+    jar.store(csrf);
+    const { csrfToken } = (await csrf.json()) as { csrfToken: string };
+    const since = mail.messages.length;
+    for (let i = 0; i < 4; i++) {
+      const res = await fetch(`${app.origin}/api/auth/signin/nodemailer`, {
+        method: 'POST',
+        redirect: 'manual',
+        headers: { 'content-type': 'application/x-www-form-urlencoded', cookie: jar.header(), origin: app.origin },
+        body: new URLSearchParams({ csrfToken, email: 'direct@example.test', callbackUrl: '/cuenta' }),
+      });
+      expect(res.status, `POST ${i + 1}`).toBe(404);
+    }
+    await new Promise((r) => setTimeout(r, 500));
+    expect(mail.messages.slice(since)).toEqual([]);
+    expect((await db.client.query("SELECT 1 FROM verification_token WHERE identifier = 'direct@example.test'")).rowCount).toBe(0);
+  });
+
+  it('rejects oversized input before any pattern runs', async () => {
+    const since = mail.messages.length;
+    const started = performance.now();
+    const res = await requestLink(`${'a'.repeat(400_000)}@${'b.'.repeat(100_000)}mx`);
+    expect(res.headers.get('location')).toBe('/acceso/revisa-tu-correo');
+    expect(performance.now() - started).toBeLessThan(2_000);
+    expect(mail.messages.length).toBe(since);
+  });
+
+  it('deletes rate-limit windows older than the previous one', async () => {
+    await db.client.query(
+      "INSERT INTO auth_rate_limits (bucket, window_start, hits) VALUES (repeat('f', 64), now() - interval '2 hours', 1)",
+    );
+    await allowLoginLink(db.client, { email: 'prune@example.test', client: '192.0.2.250' });
+    const { rows } = await db.client.query("SELECT count(*)::int AS n FROM auth_rate_limits WHERE window_start < now() - interval '1 hour'");
+    expect(rows[0].n).toBe(0);
   });
 });
 
@@ -227,6 +340,7 @@ describe('administrator approval', () => {
       business_id: bizA,
       kind: 'first_owner',
       evidence_method: 'dns',
+      evidence_subject: 'tienda-a.example',
       authority_basis: 'legal_representative',
       evidence_reference: 'VER-1001',
     });
@@ -248,6 +362,11 @@ describe('administrator approval', () => {
       [{ ...VALID, businessSlug: 'tienda-b', evidenceReference: 'llamé al 5550000002' }, 'invalid_request'],
       [{ ...VALID, businessSlug: 'tienda-b', evidenceMethod: 'claimed_listing' }, 'invalid_request'],
       [{ ...VALID, businessSlug: 'tienda-b', authorityBasis: '' }, 'invalid_request'],
+      [{ ...VALID, businessSlug: 'tienda-b', evidenceSubject: '' }, 'invalid_request'],
+      [{ ...VALID, businessSlug: 'tienda-b', evidenceSubject: 'juan@tienda-b.example' }, 'invalid_request'],
+      [{ ...VALID, businessSlug: 'tienda-b', evidenceSubject: '+525550000002' }, 'invalid_request'], // a phone for a DNS check
+      [{ ...VALID, businessSlug: 'tienda-b', evidenceMethod: 'business_callback', evidenceSubject: 'tienda-b.example' }, 'invalid_request'],
+      [{ ...VALID, businessSlug: 'tienda-b', applicantEmail: `${'a'.repeat(300_000)}@x.mx` }, 'invalid_request'],
       [{ ...VALID, businessSlug: 'no-such-business' }, 'business_not_found'],
       [{ ...VALID, businessSlug: 'tienda-b', applicantEmail: 'never-signed-in@example.test' }, 'applicant_not_signed_in'],
       [{ ...VALID, businessSlug: 'tienda-b', applicantEmail: ADMIN }, 'self_approval'],
@@ -294,17 +413,55 @@ describe('approved owner', () => {
     expect((await get('/admin/aprobaciones', cookies.owner)).status).toBe(404);
   });
 
-  it('keeps the existing merchant dashboard contained', async () => {
-    const before = await (await fetch(`${off.origin}/merchant`, { redirect: 'manual' })).status;
-    expect((await get('/merchant', cookies.owner)).status).toBe(before);
+  // This proves B03 changes nothing about /merchant: an approved owner's
+  // session gets exactly what an anonymous visitor gets with the switch off.
+  // It does not prove /merchant is denied; that is #42 (CONTAIN-2), which must
+  // merge first. The strict denial test is added when B03 is restacked on it.
+  it('does not change the existing merchant dashboard (containment itself is #42)', async () => {
+    const anonymousOff = await fetch(`${off.origin}/merchant`, { redirect: 'manual' });
+    const ownerOn = await get('/merchant', cookies.owner);
+    expect(ownerOn.status).toBe(anonymousOff.status);
+    expect(ownerOn.headers.get('location')).toBe(anonymousOff.headers.get('location'));
   });
 
-  it('loses access on the next request after the membership is revoked', async () => {
-    await db.client.query("UPDATE business_memberships SET status = 'revoked', revoked_at = now() WHERE business_id = $1", [bizA]);
+  it('loses access on the next request after an administrator revokes the approval', async () => {
+    const [approval] = (await db.client.query('SELECT id FROM ownership_approvals WHERE business_id = $1 AND revoked_at IS NULL', [bizA])).rows;
+    const html = await (await get('/admin/aprobaciones', cookies.admin)).text();
+    const ids = [...html.matchAll(/name="\$ACTION_ID_([0-9a-f]+)"/g)].map((m) => m[1]);
+    const revokeId = ids.at(-1)!;
+    // Not an administrator: nothing changes.
+    await submit('/admin/aprobaciones', revokeId, { approvalId: String(approval.id) }, { cookie: cookies.owner });
+    expect((await get(`/cuenta/negocios/${bizA}`, cookies.owner)).status).toBe(200);
+    // The administrator revokes it.
+    const res = await submit('/admin/aprobaciones', revokeId, { approvalId: String(approval.id) }, { cookie: cookies.admin });
+    expect(new URL(res.headers.get('location')!, app.origin).searchParams.get('resultado')).toBe('revocado');
     expect((await get(`/cuenta/negocios/${bizA}`, cookies.owner)).status).toBe(404);
     expect(await (await get('/cuenta', cookies.owner)).text()).toContain('data-testid="access-pending"');
-    await db.client.query("UPDATE business_memberships SET status = 'active', revoked_at = NULL WHERE business_id = $1", [bizA]);
+    const audit = (await db.client.query("SELECT details FROM audit_logs WHERE action = 'ownership.approval_revoked'")).rows;
+    expect(audit).toEqual([{ details: { approval_id: approval.id, revoked_memberships: 1 } }]);
+    // Revoking twice finds nothing to revoke.
+    const again = await submit('/admin/aprobaciones', revokeId, { approvalId: String(approval.id) }, { cookie: cookies.admin });
+    expect(new URL(again.headers.get('location')!, app.origin).searchParams.get('resultado')).toBe('approval_not_found');
+    // A fresh approval restores access.
+    expect((await approve({ ...VALID, evidenceReference: 'VER-1002' })).outcome).toBe('aprobado');
     expect((await get(`/cuenta/negocios/${bizA}`, cookies.owner)).status).toBe(200);
+  });
+
+  it('allows one active owner per business, whatever the code path', async () => {
+    const [{ id: approvalId }] = (
+      await db.client.query(
+        `INSERT INTO ownership_approvals (business_id, subject_user_id, kind, evidence_method, evidence_subject, authority_basis, evidence_reference, approved_by_user_id)
+         SELECT $1, u.id, 'first_owner', 'dns', 'tienda-a.example', 'owner_of_record', 'VER-9', a.user_id
+           FROM users u, platform_administrators a WHERE u.email = $2 LIMIT 1 RETURNING id`,
+        [bizA, PENDING],
+      )
+    ).rows;
+    await expect(
+      db.client.query(
+        "INSERT INTO business_memberships (business_id, user_id, role, approval_id) SELECT $1, id, 'owner', $2 FROM users WHERE email = $3",
+        [bizA, approvalId, PENDING],
+      ),
+    ).rejects.toMatchObject({ code: '23505' });
   });
 
   it('is denied after expiry, session deletion and sign-out', async () => {
@@ -325,6 +482,68 @@ describe('approved owner', () => {
       expect((await get(`/cuenta/negocios/${bizA}`, cookie)).headers.get('location')).toBe('/acceso');
       expect((await get('/cuenta', cookie)).headers.get('location')).toBe('/acceso');
     }
+  });
+});
+
+describe('private payloads and analytics', () => {
+  it('keeps the token and email out of HTML, RSC, JSON and error payloads', async () => {
+    const email = 'payload-check@example.test';
+    const link = await emailedLink(email);
+    const token = new URLSearchParams(link.hash.slice(1)).get('token')!;
+    const rsc = { RSC: '1' };
+    const responses: [string, Response][] = [
+      ['confirm page', await fetch(`${app.origin}/acceso/confirmar`)],
+      ['confirm page RSC', await fetch(`${app.origin}/acceso/confirmar`, { headers: rsc })],
+      ['check-your-mail page', await fetch(`${app.origin}/acceso/revisa-tu-correo`)],
+      ['check-your-mail RSC', await fetch(`${app.origin}/acceso/revisa-tu-correo`, { headers: rsc })],
+      ['session JSON, signed out', await fetch(`${app.origin}/api/auth/session`)],
+      ['cross-site exchange', await exchange(link.hash.slice(1), { origin: 'https://evil.example' })],
+      ['tampered-token exchange', await exchange(`token=${token.slice(0, -4)}AAAA&email=${encodeURIComponent(email)}`)],
+      ['closed GET callback', await fetch(`${app.origin}/api/auth/callback/nodemailer?${link.hash.slice(1)}`, { redirect: 'manual' })],
+      ['error page', await fetch(`${app.origin}/acceso/error?error=Verification`)],
+      ['error page RSC', await fetch(`${app.origin}/acceso/error?error=Verification`, { headers: rsc })],
+    ];
+    for (const [label, res] of responses) {
+      const body = await res.text();
+      const headers = JSON.stringify([...res.headers]);
+      for (const secret of [token, hashSecret(token), email, encodeURIComponent(email)]) {
+        expect(body, label).not.toContain(secret);
+        expect(headers, label).not.toContain(secret);
+      }
+    }
+    // The failed exchanges land on the generic error page, not on Auth.js's own.
+    expect(new URL(responses[6][1].headers.get('location')!, app.origin).pathname).toBe('/acceso/error');
+  });
+
+  it('keeps an already-loaded gtag silent while navigating into /acceso and /cuenta', async () => {
+    const context = await browser.newContext();
+    await context.addInitScript(() => window.localStorage.setItem('opinio.analytics-consent', 'granted'));
+    const page = await context.newPage();
+    const beacons: string[] = [];
+    // Stand in for gtag.js; any collect beacon is recorded and aborted, nothing leaves the machine.
+    await page.route(/googletagmanager\.com\/gtag\/js/, (r) => r.fulfill({ contentType: 'text/javascript', body: '/* gtag.js stub */' }));
+    await page.route(/google-analytics\.com|analytics\.google\.com|googletagmanager\.com\/g\/collect/, (r) => {
+      beacons.push(r.request().url());
+      return r.abort();
+    });
+    await page.goto(`${app.origin}/`);
+    await page.waitForFunction(() => Array.isArray(window.dataLayer) && window.dataLayer.length > 0);
+    const entries = (from: number) =>
+      page.evaluate((i) => JSON.stringify((window.dataLayer ?? []).slice(i).map((a) => Array.from(a as ArrayLike<unknown>))), from);
+    expect(await entries(0)).toContain('page_view'); // positive control: the public page is measured
+    const loadedCount = await page.evaluate(() => window.dataLayer!.length);
+
+    const marker = 'SENTINEL_TOKEN_NOT_A_SECRET';
+    for (const path of ['/acceso', `/acceso/confirmar#token=${marker}&email=sentinel%40example.test`, '/cuenta', `/cuenta/negocios/${bizA}`]) {
+      await page.evaluate((p) => window.history.pushState(null, '', p), path);
+      await page.waitForTimeout(300);
+      expect(await page.evaluate((id) => window[`ga-disable-${id}` as `ga-disable-${string}`], E2E_GA_ID), path).toBe(true);
+    }
+    const added = await entries(loadedCount);
+    for (const leak of ['/acceso', '/cuenta', marker, 'sentinel']) expect(added, leak).not.toContain(leak);
+    expect(added).not.toContain('page_view');
+    expect(beacons).toEqual([]);
+    await context.close();
   });
 });
 

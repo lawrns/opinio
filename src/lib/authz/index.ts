@@ -202,6 +202,8 @@ export async function authorizeMachineKey(
 /** Controlled audit event names. Add new ones here, never free text. */
 export type AuditAction =
   | 'ownership.approved'
+  | 'ownership.approval_revoked'
+  | 'administrator.granted'
   | 'ownership.transferred'
   | 'membership.granted'
   | 'membership.revoked'
