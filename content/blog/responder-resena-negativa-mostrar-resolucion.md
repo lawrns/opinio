@@ -89,6 +89,8 @@ El perfil de Opinio reúne opiniones, respuestas y casos con seguimiento. Esa in
 
 Para trabajar también en la recepción de opiniones, consulta la [guía para pedir reseñas por WhatsApp](https://opinio.mx/blog/como-pedir-resenas-por-whatsapp-mexico). No necesitas repetir la invitación en la respuesta a una queja: primero atiende el caso.
 
+Puedes revisar la gestión del perfil y los casos en [reseñas y reputación de Opinio](https://opinio.mx/resenas-y-reputacion).
+
 ## Preguntas frecuentes
 
 ### ¿Responder una reseña negativa hace que se elimine?
@@ -106,7 +108,3 @@ Comunica solo el estado que puedes respaldar: respuesta enviada, propuesta reali
 ### ¿Opinio asegura que el cliente quedará satisfecho?
 
 No se publica esa garantía. La plataforma permite mostrar evidencia y seguimiento; un perfil no garantiza el resultado de una compra.
-
-## Siguiente paso
-
-Puedes revisar la gestión del perfil y los casos en [reseñas y reputación de Opinio](https://opinio.mx/resenas-y-reputacion).
