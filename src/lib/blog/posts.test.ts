@@ -35,6 +35,21 @@ describe('CONTENT-003 FAQ closing sections', () => {
   });
 });
 
+describe('CONTENT-004 published guides', () => {
+  it.each([
+    'elegir-software-resenas-mexico-que-revisar',
+    'facilitar-opiniones-clientes-local-formulario-publico',
+  ])('publishes %s with the CTA above four FAQs', (slug) => {
+    const post = getPostBySlug(slug)!;
+    expect(post.faqs).toHaveLength(4);
+    expect(post.afterFaqMarkdown).toBe('');
+    const raw = fs.readFileSync(path.join(CONTENT_DIR, slug + '.md'), 'utf8');
+    expect(matter(raw).data.status).toBe('published');
+    expect(raw.indexOf('## Siguiente paso')).toBeLessThan(raw.indexOf('## Preguntas frecuentes'));
+    expect(getAllPosts().map((p) => p.slug)).toContain(slug);
+  });
+});
+
 describe('the published article', () => {
   it('resolves title, slug, description and date from the draft frontmatter', () => {
     const post = getPostBySlug('como-pedir-resenas-por-whatsapp-mexico');
