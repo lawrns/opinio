@@ -22,8 +22,8 @@ tables). Rules the build relies on:
   and its FAQPage structured data: each `###` heading is a question and the
   paragraphs that follow it are the answer. The JSON-LD text is generated from
   the same source that renders the visible text, so the two always match.
-- Put a closing CTA under `## Siguiente paso` after the FAQ. The next h2 ends
-  the FAQ; that section renders after the accordion, outside its answers.
+- Put the closing CTA paragraph before `## Preguntas frecuentes`. Keep the
+  FAQ last so each answer ends with its own text, without closing navigation.
 - Internal links in the copy are written as full URLs (`https://opinio.mx/…`).
 
 Invalid frontmatter (missing title/description/date) fails the build with the

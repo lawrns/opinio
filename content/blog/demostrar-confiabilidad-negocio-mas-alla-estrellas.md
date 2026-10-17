@@ -94,6 +94,8 @@ Comprueba que identidad, contacto, opiniones y casos se puedan entender por sepa
 
 El siguiente paso es revisar tu perfil desde la perspectiva de alguien que todavía no te conoce: qué puede verificar y qué pregunta necesitaría hacerte antes de comprar.
 
+Para revisar estas piezas en el producto, consulta [reseñas y reputación para negocios](https://opinio.mx/resenas-y-reputacion) y comparte solo lo que tu perfil permite comprobar.
+
 ## Preguntas frecuentes
 
 ### ¿Un perfil en Opinio certifica oficialmente a mi negocio?
@@ -111,7 +113,3 @@ Opinio indica que su puntaje utiliza esa escala y que no es un promedio de estre
 ### ¿Una solución propuesta ya cuenta como caso resuelto?
 
 La plataforma distingue la propuesta del comercio de la resolución confirmada por el comprador.
-
-## Siguiente paso
-
-Para revisar estas piezas en el producto, consulta [reseñas y reputación para negocios](https://opinio.mx/resenas-y-reputacion) y comparte solo lo que tu perfil permite comprobar.

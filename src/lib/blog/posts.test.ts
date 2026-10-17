@@ -27,9 +27,10 @@ describe('CONTENT-003 FAQ closing sections', () => {
     const post = getPostBySlug(slug)!;
     expect(post.faqs).toHaveLength(4);
     expect(post.faqs.at(-1)!.a).toBe(answer);
-    expect(post.afterFaqMarkdown).toBe('## Siguiente paso\n\n' + cta);
-    expect(post.markdown).not.toContain(cta);
+    expect(post.afterFaqMarkdown).toBe('');
+    expect(post.markdown.endsWith(cta)).toBe(true);
     const raw = fs.readFileSync(path.join(CONTENT_DIR, slug + '.md'), 'utf8');
+    expect(raw.indexOf(cta)).toBeLessThan(raw.indexOf('## Preguntas frecuentes'));
     expect(matter(raw).data.status).toBe('published');
   });
 });
