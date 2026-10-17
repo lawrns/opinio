@@ -325,6 +325,12 @@ describe('administrator approval', () => {
     expect(await count('platform_administrators')).toBe(0);
     expect(await grantAdministrator(db.client, ADMIN)).toBe('granted');
     expect(await grantAdministrator(db.client, ADMIN)).toBe('already_administrator');
+    // After the first administrator, every grant names an existing administrator.
+    expect(await grantAdministrator(db.client, PENDING, { dryRun: true })).toBe('granter_required');
+    expect(await grantAdministrator(db.client, PENDING, { dryRun: true, grantedBy: PENDING })).toBe('granter_not_administrator');
+    expect(await grantAdministrator(db.client, PENDING, { dryRun: true, grantedBy: ADMIN })).toBe('would_grant');
+    const grants = (await db.client.query("SELECT actor_type, details FROM audit_logs WHERE action = 'administrator.granted'")).rows;
+    expect(grants).toEqual([{ actor_type: 'system', details: expect.objectContaining({ granted_by_user_id: null }) }]);
     expect((await get('/admin/aprobaciones', cookies.admin)).status).toBe(200);
   });
 
