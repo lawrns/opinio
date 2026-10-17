@@ -37,13 +37,13 @@ The e2e suite starts a throwaway PostgreSQL 16 on 127.0.0.1 in a temp directory,
 
 - Email login: CSRF-protected sign-in POST → mail captured by the sink → callback GET → `sessions` row → session cookie.
 - A protected route handler (`/api/spike/auth/session`) and a real server action (the `/spike/auth` form, invoked by its rendered action ID) both succeed with the session and write nothing without one.
-- Deleting the session row, signing out, or reaching the expiry instant denies the next route and action request, including an action ID taken from a page rendered before revocation (already open tab).
+- Deleting the session row, signing out, or session expiry denies the next route and action request, including an action ID taken from a page rendered before revocation (already open tab).
 - Logged-out, tampered-cookie and stored-hash-as-cookie requests are denied.
-- A replayed link and a link at its expiry instant fail with `Verification` and create no session. Of two concurrent exchanges of one link, exactly one gets a session.
+- A replayed link and an expired link fail with `Verification` and create no session. The exact expiry instant is pinned with a controlled clock in `src/lib/auth/adapter.test.ts`. Of two concurrent exchanges of one link, exactly one gets a session.
 - A cross-origin server action POST is aborted by Next (`Origin` ≠ `Host`/`X-Forwarded-Host`). Sign-in and sign-out POSTs without the Auth.js CSRF token send no mail and keep the session.
 - Behind a TLS-terminating proxy (`AUTH_URL=https://…`, `X-Forwarded-Proto: https`), cookies are `__Secure-authjs.session-token; Secure; HttpOnly; SameSite=Lax; Path=/` with no `Domain` (host-only), and links stay on `AUTH_URL` even with a forged `X-Forwarded-Host`.
 - With the switch off (the production default), every auth and spike path returns 404.
-- Server logs from every run contain no email-link token, session cookie, token hash or secret. Failed callbacks log only `[auth][error] Verification: Read more at …`.
+- Server logs from every run contain no email-link token, session cookie, stored token or session hash, secret or recipient address. Failed callbacks log only `[auth][error] Verification: Read more at …`.
 
 ## Findings
 
@@ -58,6 +58,7 @@ The e2e suite starts a throwaway PostgreSQL 16 on 127.0.0.1 in a temp directory,
 ## Deployment uncertainty
 
 - **Standalone (Dockerfile/Coolify shape):** covered above. The proxy must forward `X-Forwarded-Proto: https` and `X-Forwarded-Host`, or `serverActions.allowedOrigins` must list the public host.
+- **Docker image:** the `deps` stage installs every dependency, test-only ones included (embedded-postgres, smtp-server, mailparser), because `next build` needs dev dependencies. The stage does not copy `pnpm-workspace.yaml`, so the embedded-postgres postinstall does not run there, and nothing at build time uses it. The runtime image copies only the traced standalone output, whose `node_modules` holds `next`, `pg`, `react` and `react-dom` (checked in `.next-e2e/standalone/node_modules`). No test dependency ships at runtime.
 - **Netlify:** not exercised. The repository references Netlify analytics, but Netlify's Next runtime, its forwarded headers and its log handling of callback query strings were not tested here. Run this suite's checks against a Netlify preview before relying on that deployment shape.
 
 ## Production stop

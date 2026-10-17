@@ -20,6 +20,8 @@ import {
 const SECRET = randomBytes(32).toString('hex'); // test-only, per run
 const MERCHANT = 'merchant-owner@example.test';
 const FROM = 'Opinio Test <login@opinio.test>';
+// Every synthetic address this suite signs in with; none may appear in logs.
+const EMAILS = [MERCHANT, 'tls-owner@example.test', 'host-header@example.test', 'csrf-victim@example.test'];
 
 let db: TestDatabase;
 let mail: MailSink;
@@ -213,7 +215,9 @@ describe('email login → database session → protected route and server action
     expect(await sessionCount()).toBe(before + 1);
   });
 
-  it('rejects a link at its expiry instant', async () => {
+  // The exact expiry instant (now === expires) is pinned with a controlled clock in
+  // src/lib/auth/adapter.test.ts; over HTTP the request lands just after expiry.
+  it('rejects an expired link', async () => {
     const link = await requestLink(app, MERCHANT);
     await db.client.query('UPDATE verification_token SET expires = now()');
     const before = await sessionCount();
@@ -264,7 +268,8 @@ describe('revocation and expiry deny the next route and action request', () => {
     expect(await userName()).toBe(nameBefore);
   });
 
-  it('denies both at the session expiry instant and deletes the row', async () => {
+  // Exact-instant boundary: src/lib/auth/adapter.test.ts.
+  it('denies both once the session has expired and deletes the row', async () => {
     const { cookie } = await login(app);
     const c = `authjs.session-token=${cookie}`;
     const { id } = await loadActionId(app, c);
@@ -410,12 +415,20 @@ describe('credential leakage', () => {
     expect(res.headers.get('location')).toContain('error=Verification');
   });
 
-  it('writes no link token or session cookie to server logs', () => {
+  it('writes no token, cookie, stored hash, secret or email address to server logs', () => {
     expect(secrets.size).toBeGreaterThan(5);
     const logs = servers.map((s) => s.logs()).join('\n').replace(/\x1b\[[0-9;]*m/g, '');
     expect(logs).toContain('[auth][error] Verification'); // failed callbacks were logged
-    for (const secret of secrets) expect(logs).not.toContain(secret);
-    expect(logs).not.toContain(createHash('sha256').update(`${[...secrets][0]}${SECRET}`).digest('hex'));
+    const sha256 = (v: string) => createHash('sha256').update(v).digest('hex');
+    for (const secret of secrets) {
+      expect(logs).not.toContain(secret); // raw link token or session cookie
+      expect(logs).not.toContain(sha256(secret)); // stored session hash
+      expect(logs).not.toContain(sha256(`${secret}${SECRET}`)); // stored link-token hash
+    }
     expect(logs).not.toContain(SECRET);
+    for (const email of EMAILS) {
+      expect(logs).not.toContain(email);
+      expect(logs).not.toContain(encodeURIComponent(email));
+    }
   });
 });
