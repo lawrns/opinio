@@ -17,14 +17,22 @@ const read = (...parts: string[]) => fs.readFileSync(path.join(process.cwd(), ..
 const SENDING_CLAIMS = [
   /sale por (\*\*)?WhatsApp/i,
   /manda el formulario/i,
-  /recibi[oó] invitaci[oó]n/i,
+  /recibi[oó] (una )?invitaci[oó]n/i,
   /No tienes que armar mensajes/i,
+  /se invita al 100/i,
+  /Invitaciones enviadas/i,
 ];
 
 const SURFACES: [string, string][] = [
   ['blog post (body, FAQ and source claims)', read('content', 'blog', 'como-pedir-resenas-por-whatsapp-mexico.md')],
   ['/resenas-y-reputacion FAQ (and its JSON-LD)', RESENAS_FAQ.map((f) => f.a).join('\n')],
   ['/resenas-y-reputacion pillars', read('src', 'app', 'resenas-y-reputacion', 'page.tsx')],
+  ['trust post (body, FAQ and source claims)', read('content', 'blog', 'demostrar-confiabilidad-negocio-mas-alla-estrellas.md')],
+  ['home: connected pipeline', read('src', 'components', 'home', 'ConnectedPipeline.tsx')],
+  ['home: proof grid', read('src', 'components', 'home', 'ProofBentoGrid.tsx')],
+  ['merchant dashboard', read('src', 'app', 'merchant', 'page.tsx')],
+  ['llms.txt', read('public', 'llms.txt')],
+  ['llms-full.txt', read('public', 'llms-full.txt')],
 ];
 
 describe('invitation copy matches the code (OPINIO-COPY-001)', () => {

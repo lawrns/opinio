@@ -25,7 +25,7 @@ sources:
     url: "https://opinio.mx/directorio"
   - claim: "Ninguna queja se marca como resuelta sin la confirmación expresa del comprador; el caso pasa por queja registrada, propuesta del comercio y confirmación del cliente"
     url: "https://opinio.mx/"
-  - claim: "Con pedidos conectados, Opinio monitorea las ventas y se invita al 100% de clientes reales, sin importar si tuvieron un retraso o no"
+  - claim: "Con pedidos conectados, Opinio monitorea las ventas y la cobertura cuenta las invitaciones registradas para clientes reales, sin importar si tuvieron un retraso o no"
     url: "https://opinio.mx/"
   - claim: "Opinio es una plataforma mexicana: los negocios, opiniones y casos que publica son de México"
     url: "https://opinio.mx/resenas-y-reputacion"

@@ -170,7 +170,7 @@ export default async function MerchantDashboardPage({ searchParams }: PageProps)
             </div>
           </div>
           <div className="mt-4 pt-3 border-t border-op-border flex items-center justify-between text-xs">
-            <span className="text-op-muted">Invitaciones enviadas:</span>
+            <span className="text-op-muted">Invitaciones registradas:</span>
             <span className="font-mono text-op-ink font-medium">
               {currentBusiness.invited_orders_count.toLocaleString('es-MX')} / {currentBusiness.observed_orders_count.toLocaleString('es-MX')}
             </span>
