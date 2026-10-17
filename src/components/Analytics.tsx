@@ -3,7 +3,7 @@
 import Script from 'next/script';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { usePathname } from 'next/navigation';
-import { analyticsPageLocation, analyticsReferrer, isPublicAnalyticsPath } from '@/lib/analytics';
+import { analyticsPageLocation, analyticsReferrer, isPublicAnalyticsPath, stripLandingTracking } from '@/lib/analytics';
 import { bindCtaTracking, clearConversionJourney, recordConversionLanding } from '@/lib/conversion/client';
 
 declare global {
@@ -130,8 +130,19 @@ export function Analytics({ measurementId }: { measurementId: string }) {
     <>
       {consent === 'granted' && (
         <>
-          {/* Keep Google's documented arguments-object command queue. */}
-          <Script id="opinio-ga-bootstrap" strategy="afterInteractive" onReady={() => setReady(true)}>
+          {/* Keep Google's documented arguments-object command queue. The
+              landing touch is recorded from the URL as loaded, then its
+              tracking params leave the URL (QA-042), and only then is gtag.js
+              mounted. */}
+          <Script
+            id="opinio-ga-bootstrap"
+            strategy="afterInteractive"
+            onReady={() => {
+              recordConversionLanding();
+              stripLandingTracking();
+              setReady(true);
+            }}
+          >
             {`window.dataLayer = window.dataLayer || [];
 window.gtag = function () { window.dataLayer.push(arguments); };
 window.gtag('consent', 'default', {
