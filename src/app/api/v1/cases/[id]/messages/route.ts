@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { isOperationEnabled } from '@/lib/containment';
+import { containedResponse } from '@/lib/containment-http';
 import { query } from '@/lib/db';
 import { CONSUMER_CONFIRMATION_PENDING_ERROR, consumerConfirmationAttempt } from '@/lib/case-access';
 
@@ -57,6 +59,12 @@ export async function POST(
         { success: false, error: 'sender_type debe ser: consumer, merchant o mediator' },
         { status: 400 }
       );
+    }
+
+    // Merchant/mediator messages are contained until merchant auth exists;
+    // buyer messages on the case page keep working (src/lib/containment.ts).
+    if (body.sender_type !== 'consumer' && !isOperationEnabled('case_merchant_message')) {
+      return containedResponse();
     }
 
     if (!body.sender_name || typeof body.sender_name !== 'string' || body.sender_name.trim().length === 0) {

@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { isOperationEnabled } from '@/lib/containment';
+import { containedResponse } from '@/lib/containment-http';
 import { query } from '@/lib/db';
 
 interface InvitationInput {
@@ -54,6 +56,8 @@ interface BusinessStatsRow {
 }
 
 export async function POST(request: NextRequest) {
+  // Contained until merchant auth exists (src/lib/containment.ts).
+  if (!isOperationEnabled('invitation_create')) return containedResponse();
   try {
     const body = (await request.json()) as InvitationInput;
 

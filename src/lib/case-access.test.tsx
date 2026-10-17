@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { NextRequest } from 'next/server';
@@ -60,6 +60,7 @@ import { GET as getInvitations } from '@/app/api/v1/invitations/route';
 import CasoDetailPage from '@/app/caso/[id]/page';
 import { CasePortalClient } from '@/app/caso/[id]/CasePortalClient';
 import { updateCaseRemedyAction } from '@/lib/merchant-actions';
+import { CONTAINED_OPERATIONS } from '@/lib/containment';
 
 const caseParams = { params: Promise.resolve({ id: '7' }) };
 
@@ -77,6 +78,16 @@ function expectNoPrivateData(payload: string) {
 }
 
 const writes = () => db.state.calls.filter((c) => /^\s*(UPDATE|INSERT)/.test(c.text));
+
+// These tests run with every contained merchant operation re-enabled, so the
+// buyer-confirmation guard and the public projections are proven on their own,
+// independent of the merchant containment (covered in containment.test.tsx).
+beforeEach(() => {
+  process.env.OPINIO_REENABLE_OPS = Object.keys(CONTAINED_OPERATIONS).join(',');
+});
+afterEach(() => {
+  delete process.env.OPINIO_REENABLE_OPS;
+});
 
 beforeEach(() => {
   db.state.calls.length = 0;
@@ -231,7 +242,7 @@ describe('the buyer confirmation is refused on every path', () => {
   });
 });
 
-describe('merchant flows keep working', () => {
+describe('merchant flows keep working once re-enabled', () => {
   it('PATCH with a remedy offer updates the case', async () => {
     const res = await patchCase(
       jsonRequest('http://localhost/api/v1/cases/7', 'PATCH', { status: 'remedy_offered', remedy_offered: 'Reembolso' }),

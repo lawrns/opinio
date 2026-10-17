@@ -1,11 +1,14 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { containedActionResult, isOperationEnabled } from './containment';
 import { query } from './db';
 import { Widget, ReviewResponse } from './types';
 import { CONSUMER_CONFIRMATION_PENDING_ERROR, consumerConfirmationAttempt } from './case-access';
 
 export async function postReviewResponseAction(formData: FormData) {
+  // Contained until merchant auth exists (src/lib/containment.ts).
+  if (!isOperationEnabled('review_response')) return containedActionResult();
   const reviewId = Number(formData.get('review_id'));
   const businessId = Number(formData.get('business_id'));
   const responderName = String(formData.get('responder_name') || 'Atención a Clientes Oficial');
@@ -52,6 +55,8 @@ export async function postReviewResponseAction(formData: FormData) {
 }
 
 export async function updateCaseRemedyAction(formData: FormData) {
+  // Contained until merchant auth exists (src/lib/containment.ts).
+  if (!isOperationEnabled('case_remedy')) return containedActionResult();
   const caseId = Number(formData.get('case_id'));
   const remedyOffered = String(formData.get('remedy_offered') || '').trim();
   const status = String(formData.get('status') || 'remedy_offered');
@@ -92,6 +97,8 @@ export async function updateCaseRemedyAction(formData: FormData) {
 }
 
 export async function sendCaseMessageAction(formData: FormData) {
+  // Contained until merchant auth exists (src/lib/containment.ts).
+  if (!isOperationEnabled('case_merchant_message')) return containedActionResult();
   const caseId = Number(formData.get('case_id'));
   const senderName = String(formData.get('sender_name') || 'Representante Oficial');
   const message = String(formData.get('message') || '').trim();
@@ -122,6 +129,8 @@ export async function sendCaseMessageAction(formData: FormData) {
 }
 
 export async function triggerInvitationAction(formData: FormData) {
+  // Contained until merchant auth exists (src/lib/containment.ts).
+  if (!isOperationEnabled('invitation_create')) return containedActionResult();
   const businessId = Number(formData.get('business_id'));
   const channel = String(formData.get('channel') || 'whatsapp') as 'whatsapp' | 'email' | 'sms';
   const recipientTarget = String(formData.get('recipient_target') || '').trim();
@@ -160,6 +169,8 @@ export async function triggerInvitationAction(formData: FormData) {
 }
 
 export async function updateBusinessSettingsAction(formData: FormData) {
+  // Contained until merchant auth exists (src/lib/containment.ts).
+  if (!isOperationEnabled('business_settings')) return containedActionResult();
   const businessId = Number(formData.get('business_id'));
   const legalName = String(formData.get('legal_name') || '').trim();
   const rfc = String(formData.get('rfc') || '').trim().toUpperCase();
@@ -239,6 +250,8 @@ export interface CreateWidgetParams {
 }
 
 export async function createOrUpdateWidgetAction(data: FormData | CreateWidgetParams) {
+  // Contained until merchant auth exists (src/lib/containment.ts).
+  if (!isOperationEnabled('widget_management')) return containedActionResult();
   let businessId: number;
   let widgetType: string;
   let theme: string;

@@ -1,4 +1,6 @@
 import Link from 'next/link';
+import { isOperationEnabled } from '@/lib/containment';
+import { MerchantUnavailable } from '@/components/MerchantUnavailable';
 import { ArrowRight, BarChart3 } from 'lucide-react';
 import { getMerchantBusinesses, getMerchantBusiness, getMerchantCases } from '@/lib/merchant-data';
 
@@ -6,6 +8,8 @@ export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Métricas del negocio · Opinio.mx' };
 
 export default async function MerchantInsightsPage({ searchParams }: { searchParams: Promise<{ business?: string }> }) {
+  // Contained until merchant auth exists (src/lib/containment.ts).
+  if (!isOperationEnabled('merchant_panel')) return <MerchantUnavailable />;
   const { business: slug } = await searchParams;
   const businesses = await getMerchantBusinesses();
   const business = slug ? (await getMerchantBusiness(slug)) || businesses[0] : businesses[0];

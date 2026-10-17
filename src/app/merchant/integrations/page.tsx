@@ -1,4 +1,6 @@
 import React from 'react';
+import { isOperationEnabled } from '@/lib/containment';
+import { MerchantUnavailable } from '@/components/MerchantUnavailable';
 import {
   getMerchantBusinesses,
   getMerchantBusiness,
@@ -13,6 +15,8 @@ interface PageProps {
 }
 
 export default async function MerchantIntegrationsPage({ searchParams }: PageProps) {
+  // Contained until merchant auth exists (src/lib/containment.ts).
+  if (!isOperationEnabled('merchant_panel')) return <MerchantUnavailable />;
   const { business: businessSlug } = await searchParams;
   const allBusinesses = await getMerchantBusinesses();
   const currentBusiness = businessSlug
