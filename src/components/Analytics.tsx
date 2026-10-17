@@ -100,13 +100,16 @@ export function Analytics({ measurementId }: { measurementId: string }) {
     void retryPendingWithdrawal();
   }, []);
 
-  // CONVERSION-001 CTA intent, consented only; no journey is kept otherwise.
-  // Clearing a journey that existed (consent was granted) withdraws it server-side.
+  // CONVERSION-001 CTA intent, consented only. Only an explicit "denied"
+  // clears (and withdraws) the journey: hydration renders with the server
+  // snapshot "pending" before the stored choice, so clearing on "pending"
+  // wiped the first touch on every full load.
   useEffect(() => {
-    if (consent !== 'granted') {
+    if (consent === 'denied') {
       void clearConversionJourney();
       return;
     }
+    if (consent !== 'granted') return;
     return bindCtaTracking();
   }, [consent]);
 

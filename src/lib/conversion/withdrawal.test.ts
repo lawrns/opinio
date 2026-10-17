@@ -158,7 +158,7 @@ describe('browser withdrawal', () => {
   it('Analytics retries on mount before any consent check, and withdraws whenever a journey is cleared', () => {
     const source = readFileSync('src/components/Analytics.tsx', 'utf8');
     expect(source).toMatch(/useEffect\(\(\) => \{\s*void retryPendingWithdrawal\(\);\s*\}, \[\]\);/);
-    expect(source).toMatch(/if \(consent !== 'granted'\) \{\s*void clearConversionJourney\(\);/);
+    expect(source).toMatch(/if \(consent === 'denied'\) \{\s*void clearConversionJourney\(\);/);
   });
 
   it('the consent route validates the ID and stops the journey server-side', () => {

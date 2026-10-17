@@ -3,6 +3,7 @@
 import { clearJourney, conversionContextForServer, recordLanding, trackIntent, windowEnv } from './browser';
 import { isOpaqueId, type ConversionJourney, type StepId } from './contract';
 import { ctaIdFor, journeyForCta } from './cta';
+import { pageForPath } from './pages';
 
 /**
  * Browser half of CONVERSION-001 for Opinio. Every event goes to GA4 only
@@ -10,7 +11,14 @@ import { ctaIdFor, journeyForCta } from './cta';
  * explicit "granted" choice nothing is stored or sent.
  */
 function env() {
-  return windowEnv((name, params) => window.gtag?.('event', name, params));
+  return windowEnv((name, params) => {
+    // Explicit page context, so the event never inherits the document title
+    // (a business name on /b/<slug>) or the real slug path set for page views.
+    const page = pageForPath(window.location.pathname);
+    if (!page) return;
+    const origin = window.location.origin;
+    window.gtag?.('event', name, { ...params, page_location: origin + page.templatePath, page_title: page.pageId, page_referrer: origin + '/' });
+  });
 }
 
 let landingRecorded = false;
@@ -37,8 +45,14 @@ export function trackStepStarted(journey: ConversionJourney, stepId: StepId): vo
 
 /** Association for the review submit; the server re-validates it and never trusts a stage from it. */
 export function conversionContext(): Record<string, unknown> {
-  const e = env();
-  return e ? conversionContextForServer(e) : { consent: 'denied' };
+  // Read inside the review submit: it must never throw (README: telemetry
+  // never fails product success).
+  try {
+    const e = env();
+    return e ? conversionContextForServer(e) : { consent: 'denied' };
+  } catch {
+    return { consent: 'denied' };
+  }
 }
 
 const WITHDRAWAL_KEY = 'opinio.conversion-withdrawal';

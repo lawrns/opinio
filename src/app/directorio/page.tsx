@@ -220,6 +220,7 @@ export default async function DirectorioPage({ searchParams }: PageProps) {
                       <Link
                         key={b.id}
                         href={`/b/${encodeURIComponent(b.slug)}`}
+                        data-cta="directory_open_passport"
                         className="group flex flex-col justify-between rounded-xl border border-op-border bg-op-sheet p-4 shadow-flat hover:border-op-blue-border hover:shadow-md transition-all"
                       >
                         <div className="flex items-start gap-3">

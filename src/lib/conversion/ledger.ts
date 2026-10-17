@@ -3,7 +3,8 @@
  * the existing `pg` pool (CONVERSION-001).
  *
  * Only trustworthy committed product outcomes are recorded. Today that is one
- * milestone: a review committed together with its passport update. It is not
+ * milestone: a published review, recorded after its write commits (and after
+ * its passport update when that runs for the review). It is not
  * proof of a genuine customer, a business owner or merchant activation; those
  * stages are unavailable (coverage.ts). Delivery to GA4 is optional (needs
  * GA4_API_SECRET), only for consent-granted journeys, claimed before sending

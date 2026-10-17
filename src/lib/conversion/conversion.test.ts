@@ -196,16 +196,22 @@ describe('ledger: review_published after commit', () => {
     expect(new Set([...f.identities.values()].map((i) => i.analytics_id)).size).toBe(1);
   });
 
-  it('not consented (or tampered context): stored without analytics ID or attribution, never sent', async () => {
+  it('not consented: stored without analytics ID or attribution, never sent', async () => {
     const f = fakePg();
-    const tampered = parseConversionContext({ consent: 'granted', journeyId: 'maria@correo-ficticio.mx', firstTouch: { category: 'tagged', source: 'juan perez' }, stage: 'activated' });
     await recordMilestone({ entityType: 'review', entityId: '11', milestone: 'review_published', journey: 'consumer_review', context: parseConversionContext({ consent: 'pending' }) }, f.deps);
-    await recordMilestone({ entityType: 'review', entityId: '12', milestone: 'review_published', journey: 'consumer_review', context: tampered }, f.deps);
     const s11 = f.stages.get('review:11:milestone_review_published')!;
     expect(s11.analytics_id).toBeNull();
     expect(s11.delivery_state).toBe('skipped_consent');
+    expect(f.sent.length).toBe(0);
+  });
+
+  it('a tampered context that claims "granted" IS sent (consent is the browser\'s choice; the server cannot verify it), but only with allowlisted codes', async () => {
+    const f = fakePg();
+    const tampered = parseConversionContext({ consent: 'granted', journeyId: 'maria@correo-ficticio.mx', firstTouch: { category: 'tagged', source: 'juan perez' }, stage: 'activated' });
+    await recordMilestone({ entityType: 'review', entityId: '12', milestone: 'review_published', journey: 'consumer_review', context: tampered }, f.deps);
     expect(f.identities.get('review:12')!.journey_id).toBeNull();
     expect(f.sent.length).toBe(1);
+    expect(f.sent[0].event.params.ft_source ?? 'unknown').toBe('unknown');
     assertSafe(f.sent);
   });
 
@@ -240,7 +246,7 @@ describe('ledger: review_published after commit', () => {
 describe('unavailable stages are explicit, never zero', () => {
   it('qualified, activated, paid and business week two are unavailable with reasons', () => {
     const unavailable = STAGE_COVERAGE.filter((c) => c.status === 'unavailable').map((c) => c.stage);
-    expect(unavailable).toEqual(['enquiry_submitted (merchant)', 'qualified', 'activated', 'paid', 'week2_return (business)']);
+    expect(unavailable).toEqual(['step_failed', 'review_abandonment', 'enquiry_submitted (merchant)', 'qualified', 'activated', 'paid', 'week2_return (business)']);
     expect(STAGE_COVERAGE.find((c) => c.stage === 'paid')!.note).toMatch(/never Opinio revenue/);
   });
 

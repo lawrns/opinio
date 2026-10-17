@@ -12,6 +12,7 @@ const CTA_JOURNEYS = {
   reputation_merchant_panel: 'merchant_panel',
   reputation_directory: 'consumer_discovery',
   search_open_passport: 'consumer_discovery',
+  directory_open_passport: 'consumer_discovery',
   search_write_review: 'consumer_review',
   passport_write_review: 'consumer_review',
   nav_case_new: 'consumer_case',

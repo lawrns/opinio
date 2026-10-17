@@ -48,7 +48,7 @@ export function Navbar() {
         </button>
       </div>
       {open && <nav id="mobile-navigation" aria-label="Navegación móvil" className="op-container border-t border-op-border pb-5 pt-3 lg:hidden">
-        {[...links, { href: '/verificar?accion=opinar', label: 'Escribir opinión' }].map(({ href, label }) => <Link key={href} href={href} onClick={() => setOpen(false)} className="flex min-h-12 items-center border-b border-op-border text-sm font-medium">{label}</Link>)}
+        {[...links, { href: '/verificar?accion=opinar', label: 'Escribir opinión', cta: 'nav_write_review' }].map(({ href, label, cta }: { href: string; label: string; cta?: string }) => <Link key={href} href={href} data-cta={cta} onClick={() => setOpen(false)} className="flex min-h-12 items-center border-b border-op-border text-sm font-medium">{label}</Link>)}
         <Link href="/merchant" data-cta="nav_merchant_panel" onClick={() => setOpen(false)} className="op-button mt-4 w-full">Para comercios <ArrowUpRight aria-hidden="true" className="size-4" /></Link>
       </nav>}
     </header>

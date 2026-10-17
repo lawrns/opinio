@@ -144,11 +144,26 @@ export function trackIntent(
   return event;
 }
 
-/** Production browser environment (GA4 only; GA4 only). */
+/**
+ * localStorage, or a no-op store when the browser blocks site data (reading
+ * `window.localStorage` itself throws then). Nothing is kept without storage,
+ * and nothing here can fail a page or a review submit.
+ */
+function safeStorage(): BrowserEnv["storage"] {
+  try {
+    const storage = window.localStorage;
+    if (storage) return storage;
+  } catch {
+    // blocked
+  }
+  return { getItem: () => null, setItem: () => undefined, removeItem: () => undefined };
+}
+
+/** Production browser environment (GA4 only). */
 export function windowEnv(emitToGa: (name: string, params: Record<string, string>) => void): BrowserEnv | null {
   if (typeof window === "undefined") return null;
   return {
-    storage: window.localStorage,
+    storage: safeStorage(),
     consent: () => readConsent(window),
     emit: (event) => emitToGa(event.name, event.params as Record<string, string>),
     randomUUID: () => window.crypto.randomUUID(),
