@@ -14,9 +14,12 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
-ARG DATABASE_URL="postgres://opinio:Hennie14Hennie14@82.208.21.221:15437/opinio"
-ENV DATABASE_URL=$DATABASE_URL
-RUN pnpm build
+# DATABASE_URL must be supplied at build time (no committed default):
+#   docker build --build-arg DATABASE_URL=... .
+# It is used only by `pnpm build` and is not persisted with ENV.
+ARG DATABASE_URL
+RUN if [ -z "$DATABASE_URL" ]; then echo "ERROR: DATABASE_URL build arg is required (docker build --build-arg DATABASE_URL=...)" >&2; exit 1; fi \
+  && DATABASE_URL="$DATABASE_URL" pnpm build
 
 FROM base AS runner
 WORKDIR /app

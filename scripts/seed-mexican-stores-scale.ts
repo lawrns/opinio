@@ -3,8 +3,18 @@ import path from 'path';
 import pg from 'pg';
 const { Pool } = pg;
 
+/** The connection string comes from the environment only; there is no committed default. */
+function requireDatabaseUrl(): string {
+  const url = process.env.DATABASE_URL?.trim();
+  if (!url) {
+    console.error('DATABASE_URL is required (set it in the environment; there is no default).');
+    process.exit(1);
+  }
+  return url;
+}
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgres://opinio:Hennie14Hennie14@82.208.21.221:15437/opinio'
+  connectionString: requireDatabaseUrl()
 });
 
 interface MexicanStore {
