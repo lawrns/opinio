@@ -7,8 +7,10 @@ import { AccessDenied, Unauthenticated, authorizeMerchant } from '@/lib/authz';
 import { roleAllows } from '@/lib/authz/policy';
 import { currentMerchantUserId } from '@/lib/authz/session';
 import { listBusinessTeam } from '@/lib/authz/staff';
+import { listMachineKeys } from '@/lib/authz/keys';
 import { gatedMetadata, merchantAuthEnabled } from '@/lib/auth/spike';
 import { inviteStaffAction, removeStaffAction, revokeInvitationAction } from './actions';
+import { KeyManager } from './KeyManager';
 
 export const dynamic = 'force-dynamic';
 export function generateMetadata(): Metadata {
@@ -73,6 +75,8 @@ export default async function BusinessAccessPage({
   // Team management is owner-only; staff see none of it.
   const team = roleAllows(authority.role, 'manage_staff') ? await listBusinessTeam(pool, authority.businessId) : null;
   const teamResult = TEAM_RESULT[(await searchParams).equipo ?? ''];
+  // Keys are owner-only too: safe metadata only, never a secret or hash.
+  const keys = roleAllows(authority.role, 'manage_keys') ? await listMachineKeys(pool, authority.businessId) : null;
 
   return (
     <AuthShell title={row.brand_name}>
@@ -128,6 +132,19 @@ export default async function BusinessAccessPage({
             <button type="submit" className={buttonClass}>Invitar</button>
           </form>
         </section>
+      )}
+      {keys && (
+        <KeyManager
+          businessId={authority.businessId}
+          keys={keys.map((k) => ({
+            keyId: k.keyId,
+            label: k.label,
+            prefix: k.prefix,
+            scopes: k.scopes,
+            createdAt: k.createdAt.toISOString(),
+            revoked: k.revokedAt !== null,
+          }))}
+        />
       )}
       <p>
         <Link href="/cuenta" className="font-bold underline">Volver</Link>

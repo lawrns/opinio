@@ -179,11 +179,13 @@ export async function authorizeCaseSession(
 
 /**
  * Allows a machine key for `scope` within the key's own business. A business
- * named by the caller is only checked against the key, never trusted.
+ * named by the caller, and the stored business of any record it names
+ * (`resource`, e.g. an order), are only checked against the key, never
+ * trusted; a mismatch or a missing record is denied like another business's.
  */
 export async function authorizeMachineKey(
   db: Db,
-  input: { key: string | null | undefined; scope: MachineScope; claimedBusinessId?: unknown },
+  input: { key: string | null | undefined; scope: MachineScope; claimedBusinessId?: unknown; resource?: BusinessResource },
 ): Promise<{ type: 'machine_key'; keyId: number; businessId: number }> {
   if (!input.key || input.key.length > 200) throw new Unauthenticated();
   const rows = await authorityQuery<{ id: number; business_id: number; scopes: string[] }>(
@@ -197,6 +199,7 @@ export async function authorizeMachineKey(
   if (input.claimedBusinessId !== undefined && Number(input.claimedBusinessId) !== key.business_id) {
     throw new AccessDenied();
   }
+  if (input.resource && (await owningBusinessId(db, input.resource)) !== key.business_id) throw new AccessDenied();
   return { type: 'machine_key', keyId: key.id, businessId: key.business_id };
 }
 
