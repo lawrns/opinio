@@ -7,6 +7,12 @@ import {
   CalculatedTrustPassport,
 } from '@/lib/scoring';
 import { publicCaseColumnsSql, toPublicCase, toPublicMessages } from '@/lib/case-access';
+import {
+  PUBLIC_REVIEW_STATUS,
+  isPublicReview,
+  publicReviewColumnsSql,
+  toPublicReview,
+} from '@/lib/public-reviews';
 
 interface BusinessRow {
   id: number;
@@ -64,13 +70,10 @@ interface OfficialRecordRow {
 interface ReviewRow {
   id: number;
   business_id: number;
-  order_id: number | null;
-  invitation_id: number | null;
   rating: number;
   title: string | null;
   body: string;
   author_name: string;
-  author_masked_contact: string | null;
   verification_level: 'confirmed_payment' | 'confirmed_store_order' | 'reviewed_proof' | 'unverified_experience';
   score_weight: string | number;
   integrity_factor: string | number;
@@ -161,9 +164,10 @@ export async function GET(
           'SELECT * FROM official_records WHERE business_id = $1 ORDER BY record_date DESC, id DESC',
           [businessId]
         ),
+        // Public endpoint: published reviews only, without reviewer contact.
         query<ReviewRow>(
-          'SELECT * FROM reviews WHERE business_id = $1 ORDER BY created_at DESC',
-          [businessId]
+          `SELECT ${publicReviewColumnsSql()} FROM reviews WHERE business_id = $1 AND status = $2 ORDER BY created_at DESC`,
+          [businessId, PUBLIC_REVIEW_STATUS]
         ),
         query<ReviewResponseRow>(
           'SELECT * FROM review_responses WHERE business_id = $1 ORDER BY created_at ASC',
@@ -190,8 +194,10 @@ export async function GET(
       responsesByReviewId.set(resp.review_id, arr);
     }
 
-    const reviewsWithResponses = reviewsRes.rows.map((rev) => ({
-      ...rev,
+    const publishedReviews = reviewsRes.rows.filter(isPublicReview);
+
+    const reviewsWithResponses = publishedReviews.map((rev) => ({
+      ...toPublicReview(rev),
       score_weight: Number(rev.score_weight) || 0.9,
       integrity_factor: Number(rev.integrity_factor) || 1.0,
       responses: responsesByReviewId.get(rev.id) || [],
@@ -214,7 +220,7 @@ export async function GET(
 
     // 3. Live Scoring Engine Calculation
     const nowMs = Date.now();
-    const reviewCalculationItems: ReviewCalculationItem[] = reviewsRes.rows.map((r) => {
+    const reviewCalculationItems: ReviewCalculationItem[] = publishedReviews.map((r) => {
       const reviewDateMs = new Date(r.created_at).getTime();
       const ageDays = Math.max(0, Math.floor((nowMs - reviewDateMs) / (1000 * 60 * 60 * 24)));
       return {

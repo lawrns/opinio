@@ -45,6 +45,7 @@ export async function getMerchantOfficialRecords(businessId: number): Promise<Of
 }
 
 export interface ReviewFilterOptions {
+  status?: string;
   rating?: number;
   verificationLevel?: string;
   hasResponse?: boolean;
@@ -60,6 +61,11 @@ export async function getMerchantReviews(
   if (filters?.rating) {
     params.push(filters.rating);
     whereClauses += ` AND r.rating = $${params.length}`;
+  }
+
+  if (filters?.status) {
+    params.push(filters.status);
+    whereClauses += ` AND r.status = $${params.length}`;
   }
 
   if (filters?.verificationLevel) {
