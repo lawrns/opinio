@@ -20,6 +20,11 @@ const normalize = (email) => String(email).trim().toLowerCase();
 /**
  * Grants administrator to the signed-in user with `email`, recording the
  * granter and an audit row in one transaction. Returns the outcome.
+ *
+ * @param {import('pg').ClientBase} client
+ * @param {string} email
+ * @param {{ dryRun?: boolean, grantedBy?: string }} [options]
+ * @returns {Promise<'no_signed_in_user' | 'already_administrator' | 'granter_required' | 'granter_not_administrator' | 'would_grant' | 'granted'>}
  */
 export async function grantAdministrator(client, email, { dryRun = false, grantedBy } = {}) {
   const user = (await client.query('SELECT id FROM users WHERE email = $1', [normalize(email)])).rows[0];
