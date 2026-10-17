@@ -337,6 +337,18 @@ describe('approved transfer', () => {
     expect(audit.actor_type).toBe('administrator');
     expect(audit.details).toMatchObject({ previous_owner_user_id: ids[OWNER], revoked_keys: 1 });
     expect(JSON.stringify(audit)).not.toContain('@');
+    // Each revoked item has its own audit row, marked as caused by the transfer.
+    const perItem = (await db.client.query(
+      "SELECT action, count(*)::int AS n FROM audit_logs WHERE (details->>'by_transfer')::boolean IS TRUE AND actor_type = 'administrator' GROUP BY action ORDER BY action",
+    )).rows;
+    expect(perItem).toEqual([
+      { action: 'machine_key.revoked', n: audit.details.revoked_keys },
+      { action: 'membership.revoked', n: audit.details.revoked_memberships },
+      { action: 'staff_invitation.revoked', n: audit.details.revoked_invitations },
+    ]);
+    expect(audit.details.revoked_memberships).toBeGreaterThanOrEqual(3); // owner and both staff
+    // The approving administrator is warned on the form.
+    expect(await (await get('/admin/aprobaciones', cookies[ADMIN])).text()).toContain('data-testid="transfer-warning"');
   });
 
   it('rejects transfers that would orphan or duplicate control', async () => {

@@ -55,6 +55,10 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
           <label className="flex items-center gap-2">
             <input type="radio" name="kind" value="transfer" /> Transferencia (revoca todo acceso actual del comercio)
           </label>
+          <p data-testid="transfer-warning">
+            Una transferencia revoca el acceso del propietario anterior y de todo su equipo, las invitaciones pendientes y
+            las claves de integración del comercio. El nuevo propietario debe invitar de nuevo a su equipo.
+          </p>
         </fieldset>
         <div className="space-y-1.5">
           <label htmlFor="businessSlug" className={labelClass}>Comercio (slug)</label>

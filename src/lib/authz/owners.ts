@@ -8,7 +8,7 @@
  */
 import type { Pool } from 'pg';
 import { inTransaction } from '@/lib/authz/transaction';
-import { AccessDenied, Unauthenticated, recordAuditEvent, type Db } from '@/lib/authz';
+import { AccessDenied, Unauthenticated, recordAuditEvent, type AuditAction, type Db } from '@/lib/authz';
 import {
   AUTHORITY_BASES,
   EVIDENCE_METHODS,
@@ -225,19 +225,35 @@ export async function approveOwnershipTransfer(
     );
     const memberships = await client.query(
       `UPDATE business_memberships SET status = 'revoked', revoked_at = $1, revoked_by_user_id = $2
-        WHERE business_id = $3 AND status = 'active'`,
+        WHERE business_id = $3 AND status = 'active' RETURNING id`,
       ended,
     );
     const invitations = await client.query(
       `UPDATE staff_invitations SET revoked_at = $1, revoked_by_user_id = $2
-        WHERE business_id = $3 AND accepted_at IS NULL AND revoked_at IS NULL`,
+        WHERE business_id = $3 AND accepted_at IS NULL AND revoked_at IS NULL RETURNING id`,
       ended,
     );
     const keys = await client.query(
       `UPDATE business_machine_keys SET revoked_at = $1, revoked_by_user_id = $2
-        WHERE business_id = $3 AND revoked_at IS NULL`,
+        WHERE business_id = $3 AND revoked_at IS NULL RETURNING id`,
       ended,
     );
+    // One audit row per revoked item, marked as caused by the transfer.
+    const revocations: [AuditAction, string, { id: number }[]][] = [
+      ['membership.revoked', 'membership_id', memberships.rows],
+      ['staff_invitation.revoked', 'invitation_id', invitations.rows],
+      ['machine_key.revoked', 'key_id', keys.rows],
+    ];
+    for (const [action, idKey, rows] of revocations) {
+      for (const row of rows) {
+        await recordAuditEvent(client, {
+          businessId: request.businessId,
+          actor: admin,
+          action,
+          details: { [idKey]: row.id, by_transfer: true },
+        });
+      }
+    }
 
     const approvalId: number = (
       await client.query(

@@ -66,7 +66,7 @@ Policy: [ADR 0004](../adr/0004-staff-and-transfer-policy.md). Code: `src/lib/aut
 | `createStaffInvitation` | active owner (`manage_staff`) | hashed 24 h single-use invitation bound to business and email; neutral email with a fragment link to `/cuenta/invitacion` |
 | `acceptStaffInvitation` | signed-in user whose login email matches | staff membership, only while the inviter is still the active owner; same-origin `POST /cuenta/invitacion/aceptar` |
 | `revokeStaffInvitation`, `removeStaffMembership` | active owner | pending invitation withdrawn / staff access ends on the next request; owners are never removed here |
-| `approveOwnershipTransfer` | platform administrator | revokes every approval, membership, pending invitation and machine key of that business, then records the transfer and the new owner |
+| `approveOwnershipTransfer` | platform administrator | revokes every approval, membership (staff included), pending invitation and machine key of that business, each with its own audit row, then records the transfer and the new owner; the form warns the administrator first |
 
 Each runs in one transaction that locks the business row first, and is audited.
 
