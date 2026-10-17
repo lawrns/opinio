@@ -17,6 +17,22 @@ const nextConfig: NextConfig = {
         ],
       },
       {
+        // Login, account and approval screens: never indexed, never forward
+        // their URL (the login confirmation page handles a token fragment).
+        source: "/:area(acceso|cuenta|admin)/:path*",
+        headers: [
+          { key: "Referrer-Policy", value: "no-referrer" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow" },
+        ],
+      },
+      {
+        source: "/:area(acceso|cuenta|admin)",
+        headers: [
+          { key: "Referrer-Policy", value: "no-referrer" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow" },
+        ],
+      },
+      {
         // Embeddable widgets are served for cross-origin <iframe> use on
         // merchant sites (see src/components/WidgetsCustomizer.tsx), so they
         // must stay frameable and must not forward the host page URL.

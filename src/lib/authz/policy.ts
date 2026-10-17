@@ -61,3 +61,19 @@ export function caseSessionCookieOptions(secure: boolean, expiresAt: Date) {
     expires: expiresAt,
   };
 }
+
+/** Login-link requests allowed per fixed window, per email and per client address. */
+export const LOGIN_RATE_WINDOW_MS = 15 * 60 * 1000;
+export const LOGIN_LIMIT_PER_EMAIL = 3;
+export const LOGIN_LIMIT_PER_CLIENT = 10;
+
+/** How first-owner control was independently established (ADR 0002). */
+export const EVIDENCE_METHODS = ['domain_email', 'dns', 'business_callback'] as const;
+export type EvidenceMethod = (typeof EVIDENCE_METHODS)[number];
+
+/** The applicant's documented authority to act for the business. */
+export const AUTHORITY_BASES = ['legal_representative', 'owner_of_record', 'written_authorization'] as const;
+export type AuthorityBasis = (typeof AUTHORITY_BASES)[number];
+
+/** A reference to evidence kept elsewhere, e.g. VER-1042. No contacts or free text fit. */
+export const EVIDENCE_REFERENCE = /^[A-Z]{2,10}-[0-9]{1,12}$/;

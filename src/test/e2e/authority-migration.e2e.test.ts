@@ -32,7 +32,10 @@ const AUTHORITY_TABLES = [
   'case_access_tokens',
   'case_sessions',
   'business_machine_keys',
+  'platform_administrators',
 ] as const;
+
+const MIGRATIONS = ['0001_authjs_identity.sql', '0002_business_case_machine_authority.sql', '0003_owner_login.sql'];
 
 let db: TestDatabase;
 
@@ -83,10 +86,7 @@ afterAll(async () => {
 describe('auth migrations over existing data', () => {
   it('dry run lists both migrations and changes nothing', async () => {
     const before = await snapshot(db.client);
-    expect(await applyAuthMigrations(db.client, { dryRun: true })).toEqual([
-      '0001_authjs_identity.sql',
-      '0002_business_case_machine_authority.sql',
-    ]);
+    expect(await applyAuthMigrations(db.client, { dryRun: true })).toEqual(MIGRATIONS);
     expect(await snapshot(db.client)).toEqual(before);
     const { rows } = await db.client.query(
       "SELECT to_regclass('business_memberships') AS a, to_regclass('auth_schema_migrations') AS b",
@@ -100,7 +100,7 @@ describe('auth migrations over existing data', () => {
     await second.connect();
     const [a, b] = await Promise.all([applyAuthMigrations(db.client), applyAuthMigrations(second)]);
     await second.end();
-    expect([...a, ...b].sort()).toEqual(['0001_authjs_identity.sql', '0002_business_case_machine_authority.sql']);
+    expect([...a, ...b].sort()).toEqual(MIGRATIONS);
     expect(await applyAuthMigrations(db.client)).toEqual([]);
 
     const after = await snapshot(db.client);
@@ -157,8 +157,8 @@ describe('auth migrations over existing data', () => {
     const {
       rows: [approval],
     } = await c.query(
-      `INSERT INTO ownership_approvals (business_id, subject_user_id, kind, evidence_method, approved_by_user_id)
-       VALUES (1, 2, 'first_owner', 'dns', 1) RETURNING id`,
+      `INSERT INTO ownership_approvals (business_id, subject_user_id, kind, evidence_method, approved_by_user_id, authority_basis, evidence_reference)
+       VALUES (1, 2, 'first_owner', 'dns', 1, 'owner_of_record', 'VER-1') RETURNING id`,
     );
     // The same approval cannot back an owner of another business, or another person.
     await expect(

@@ -61,8 +61,9 @@ async function seed() {
 
   const owner = async (businessId: number, userId: number) => {
     const approval = await one<{ id: number }>(
-      `INSERT INTO ownership_approvals (business_id, subject_user_id, kind, evidence_method, approved_by_user_id)
-       VALUES ($1, $2, 'first_owner', 'dns', $3) RETURNING id`,
+      `INSERT INTO ownership_approvals
+         (business_id, subject_user_id, kind, evidence_method, authority_basis, evidence_reference, approved_by_user_id)
+       VALUES ($1, $2, 'first_owner', 'dns', 'legal_representative', 'VER-1', $3) RETURNING id`,
       [businessId, userId, f.admin],
     );
     await c.query(
@@ -246,7 +247,7 @@ describe('authorizeMerchant (module, real Postgres)', () => {
   });
 
   it('lists only active memberships for the business selector', async () => {
-    expect(await listMemberBusinesses(db.client, f.ownerA)).toEqual([{ businessId: f.bizA, slug: 'tienda-a', role: 'owner' }]);
+    expect(await listMemberBusinesses(db.client, f.ownerA)).toEqual([{ businessId: f.bizA, slug: 'tienda-a', brandName: 'Tienda A', role: 'owner' }]);
     expect(await listMemberBusinesses(db.client, f.revokedA)).toEqual([]);
     expect(await listMemberBusinesses(db.client, f.pending)).toEqual([]);
   });
