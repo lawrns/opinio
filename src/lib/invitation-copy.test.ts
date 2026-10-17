@@ -21,6 +21,10 @@ const SENDING_CLAIMS = [
   /No tienes que armar mensajes/i,
   /se invita al 100/i,
   /Invitaciones enviadas/i,
+  /enviada exitosamente/i,
+  /al enviar la invitaci[oó]n/i,
+  // No automatic order import exists yet (/merchant/integrations says so).
+  /monitorea (todas )?las ventas/i,
 ];
 
 const SURFACES: [string, string][] = [
@@ -31,6 +35,7 @@ const SURFACES: [string, string][] = [
   ['home: connected pipeline', read('src', 'components', 'home', 'ConnectedPipeline.tsx')],
   ['home: proof grid', read('src', 'components', 'home', 'ProofBentoGrid.tsx')],
   ['merchant dashboard', read('src', 'app', 'merchant', 'page.tsx')],
+  ['POST /api/v1/invitations messages', read('src', 'app', 'api', 'v1', 'invitations', 'route.ts')],
   ['llms.txt', read('public', 'llms.txt')],
   ['llms-full.txt', read('public', 'llms-full.txt')],
 ];

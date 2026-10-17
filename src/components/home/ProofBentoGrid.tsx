@@ -149,7 +149,7 @@ export function ProofBentoGrid() {
                     </span>
                   </div>
                   <p className="text-gray-700 text-[11px] leading-relaxed">
-                    Opinio monitorea todas las ventas por webhook. La cobertura cuenta las invitaciones registradas para clientes reales, sin importar si tuvieron retraso o no.
+                    La cobertura se calcula sobre los pedidos que registra el comercio. La cobertura cuenta las invitaciones registradas para clientes reales, sin importar si tuvieron retraso o no.
                   </p>
                 </motion.div>
               ) : (
