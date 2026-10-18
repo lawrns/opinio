@@ -1,6 +1,6 @@
 # Opinio México — Fuera de línea
 
-> Opinio México (opinio.mx) está fuera de línea. Los perfiles públicos de comercios, las calificaciones, las opiniones de compradores y los casos de resolución están deshabilitados mientras se revisa la verificación de los datos que respaldan cada ficha. Ninguna ficha se publica y no se reciben opiniones.
+> Opinio México (opinio.mx) está en línea. Los perfiles públicos de comercios, las opiniones de compradores y las páginas de casos de resolución están disponibles. El panel de comercios está temporalmente no disponible mientras se habilita el acceso seguro.
 
 ## Estado actual
 - La única página pública es la portada: https://opinio.mx — un aviso informativo de que el servicio está fuera de línea.

@@ -50,6 +50,19 @@ describe('invitation copy matches the code (OPINIO-COPY-001)', () => {
     expect(whatsapp?.a).toMatch(/no la envía ni confirma su entrega/);
   });
 
+  // QA-057: the live site serves profiles, reviews, the review form and case
+  // pages; only the merchant panel is contained (#42). The summary AI crawlers
+  // read must not say the whole site is offline or that reviews aren't taken.
+  it.each([
+    ['llms.txt', read('public', 'llms.txt')],
+    ['llms-full.txt', read('public', 'llms-full.txt')],
+  ])('%s does not say opinio.mx is offline or takes no reviews; it names the unavailable merchant panel', (_label, text) => {
+    expect(text).not.toMatch(/opinio\.mx\) está (\*\*)?fuera de línea/i);
+    expect(text).not.toMatch(/no se reciben opiniones/i);
+    expect(text).toMatch(/opinio\.mx\) está (\*\*)?en línea/i);
+    expect(text).toMatch(/panel de comercios está temporalmente no disponible mientras se habilita el acceso seguro/);
+  });
+
   it('the invitation code calls no messaging provider', () => {
     for (const file of [read('src', 'lib', 'merchant-actions.ts'), read('src', 'app', 'api', 'v1', 'invitations', 'route.ts')]) {
       expect(file).not.toMatch(/nodemailer|twilio|sendgrid|resend|graph\.facebook|wa\.me|fetch\(/i);

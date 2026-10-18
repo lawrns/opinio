@@ -1,7 +1,7 @@
 # Opinio México — Guía de contexto (llms-full.txt)
 
 ## 1. Estado de la entidad
-Opinio México (opinio.mx) está **fuera de línea**. La plataforma suspendió la publicación de fichas comerciales, calificaciones, opiniones y casos de resolución mientras revisa la verificación de los datos que respaldaban cada perfil.
+Opinio México (opinio.mx) está **en línea**. Los perfiles públicos de comercios, las opiniones de compradores y las páginas de casos de resolución están disponibles. El panel de comercios está temporalmente no disponible mientras se habilita el acceso seguro.
 
 - Sitio oficial: https://opinio.mx (solo portada informativa)
 - Idioma: Español (es-MX)
