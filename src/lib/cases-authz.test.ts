@@ -30,6 +30,7 @@ vi.mock('@/lib/db', () => {
 import { POST as postMessage } from '@/app/api/v1/cases/[id]/messages/route';
 import { POST as postCase } from '@/app/api/v1/cases/route';
 import { POST as postReview } from '@/app/api/v1/reviews/route';
+import { CASE_TRUST_FIELDS, TRUST_FIELD_ERROR } from '@/lib/trust-fields';
 
 const req = (body: unknown) => new Request('http://localhost/api', { method: 'POST', body: JSON.stringify(body) }) as never;
 const caseParams = { params: Promise.resolve({ id: '41' }) };
@@ -134,5 +135,36 @@ describe('(2) review POST: no client trust fields', () => {
     const res = await postReview(req({ ...valid, [field]: value }));
     expect(res.status).toBe(403);
     expect(writes()).toEqual([]);
+  });
+});
+
+describe('(3) with buyer proof on (B06): the same refusals run first', () => {
+  const buyer = { sender_name: 'Comprador', message: 'Sigo esperando el reembolso' };
+  const b06Case = { business_id: 7, customer_name: 'Ana Prueba', access_email: 'ana@example.test', issue_category: 'envio', customer_requested_remedy: 'reembolso', initial_message: 'No llegó mi pedido' };
+  beforeEach(() => vi.stubEnv('OPINIO_BUYER_PROOF', '1'));
+
+  it.each([
+    ['a merchant sender', { ...buyer, sender_type: 'merchant' }],
+    ['a mediator sender', { ...buyer, sender_type: 'mediator' }],
+    ['a staff sender', { ...buyer, sender_type: 'staff' }],
+    ['a private message', { ...buyer, is_private: true }],
+    ['a confirmation attempt', { ...buyer, status: 'resolved_consumer_confirmed' }],
+  ])('refuses %s before the session check reads anything', async (_label, body) => {
+    const res = await postMessage(req(body), caseParams);
+    expect(res.status).toBe(403);
+    expect(db.calls).toEqual([]);
+  });
+
+  it('never sends a message without a sender_type down the switch-off path', async () => {
+    const res = await postMessage(req(buyer), caseParams);
+    expect(res.status).not.toBe(201);
+    expect(writes()).toEqual([]);
+  });
+
+  it.each(CASE_TRUST_FIELDS.map((field) => [field]))('refuses %s on a case with an access email, before any read, limit or write', async (field) => {
+    const res = await postCase(req({ ...b06Case, [field]: field === 'is_consumer_confirmed' || field === 'verified' || field === 'is_verified' ? true : 12 }));
+    expect(res.status).toBe(403);
+    expect(((await res.json()) as { error: string }).error).toBe(TRUST_FIELD_ERROR);
+    expect(db.calls).toEqual([]);
   });
 });

@@ -56,3 +56,22 @@ export function clientAddress(forwardedFor: string | null): string {
 export async function allowStaffInvitationEmail(db: Db, businessId: number, now: Date = new Date()): Promise<boolean> {
   return hit(db, `staff-invite:${businessId}`, STAFF_INVITATION_EMAILS_PER_WINDOW, now);
 }
+
+/** Whether another buyer access-link resend is allowed in this window for a case or a client address. */
+export async function allowCaseLinkResend(
+  db: Db,
+  input: { scope: 'case' | 'client'; key: string; limit: number },
+  now: Date = new Date(),
+): Promise<boolean> {
+  return hit(db, `case-link-${input.scope}:${input.key}`, input.limit, now);
+}
+
+/** Whether another case with an access email may be opened in this window, for a client address or an access email (hashed). */
+export async function allowCaseCreation(
+  db: Db,
+  input: { scope: 'client' | 'email'; key: string; limit: number },
+  now: Date = new Date(),
+): Promise<boolean> {
+  return hit(db, `case-create-${input.scope}:${input.key}`, input.limit, now);
+}
+

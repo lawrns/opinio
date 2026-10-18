@@ -40,7 +40,13 @@ const MIGRATIONS = [
   '0002_business_case_machine_authority.sql',
   '0003_owner_login.sql',
   '0004_staff_and_transfer.sql',
+  '0005_buyer_case_access.sql',
 ];
+
+/** Columns the migrations add to legacy tables; digests compare legacy columns only, and these are checked NULL separately. */
+const ADDED_COLUMNS: Partial<Record<(typeof LEGACY_TABLES)[number], string[]>> = {
+  resolution_cases: ['access_email', 'submission_key'],
+};
 
 let db: TestDatabase;
 
@@ -72,7 +78,7 @@ async function snapshot(client: Client) {
   const out: Record<string, string> = {};
   for (const table of LEGACY_TABLES) {
     const { rows } = await client.query(
-      `SELECT count(*)::int AS n, md5(coalesce(string_agg(to_jsonb(t)::text, '|' ORDER BY t.id), '')) AS digest FROM ${table} t`,
+      `SELECT count(*)::int AS n, md5(coalesce(string_agg((to_jsonb(t)${(ADDED_COLUMNS[table] ?? []).map((c) => ` - '${c}'`).join('')})::text, '|' ORDER BY t.id), '')) AS digest FROM ${table} t`,
     );
     out[table] = `${rows[0].n}:${rows[0].digest}`;
   }
@@ -117,6 +123,9 @@ describe('auth migrations over existing data', () => {
     for (const table of LEGACY_TABLES.filter((t) => t !== 'audit_logs')) {
       expect(after[table], table).toBe(before[table]);
     }
+    // Legacy cases gain no access email or submission key: no retroactive campaign.
+    const { rows: added } = await db.client.query('SELECT count(*)::int AS n FROM resolution_cases WHERE access_email IS NOT NULL OR submission_key IS NOT NULL');
+    expect(added[0].n).toBe(0);
   });
 
   it('mints no identity, membership, key or case access from claimed listings, RFCs or contacts', async () => {
