@@ -402,10 +402,13 @@ describe('buyer writes need the case session (guessable ids are not proof)', () 
     expect((await messages(other.id)).length).toBe(before);
   });
 
-  it('writes as the case’s own buyer with the session, ignoring client name, privacy and type fields', async () => {
+  it('writes as the case’s own buyer with the session, ignoring the client name; a private message is refused (#58)', async () => {
     const own = await caseWithLink('writer2@example.test');
     const cookie = await prove(own.token);
-    const res = await post(app, own.id, { sender_type: 'consumer', sender_name: 'Impostor', is_private: true, message: 'Sigo esperando' }, cookie);
+    const before = (await messages(own.id)).length;
+    expect((await post(app, own.id, { sender_type: 'consumer', message: 'privado', is_private: true }, cookie)).status).toBe(403);
+    expect((await messages(own.id)).length).toBe(before);
+    const res = await post(app, own.id, { sender_type: 'consumer', sender_name: 'Impostor', message: 'Sigo esperando' }, cookie);
     expect(res.status).toBe(201);
     const last = (await messages(own.id)).at(-1);
     expect(last).toEqual({ sender_type: 'consumer', sender_name: BUYER, message: 'Sigo esperando', is_private: false });
@@ -436,15 +439,19 @@ describe('buyer writes need the case session (guessable ids are not proof)', () 
     // A case from before B06: no access email (created with the switch off).
     const legacy = await (await createCase(off, { customer_contact: 'legacy-only@example.test' })).json();
     expect((await db.client.query('SELECT access_email FROM resolution_cases WHERE id = $1', [legacy.case.id])).rows[0].access_email).toBeNull();
-    const res = await post(app, legacy.case.id, { sender_type: 'consumer', sender_name: 'Impostor', is_private: true, message: 'Mensaje de caso previo' });
+    const res = await post(app, legacy.case.id, { sender_type: 'consumer', sender_name: 'Impostor', message: 'Mensaje de caso previo' });
     expect(res.status).toBe(201); // no session required: its buyer can't hold one until B07
     expect((await messages(legacy.case.id)).at(-1)).toEqual({ sender_type: 'consumer', sender_name: BUYER, message: 'Mensaje de caso previo', is_private: false });
+    // Without sender_type it is still the buyer's message, on the same path.
+    expect((await post(app, legacy.case.id, { message: 'Sin tipo' })).status).toBe(201);
+    expect((await post(app, legacy.case.id, { sender_type: 'consumer', message: 'privado', is_private: true })).status).toBe(403);
     expect((await post(app, legacy.case.id, { sender_type: 'merchant', sender_name: 'x', message: 'hola' })).status).toBe(403);
     expect((await post(app, legacy.case.id, { sender_type: 'consumer', message: 'x', status: 'resolved_consumer_confirmed' })).status).toBe(403);
     expect((await post(app, legacy.case.id, { sender_type: 'consumer', message: 'csrf' }, '', 'https://evil.example')).status).toBe(403);
     // A B06 case on the same server: the session is required.
     const fresh = await caseWithLink('pinned@example.test');
     expect((await post(app, fresh.id, { sender_type: 'consumer', message: 'sin sesión' })).status).toBe(401);
+    expect((await post(app, fresh.id, { message: 'sin tipo ni sesión' })).status).toBe(401);
   });
 
   it('with the switch off, keeps the legacy buyer message path as on main', async () => {

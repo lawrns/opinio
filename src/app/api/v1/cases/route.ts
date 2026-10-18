@@ -207,6 +207,8 @@ async function createCaseWithAccessEmail(request: NextRequest) {
   } catch {
     return bad('Solicitud inválida');
   }
+  // Same refusal as the switch-off path (#58), before any read, limit or write.
+  if (trustFieldsIn(body, CASE_TRUST_FIELDS).length > 0) return bad(TRUST_FIELD_ERROR, 403);
   const text = (value: unknown, max: number) => (typeof value === 'string' && value.length <= max ? value.trim() : '');
   const accessEmail = parseEmail(body.access_email);
   const phone = text(body.customer_contact, 30);
@@ -248,7 +250,7 @@ async function createCaseWithAccessEmail(request: NextRequest) {
         if (existing) return { created: false as const, row: existing };
       }
       const slugPrefix = business.slug.replace(/[^a-zA-Z0-9]/g, '').slice(0, 4).toUpperCase() || 'GEN';
-      const caseNumber = `CASO-${slugPrefix}-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+      const caseNumber = `CASO-${slugPrefix}-${new Date().getFullYear()}-${randomInt(1000, 10000)}`;
       const inserted = await client.query<CaseRow>(
         `INSERT INTO resolution_cases (
           business_id, review_id, order_id, case_number, customer_name, customer_contact, access_email, submission_key,
