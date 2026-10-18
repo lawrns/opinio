@@ -85,7 +85,9 @@ Issue [#32](https://github.com/lawrns/opinio/issues/32). Everything here is behi
 | Leave | `POST /caso/acceso/salir` | revokes the session server-side and clears the cookie |
 | Resend | `/caso/acceso/reenviar` | the same answer for every input; sends to the stored access email only when the case number and address match; retires earlier unused links; at most 3 per case and 10 per client address every 15 minutes |
 
-Buyer messages (`POST /api/v1/cases/<id>/messages` as consumer) need the session for the case they resolve to, by id or case number, from the same origin; the sender is always that case's buyer.
+Buyer messages (`POST /api/v1/cases/<id>/messages` as consumer) come from the same origin, and the sender is always that case's buyer (the stored name, never private, client fields ignored). A case created under B06 (it has an access email) also needs the session for that case, by id or case number.
+
+**Known gap, closed by B07 (#33), by Chief's decision:** a case from before B06 has no access email, so its buyer can't hold a session yet. Its messages keep the buyer-only path without one, with no merchant messages and no confirmation. Requiring a session there would cut existing buyers off until B07's requested recovery exists.
 
 Per-client limits (case creation, resend) key on the last `X-Forwarded-For` entry, as merchant login does. Without exactly one appending reverse proxy, every caller shares one `unknown` bucket. That's a deployment prerequisite.
 

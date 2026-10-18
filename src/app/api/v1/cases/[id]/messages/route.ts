@@ -142,9 +142,12 @@ export async function POST(
 }
 
 /**
- * A buyer message under B06: the case session for the resolved case is
- * required, and the sender is always that case's buyer. Client-sent name,
- * privacy and type fields are ignored.
+ * A buyer message under B06. The sender is always the case's own buyer:
+ * client-sent name, privacy and type fields are ignored. A case created
+ * under B06 (it has an access email) requires that case's session. A case
+ * from before B06 has no access email, so its buyer can't hold a session
+ * yet: it keeps the buyer-only path without one (Chief's decision), a known
+ * gap that B07's requested recovery (#33) closes.
  */
 async function postBuyerMessage(request: NextRequest, identifier: string, rawMessage: unknown) {
   // Cookie-authenticated write: same-origin only.
@@ -157,19 +160,24 @@ async function postBuyerMessage(request: NextRequest, identifier: string, rawMes
     // Ids beyond the INTEGER range can't exist: treated like any unknown case, not a database error.
     const isNumeric = /^\d{1,10}$/.test(identifier) && Number(identifier) <= 2_147_483_647;
     const looksNumeric = /^\d+$/.test(identifier);
+    type Found = { id: number; customer_name: string; access_email: string | null };
     const found =
       looksNumeric && !isNumeric
-        ? { rows: [] as { id: number; customer_name: string }[] }
-        : await query<{ id: number; customer_name: string }>(
-            isNumeric ? 'SELECT id, customer_name FROM resolution_cases WHERE id = $1' : 'SELECT id, customer_name FROM resolution_cases WHERE case_number = $1',
+        ? { rows: [] as Found[] }
+        : await query<Found>(
+            isNumeric
+              ? 'SELECT id, customer_name, access_email FROM resolution_cases WHERE id = $1'
+              : 'SELECT id, customer_name, access_email FROM resolution_cases WHERE case_number = $1',
             [isNumeric ? Number(identifier) : identifier.slice(0, 50)],
           );
     const caseRow = found.rows[0];
-    // A missing case and a case without this caller's session look the same.
-    await authorizeCaseSession(pool, {
-      sessionToken: caseRow ? request.cookies.get(caseSessionCookieName(caseRow.id, servedOverHttps()))?.value : undefined,
-      caseId: caseRow?.id ?? 0,
-    });
+    if (!caseRow || caseRow.access_email !== null) {
+      // A missing case and a B06 case without this caller's session look the same.
+      await authorizeCaseSession(pool, {
+        sessionToken: caseRow ? request.cookies.get(caseSessionCookieName(caseRow.id, servedOverHttps()))?.value : undefined,
+        caseId: caseRow?.id ?? 0,
+      });
+    }
     const created = await query<CaseMessageRow>(
       `INSERT INTO case_messages (case_id, sender_type, sender_name, message, is_private, created_at)
        VALUES ($1, 'consumer', $2, $3, false, NOW()) RETURNING *`,
