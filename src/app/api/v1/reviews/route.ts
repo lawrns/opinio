@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isOperationEnabled } from '@/lib/containment';
 import { query, withTransaction } from '@/lib/db';
+import { TRUST_FIELD_ERROR, reviewTrustFieldsIn } from '@/lib/trust-fields';
 import { toPublicReview } from '@/lib/public-reviews';
 import {
   calculateOpinioScore,
@@ -98,6 +99,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Contained (src/lib/containment.ts): an order_id or "reviewed_proof" in
+    // the request body is a claim, not proof. While claims aren't trusted, a
+    // body that makes one (or sets any server-only field) is refused before
+    // any read or write (src/lib/trust-fields.ts).
+    const trustClaims = isOperationEnabled('review_claimed_verification');
+    if (reviewTrustFieldsIn(body, trustClaims).length > 0) {
+      return NextResponse.json({ success: false, error: TRUST_FIELD_ERROR }, { status: 403 });
+    }
+
     // Verify business exists
     const bizRes = await query<BusinessStatsRow>(
       'SELECT id, observed_orders_count, invited_orders_count, median_response_hours FROM businesses WHERE id = $1',
@@ -113,11 +123,6 @@ export async function POST(request: NextRequest) {
 
     let verifiedLevel: 'confirmed_payment' | 'confirmed_store_order' | 'reviewed_proof' | 'unverified_experience' = 'unverified_experience';
     let verifiedOrderId: number | null = null;
-
-    // Contained (src/lib/containment.ts): an order_id or "reviewed_proof" in
-    // the request body is a claim, not proof, so it cannot raise the review's
-    // verification level until buyer proof exists.
-    const trustClaims = isOperationEnabled('review_claimed_verification');
 
     if (!trustClaims) {
       verifiedLevel = 'unverified_experience';

@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { isOperationEnabled } from '@/lib/containment';
-import { containedResponse } from '@/lib/containment-http';
 import { query } from '@/lib/db';
 import { CONSUMER_CONFIRMATION_PENDING_ERROR, consumerConfirmationAttempt } from '@/lib/case-access';
+import { TRUST_FIELD_ERROR } from '@/lib/trust-fields';
 
 interface MessageInput {
-  sender_type: 'consumer' | 'merchant' | 'mediator';
+  sender_type?: unknown;
   sender_name: string;
   message: string;
-  is_private?: boolean;
+  is_private?: unknown;
 }
 
 interface CaseRow {
@@ -26,8 +25,6 @@ interface CaseMessageRow {
   is_private: boolean;
   created_at: string;
 }
-
-const VALID_SENDER_TYPES = ['consumer', 'merchant', 'mediator'] as const;
 
 export async function POST(
   request: NextRequest,
@@ -54,17 +51,12 @@ export async function POST(
       );
     }
 
-    if (!body.sender_type || !VALID_SENDER_TYPES.includes(body.sender_type)) {
-      return NextResponse.json(
-        { success: false, error: 'sender_type debe ser: consumer, merchant o mediator' },
-        { status: 400 }
-      );
-    }
-
-    // Merchant/mediator messages are contained until merchant auth exists;
-    // buyer messages on the case page keep working (src/lib/containment.ts).
-    if (body.sender_type !== 'consumer' && !isOperationEnabled('case_merchant_message')) {
-      return containedResponse();
+    // This public route always speaks for the buyer: who is sending is never
+    // taken from the request. A merchant, mediator or staff sender, or a
+    // private (mediator-only) message, is refused before any write; those
+    // need an authenticated identity (merchant actions, B-series auth).
+    if ((body.sender_type !== undefined && body.sender_type !== null && body.sender_type !== 'consumer') || body.is_private === true) {
+      return NextResponse.json({ success: false, error: TRUST_FIELD_ERROR }, { status: 403 });
     }
 
     if (!body.sender_name || typeof body.sender_name !== 'string' || body.sender_name.trim().length === 0) {
@@ -109,22 +101,14 @@ export async function POST(
        RETURNING *`,
       [
         caseId,
-        body.sender_type,
+        'consumer',
         body.sender_name.trim(),
         body.message.trim(),
-        Boolean(body.is_private),
+        false,
       ]
     );
 
     const createdMessage = msgRes.rows[0];
-
-    // If merchant replies to an opened case, acknowledge it automatically
-    if (body.sender_type === 'merchant' && caseData.status === 'opened') {
-      await query(
-        "UPDATE resolution_cases SET status = 'acknowledged', updated_at = NOW() WHERE id = $1",
-        [caseId]
-      );
-    }
 
     return NextResponse.json(
       {

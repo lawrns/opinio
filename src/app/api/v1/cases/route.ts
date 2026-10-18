@@ -1,11 +1,11 @@
+import { randomInt } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { toPublicCase } from '@/lib/case-access';
+import { CASE_TRUST_FIELDS, TRUST_FIELD_ERROR, trustFieldsIn } from '@/lib/trust-fields';
 
 interface CaseInput {
   business_id: number;
-  review_id?: number | null;
-  order_id?: number | null;
   customer_name: string;
   customer_contact: string;
   issue_category: string;
@@ -46,6 +46,12 @@ interface BusinessRow {
 export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as CaseInput;
+
+    // No client trust fields (status, confirmation, resolution, order/review
+    // link, role): refused before any read or write (src/lib/trust-fields.ts).
+    if (trustFieldsIn(body, CASE_TRUST_FIELDS).length > 0) {
+      return NextResponse.json({ success: false, error: TRUST_FIELD_ERROR }, { status: 403 });
+    }
 
     if (!body.business_id || typeof body.business_id !== 'number') {
       return NextResponse.json(
@@ -107,7 +113,10 @@ export async function POST(request: NextRequest) {
     // Generate unique case_number
     const slugPrefix = business.slug.replace(/[^a-zA-Z0-9]/g, '').slice(0, 4).toUpperCase() || 'GEN';
     const year = new Date().getFullYear();
-    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+    // Same format as before, now from crypto randomness (randomInt). The
+    // number stays guessable by design (public case pages); writes are bound
+    // to the buyer by B06.
+    const randomSuffix = randomInt(1000, 10000);
     const caseNumber = `CASO-${slugPrefix}-${year}-${randomSuffix}`;
 
     // Insert Resolution Case
@@ -120,8 +129,8 @@ export async function POST(request: NextRequest) {
       RETURNING *`,
       [
         body.business_id,
-        body.review_id || null,
-        body.order_id || null,
+        null,
+        null,
         caseNumber,
         body.customer_name.trim(),
         body.customer_contact.trim(),
