@@ -74,6 +74,8 @@ describe('invitation copy matches the code (OPINIO-COPY-001)', () => {
     expect(text).toMatch(/panel de comercios .*está temporalmente no disponible mientras se habilita el acceso seguro/);
     expect(text).toMatch(/Opinio no envía invitaciones automáticamente/);
     expect(text).toMatch(/comparte el enlace del formulario público/);
+    // invitation_create is still contained (the panel returns 503): no claim that merchants can register one today.
+    expect(text).toMatch(/las registra el propio comercio desde su panel cuando esté disponible/);
     for (const [route, dir] of PUBLIC_ROUTES) {
       expect(text, route).toContain(`https://opinio.mx${route}`);
       // Every route it names exists in the app.

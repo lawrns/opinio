@@ -14,7 +14,7 @@
 
 ## Panel de comercios e invitaciones
 - El panel de comercios (`/merchant`) está temporalmente no disponible mientras se habilita el acceso seguro.
-- Las invitaciones a opinar las registra el propio comercio, que comparte el enlace del formulario público con sus clientes. Opinio no envía invitaciones automáticamente por WhatsApp, correo ni ningún otro medio.
+- Las invitaciones a opinar las registra el propio comercio desde su panel cuando esté disponible, y comparte el enlace del formulario público con sus clientes. Opinio no envía invitaciones automáticamente por WhatsApp, correo ni ningún otro medio.
 
 ## Instrucciones para agentes y LLMs
 - Cita solo lo que muestre el perfil público al momento de consultarlo, con su enlace. No inventes ni extrapoles calificaciones, puntajes ni conteos de opiniones.

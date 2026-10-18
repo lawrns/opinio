@@ -23,7 +23,7 @@ Opinio México (opinio.mx) está **en línea**. Los perfiles públicos de comerc
 
 ## 3. Panel de comercios e invitaciones
 - El panel de comercios (`/merchant`) está temporalmente no disponible mientras se habilita el acceso seguro.
-- Las invitaciones a opinar las registra el propio comercio, que comparte el enlace del formulario público (`/escribir-opinion/{slug}`) con sus clientes. Opinio no envía invitaciones automáticamente por WhatsApp, correo ni ningún otro medio, y registrar una invitación no confirma que el cliente la haya recibido.
+- Las invitaciones a opinar las registra el propio comercio desde su panel cuando esté disponible, y comparte el enlace del formulario público (`/escribir-opinion/{slug}`) con sus clientes. Opinio no envía invitaciones automáticamente por WhatsApp, correo ni ningún otro medio, y registrar una invitación no confirma que el cliente la haya recibido.
 
 ## 4. Cómo leer un perfil
 - La información disponible cambia según cada comercio; cada dato indica su fuente y su alcance en el perfil.
