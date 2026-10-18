@@ -7,7 +7,7 @@
 export const CONTAINED_OPERATIONS = {
   merchant_panel: 'All /merchant/** pages (dashboard, inbox, requests, reviews, settings, widgets, insights, integrations)',
   case_merchant_update: 'PATCH /api/v1/cases/[id] (merchant status, remedy, summary)',
-  case_merchant_message: 'POST /api/v1/cases/[id]/messages as merchant or mediator; sendCaseMessageAction',
+  case_merchant_message: 'sendCaseMessageAction (the public POST /api/v1/cases/[id]/messages always records the buyer and refuses other senders)',
   case_remedy: 'updateCaseRemedyAction',
   review_response: 'POST /api/v1/reviews/[id]/responses; postReviewResponseAction',
   business_settings: 'updateBusinessSettingsAction (business profile, RFC and CLEE identity records)',
@@ -37,4 +37,4 @@ export function containedActionResult() {
 }
 
 /** Neutral HTML for contained private pages: no data, noindex. */
-export const MERCHANT_UNAVAILABLE_HTML = `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="robots" content="noindex, nofollow"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Panel temporalmente no disponible | Opinio</title></head><body style="font-family:system-ui,sans-serif;max-width:40rem;margin:4rem auto;padding:0 1.5rem;line-height:1.6"><h1>Panel temporalmente no disponible</h1><p>Estamos habilitando el acceso seguro para comercios. Los perfiles públicos y el seguimiento de casos siguen disponibles.</p><p><a href="/">Volver a Opinio</a></p></body></html>`;
+export const MERCHANT_UNAVAILABLE_HTML = `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="robots" content="noindex, nofollow"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="light"><title>Panel temporalmente no disponible | Opinio</title></head><body style="background:#ffffff;color:#1a1a1a;font-family:system-ui,sans-serif;max-width:40rem;margin:4rem auto;padding:0 1.5rem;line-height:1.6"><h1>Panel temporalmente no disponible</h1><p>Estamos habilitando el acceso seguro para comercios. Los perfiles públicos y el seguimiento de casos siguen disponibles.</p><p><a href="/">Volver a Opinio</a></p></body></html>`;

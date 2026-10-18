@@ -127,6 +127,11 @@ export function CasePortalClient({ initialCase, initialMessages }: Props) {
         }),
       });
 
+      if (res.status === 401) {
+        // B06: writing needs the case access from the emailed link.
+        setErrorMsg('Para escribir en este caso, entra con el enlace que enviamos a tu correo. Si venció, pide uno nuevo en /caso/acceso/reenviar.');
+        return;
+      }
       if (!res.ok) {
         throw new Error('Error al enviar el mensaje.');
       }

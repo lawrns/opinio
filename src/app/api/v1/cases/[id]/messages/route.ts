@@ -1,14 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { isOperationEnabled } from '@/lib/containment';
-import { containedResponse } from '@/lib/containment-http';
-import { query } from '@/lib/db';
+import { pool, query } from '@/lib/db';
 import { CONSUMER_CONFIRMATION_PENDING_ERROR, consumerConfirmationAttempt } from '@/lib/case-access';
+import { TRUST_FIELD_ERROR } from '@/lib/trust-fields';
+import { authorizeCaseSession } from '@/lib/authz';
+import { authzErrorResponse } from '@/lib/authz/http';
+import { servedOverHttps } from '@/lib/authz/https';
+import { caseSessionCookieName } from '@/lib/authz/policy';
+import { buyerProofEnabled } from '@/lib/auth/spike';
+import { sameOrigin } from '@/lib/auth/same-origin';
 
 interface MessageInput {
-  sender_type: 'consumer' | 'merchant' | 'mediator';
+  sender_type?: unknown;
   sender_name: string;
   message: string;
-  is_private?: boolean;
+  is_private?: unknown;
 }
 
 interface CaseRow {
@@ -26,8 +31,6 @@ interface CaseMessageRow {
   is_private: boolean;
   created_at: string;
 }
-
-const VALID_SENDER_TYPES = ['consumer', 'merchant', 'mediator'] as const;
 
 export async function POST(
   request: NextRequest,
@@ -54,17 +57,20 @@ export async function POST(
       );
     }
 
-    if (!body.sender_type || !VALID_SENDER_TYPES.includes(body.sender_type)) {
-      return NextResponse.json(
-        { success: false, error: 'sender_type debe ser: consumer, merchant o mediator' },
-        { status: 400 }
-      );
+    // This public route always speaks for the buyer: who is sending is never
+    // taken from the request. A merchant, mediator or staff sender, or a
+    // private (mediator-only) message, is refused before any write; those
+    // need an authenticated identity (merchant actions, B-series auth).
+    if ((body.sender_type !== undefined && body.sender_type !== null && body.sender_type !== 'consumer') || body.is_private === true) {
+      return NextResponse.json({ success: false, error: TRUST_FIELD_ERROR }, { status: 403 });
     }
 
-    // Merchant/mediator messages are contained until merchant auth exists;
-    // buyer messages on the case page keep working (src/lib/containment.ts).
-    if (body.sender_type !== 'consumer' && !isOperationEnabled('case_merchant_message')) {
-      return containedResponse();
+    // B06: with buyer proof on, a buyer message needs that case's session
+    // from the emailed link; a guessable id or case number is never enough.
+    // Every message reaching this point is a buyer's (sender_type 'consumer'
+    // or absent), so all of them take this branch.
+    if (buyerProofEnabled()) {
+      return postBuyerMessage(request, identifier, body.message);
     }
 
     if (!body.sender_name || typeof body.sender_name !== 'string' || body.sender_name.trim().length === 0) {
@@ -109,22 +115,14 @@ export async function POST(
        RETURNING *`,
       [
         caseId,
-        body.sender_type,
+        'consumer',
         body.sender_name.trim(),
         body.message.trim(),
-        Boolean(body.is_private),
+        false,
       ]
     );
 
     const createdMessage = msgRes.rows[0];
-
-    // If merchant replies to an opened case, acknowledge it automatically
-    if (body.sender_type === 'merchant' && caseData.status === 'opened') {
-      await query(
-        "UPDATE resolution_cases SET status = 'acknowledged', updated_at = NOW() WHERE id = $1",
-        [caseId]
-      );
-    }
 
     return NextResponse.json(
       {
@@ -142,3 +140,52 @@ export async function POST(
     );
   }
 }
+
+/**
+ * A buyer message under B06. The sender is always the case's own buyer:
+ * client-sent name, privacy and type fields are ignored. A case created
+ * under B06 (it has an access email) requires that case's session. A case
+ * from before B06 has no access email, so its buyer can't hold a session
+ * yet: it keeps the buyer-only path without one (Chief's decision), a known
+ * gap that B07's requested recovery (#33) closes.
+ */
+async function postBuyerMessage(request: NextRequest, identifier: string, rawMessage: unknown) {
+  // Cookie-authenticated write: same-origin only.
+  if (!sameOrigin(request)) return NextResponse.json({ success: false, error: 'Origen no permitido' }, { status: 403 });
+  const message = typeof rawMessage === 'string' && rawMessage.length <= 5000 ? rawMessage.trim() : '';
+  if (!message) {
+    return NextResponse.json({ success: false, error: 'El mensaje no puede estar vacío' }, { status: 400 });
+  }
+  try {
+    // Ids beyond the INTEGER range can't exist: treated like any unknown case, not a database error.
+    const isNumeric = /^\d{1,10}$/.test(identifier) && Number(identifier) <= 2_147_483_647;
+    const looksNumeric = /^\d+$/.test(identifier);
+    type Found = { id: number; customer_name: string; access_email: string | null };
+    const found =
+      looksNumeric && !isNumeric
+        ? { rows: [] as Found[] }
+        : await query<Found>(
+            isNumeric
+              ? 'SELECT id, customer_name, access_email FROM resolution_cases WHERE id = $1'
+              : 'SELECT id, customer_name, access_email FROM resolution_cases WHERE case_number = $1',
+            [isNumeric ? Number(identifier) : identifier.slice(0, 50)],
+          );
+    const caseRow = found.rows[0];
+    if (!caseRow || caseRow.access_email !== null) {
+      // A missing case and a B06 case without this caller's session look the same.
+      await authorizeCaseSession(pool, {
+        sessionToken: caseRow ? request.cookies.get(caseSessionCookieName(caseRow.id, servedOverHttps()))?.value : undefined,
+        caseId: caseRow?.id ?? 0,
+      });
+    }
+    const created = await query<CaseMessageRow>(
+      `INSERT INTO case_messages (case_id, sender_type, sender_name, message, is_private, created_at)
+       VALUES ($1, 'consumer', $2, $3, false, NOW()) RETURNING *`,
+      [caseRow.id, caseRow.customer_name, message],
+    );
+    return NextResponse.json({ success: true, message: 'Mensaje agregado al caso exitosamente', data: created.rows[0] }, { status: 201 });
+  } catch (error) {
+    return authzErrorResponse(error);
+  }
+}
+

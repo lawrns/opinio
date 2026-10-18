@@ -5,6 +5,7 @@ import {
   STAFF_INVITATION_TTL_MS,
   caseSessionCookieName,
   caseSessionCookieOptions,
+  parseEmail,
   roleAllows,
 } from './policy';
 import { generateMachineKey, generateSecret, hashSecret } from './secrets';
@@ -48,5 +49,22 @@ describe('authority policy', () => {
     expect(hashSecret(secret)).not.toContain(secret);
     const { key, prefix } = generateMachineKey();
     expect(key.startsWith(`opk_${prefix}_`)).toBe(true);
+  });
+
+  it('parses emails, checking length before any pattern', () => {
+    expect(parseEmail('  Owner@Tienda-A.Example ')).toBe('owner@tienda-a.example');
+    for (const bad of ['', 'no-at', 'a@b', 'a@b.', 'a@@b.mx', 'a b@c.mx', 'a@b..mx', `${'a'.repeat(250)}@b.mx`, null, 42]) {
+      expect(parseEmail(bad), String(bad)).toBeNull();
+    }
+    // A 1 MB body (the reviewer's quadratic case) is rejected without running the pattern.
+    for (const huge of ['a'.repeat(1_000_000), `${'a@'.repeat(500_000)}`, `x@${'a.'.repeat(500_000)}`]) {
+      const started = performance.now();
+      expect(parseEmail(huge)).toBeNull();
+      expect(performance.now() - started).toBeLessThan(20);
+    }
+    // Within the length cap the pattern stays linear even on adversarial input.
+    const started = performance.now();
+    for (let i = 0; i < 1000; i++) parseEmail(`${'a'.repeat(120)}@${'b.'.repeat(60)}`);
+    expect(performance.now() - started).toBeLessThan(200);
   });
 });
