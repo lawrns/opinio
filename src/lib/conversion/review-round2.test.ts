@@ -38,6 +38,13 @@ describe('blog page views are a template, and one allowlist drives every hit', (
     expect(pageForPath('/blog/maria@example.com')).toBeNull();
   });
 
+  it('auth, account, admin and private share routes added on main are never measured', () => {
+    for (const p of ['/acceso', '/acceso/error', '/acceso/verificar', '/cuenta', '/cuenta/negocios', '/admin', '/admin/aprobaciones', '/compartir/abc123token', '/spike', '/merchant', '/merchant/inbox']) {
+      expect(isPublicAnalyticsPath(p), p).toBe(false);
+      expect(analyticsPageLocation(`https://opinio.mx${p}?token=abc&email=a%40b.mx`), p).toBeNull();
+    }
+  });
+
   it('two blog articles in a row are still two page views', () => {
     const source = readFileSync('src/components/Analytics.tsx', 'utf8');
     expect(source).toMatch(/const pagePath = pageLocation \? window\.location\.pathname : null;/);
