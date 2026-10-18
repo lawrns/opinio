@@ -39,6 +39,7 @@ export const RESENAS_DESCRIPTION =
 export interface ResenasFaqItem {
   q: string;
   a: string;
+  answerLink?: { text: string; href: string };
 }
 
 /** The twelve scanned prompts, verbatim, each with its answer. */
@@ -53,6 +54,10 @@ export const RESENAS_FAQ: readonly ResenasFaqItem[] = [
   },
   {
     q: '¿Qué herramienta sirve para que mis clientes dejen reseñas fácilmente en México?',
+    answerLink: {
+      text: 'registras la invitación a un cliente (por WhatsApp o email)',
+      href: '/blog/como-pedir-resenas-por-whatsapp-mexico',
+    },
     a: 'Con Opinio registras la invitación a un cliente (por WhatsApp o email) y compartes el formulario público de opiniones de tu negocio; el cliente deja su experiencia y la opinión se publica en tu perfil con el tipo de comprobante disponible. Así el proceso queda ligado a clientes reales y no a reseñas sueltas.',
   },
   {
