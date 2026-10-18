@@ -4,11 +4,15 @@ import { AuthShell, buttonClass, inputClass, labelClass } from '@/components/aut
 import { pool } from '@/lib/db';
 import { isPlatformAdministrator } from '@/lib/authz/owners';
 import { currentMerchantUserId } from '@/lib/authz/session';
-import { merchantAuthEnabled } from '@/lib/auth/spike';
+import { gatedMetadata, merchantAuthEnabled } from '@/lib/auth/spike';
 import { approveFirstOwnerAction, revokeOwnerApprovalAction } from './actions';
 
 export const dynamic = 'force-dynamic';
-export const metadata: Metadata = { title: 'Aprobaciones — Opinio', robots: { index: false, follow: false } };
+/** Metadata only for platform administrators; everyone else gets a plain 404 (no route title). */
+export async function generateMetadata(): Promise<Metadata> {
+  const admin = merchantAuthEnabled() && (await isPlatformAdministrator(pool, await currentMerchantUserId().catch(() => null)));
+  return gatedMetadata(admin, { title: 'Aprobaciones — Opinio', robots: { index: false, follow: false } });
+}
 
 const RESULT: Record<string, string> = {
   aprobado: 'Propietario aprobado.',

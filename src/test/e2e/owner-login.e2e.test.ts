@@ -579,6 +579,22 @@ describe('switch off (production default)', () => {
       expect((await fetch(`${off.origin}${p}`, { headers: { cookie: cookies.admin } })).status, p).toBe(404);
     }
   });
+
+  it('gives those 404s the same title as a route that does not exist (QA-048)', async () => {
+    const titleOf = (html: string) => html.match(/<title>([^<]*)<\/title>/)?.[1];
+    const plain = await (await fetch(`${off.origin}/no-existe-${Date.now()}`)).text();
+    const routeTitles = /Entrar — Opinio|Confirmar acceso|Revisa tu correo|Enlace no válido|Tu acceso — Opinio|Acceso al comercio|Aprobaciones — Opinio|Invitación — Opinio/;
+    for (const p of ['/acceso', '/acceso/confirmar', '/acceso/revisa-tu-correo', '/acceso/error', '/cuenta', `/cuenta/negocios/${bizA}`, '/admin/aprobaciones', '/cuenta/invitacion']) {
+      const html = await (await fetch(`${off.origin}${p}`)).text();
+      expect(titleOf(html), p).toBe(titleOf(plain));
+      const rsc = await (await fetch(`${off.origin}${p}`, { headers: { RSC: '1' } })).text();
+      expect(html + rsc, p).not.toMatch(routeTitles);
+    }
+    // With the switch on, a signed-in non-administrator's 404 on the approvals page carries no route title either.
+    const notAdmin = await (await fetch(`${app.origin}/admin/aprobaciones`, { headers: { cookie: cookies.owner } })).text();
+    expect(notAdmin).not.toContain('Aprobaciones — Opinio');
+    expect(await (await fetch(`${app.origin}/admin/aprobaciones`, { headers: { cookie: cookies.admin } })).text()).toContain('Aprobaciones — Opinio');
+  });
 });
 
 describe('credential leakage', () => {

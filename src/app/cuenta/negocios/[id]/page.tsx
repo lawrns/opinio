@@ -7,11 +7,13 @@ import { AccessDenied, Unauthenticated, authorizeMerchant } from '@/lib/authz';
 import { roleAllows } from '@/lib/authz/policy';
 import { currentMerchantUserId } from '@/lib/authz/session';
 import { listBusinessTeam } from '@/lib/authz/staff';
-import { merchantAuthEnabled } from '@/lib/auth/spike';
+import { gatedMetadata, merchantAuthEnabled } from '@/lib/auth/spike';
 import { inviteStaffAction, removeStaffAction, revokeInvitationAction } from './actions';
 
 export const dynamic = 'force-dynamic';
-export const metadata: Metadata = { title: 'Acceso al comercio — Opinio', robots: { index: false, follow: false } };
+export function generateMetadata(): Metadata {
+  return gatedMetadata(merchantAuthEnabled(), { title: 'Acceso al comercio — Opinio', robots: { index: false, follow: false } });
+}
 
 const ROLE_LABEL = { owner: 'Propietario', staff: 'Equipo' } as const;
 const METHOD_LABEL: Record<string, string> = {

@@ -2,10 +2,12 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { AuthShell } from '@/components/auth/AuthShell';
-import { merchantAuthEnabled } from '@/lib/auth/spike';
+import { gatedMetadata, merchantAuthEnabled } from '@/lib/auth/spike';
 
 export const dynamic = 'force-dynamic';
-export const metadata: Metadata = { title: 'Revisa tu correo — Opinio', robots: { index: false, follow: false } };
+export function generateMetadata(): Metadata {
+  return gatedMetadata(merchantAuthEnabled(), { title: 'Revisa tu correo — Opinio', robots: { index: false, follow: false } });
+}
 
 /** The same page for every login request, whatever the address or outcome. */
 export default function CheckEmailPage() {

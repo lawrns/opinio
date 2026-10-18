@@ -2,11 +2,13 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { AuthShell } from '@/components/auth/AuthShell';
 import { currentMerchantUserId } from '@/lib/authz/session';
-import { merchantAuthEnabled } from '@/lib/auth/spike';
+import { gatedMetadata, merchantAuthEnabled } from '@/lib/auth/spike';
 import { AcceptInvitation } from './AcceptInvitation';
 
 export const dynamic = 'force-dynamic';
-export const metadata: Metadata = { title: 'Invitación — Opinio', robots: { index: false, follow: false } };
+export function generateMetadata(): Metadata {
+  return gatedMetadata(merchantAuthEnabled(), { title: 'Invitación — Opinio', robots: { index: false, follow: false } });
+}
 
 const RESULT: Record<string, string> = {
   invalid_invitation: 'Esta invitación no es válida: venció, ya se usó o fue retirada. Pide una nueva.',

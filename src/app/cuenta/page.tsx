@@ -5,11 +5,13 @@ import { AuthShell, buttonClass } from '@/components/auth/AuthShell';
 import { pool } from '@/lib/db';
 import { listMemberBusinesses } from '@/lib/authz';
 import { currentMerchantUserId } from '@/lib/authz/session';
-import { merchantAuthEnabled } from '@/lib/auth/spike';
+import { gatedMetadata, merchantAuthEnabled } from '@/lib/auth/spike';
 import { signOutAction } from '@/app/acceso/actions';
 
 export const dynamic = 'force-dynamic';
-export const metadata: Metadata = { title: 'Tu acceso — Opinio', robots: { index: false, follow: false } };
+export function generateMetadata(): Metadata {
+  return gatedMetadata(merchantAuthEnabled(), { title: 'Tu acceso — Opinio', robots: { index: false, follow: false } });
+}
 
 const ROLE_LABEL = { owner: 'Propietario', staff: 'Equipo' } as const;
 
