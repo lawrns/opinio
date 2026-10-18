@@ -77,13 +77,17 @@ Issue [#32](https://github.com/lawrns/opinio/issues/32). Everything here is behi
 
 | Step | Where | Guard |
 |---|---|---|
-| Open a case | `POST /api/v1/cases` | a required private `access_email` and an optional phone that is never emailed; case, first message and a hashed 15-minute token are written in one transaction; a repeated `submission_key` returns the same case with no second message or email; the response never carries the token |
+| Open a case | `POST /api/v1/cases` | a required private `access_email` and an optional phone that is never emailed; at most 5 new cases per client address and 3 per access email every 15 minutes (429, with no case and no email past the limit); case, first message and a hashed 15-minute token are written in one transaction; a repeated `submission_key` returns the same case, with no second message or email, and reports whether the first email was accepted; the response never carries the token |
 | Email | `sendCaseAccessLink` | neutral text and a link to `/caso/acceso#token=…` (fragment only), sent to the access email only; the transport's answer is recorded (`transport_accepted_at` / `transport_failed_at`), and acceptance is not counted as delivery |
 | Open the link | `/caso/acceso` | strips the fragment and loads no analytics; previews and prefetches consume nothing |
 | Exchange | `POST /caso/acceso/entrar` | same-origin only; a conditional UPDATE lets one exchange win; creates a 7-day revocable session for that one case (`opinio_case_<id>` cookie, HttpOnly, SameSite=Lax, `__Host-` over HTTPS); clean redirect to `/caso/<id>` |
 | Proof | `GET /api/v1/cases/<id>/acceso`, `/caso/<id>` | `authorizeCaseSession`: that case's live session only |
 | Leave | `POST /caso/acceso/salir` | revokes the session server-side and clears the cookie |
 | Resend | `/caso/acceso/reenviar` | the same answer for every input; sends to the stored access email only when the case number and address match; retires earlier unused links; at most 3 per case and 10 per client address every 15 minutes |
+
+Buyer messages (`POST /api/v1/cases/<id>/messages` as consumer) need the session for the case they resolve to, by id or case number, from the same origin; the sender is always that case's buyer.
+
+Per-client limits (case creation, resend) key on the last `X-Forwarded-For` entry, as merchant login does. Without exactly one appending reverse proxy, every caller shares one `unknown` bucket. That's a deployment prerequisite.
 
 Nothing here confirms, reopens or otherwise changes a case. Buyer confirmation stays blocked until its own ticket.
 

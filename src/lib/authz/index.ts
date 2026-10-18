@@ -166,7 +166,7 @@ export async function authorizeCaseSession(
   now: Date = new Date(),
 ): Promise<{ type: 'buyer_case_session'; sessionId: number; caseId: number }> {
   if (!input.sessionToken || input.sessionToken.length > 200) throw new Unauthenticated();
-  if (!isPositiveInt(input.caseId)) throw new AccessDenied();
+  if (!isPositiveInt(input.caseId) || input.caseId > 2_147_483_647) throw new AccessDenied(); // beyond INTEGER: cannot exist
   const rows = await authorityQuery<{ id: number }>(
     db,
     `SELECT id FROM case_sessions

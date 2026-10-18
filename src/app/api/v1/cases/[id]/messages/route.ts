@@ -7,6 +7,7 @@ import { authzErrorResponse } from '@/lib/authz/http';
 import { servedOverHttps } from '@/lib/authz/https';
 import { caseSessionCookieName } from '@/lib/authz/policy';
 import { buyerProofEnabled } from '@/lib/auth/spike';
+import { sameOrigin } from '@/lib/auth/same-origin';
 
 interface MessageInput {
   sender_type?: unknown;
@@ -146,16 +147,23 @@ export async function POST(
  * privacy and type fields are ignored.
  */
 async function postBuyerMessage(request: NextRequest, identifier: string, rawMessage: unknown) {
+  // Cookie-authenticated write: same-origin only.
+  if (!sameOrigin(request)) return NextResponse.json({ success: false, error: 'Origen no permitido' }, { status: 403 });
   const message = typeof rawMessage === 'string' && rawMessage.length <= 5000 ? rawMessage.trim() : '';
   if (!message) {
     return NextResponse.json({ success: false, error: 'El mensaje no puede estar vacío' }, { status: 400 });
   }
   try {
-    const isNumeric = /^\d{1,12}$/.test(identifier);
-    const found = await query<{ id: number; customer_name: string }>(
-      isNumeric ? 'SELECT id, customer_name FROM resolution_cases WHERE id = $1' : 'SELECT id, customer_name FROM resolution_cases WHERE case_number = $1',
-      [isNumeric ? Number(identifier) : identifier.slice(0, 50)],
-    );
+    // Ids beyond the INTEGER range can't exist: treated like any unknown case, not a database error.
+    const isNumeric = /^\d{1,10}$/.test(identifier) && Number(identifier) <= 2_147_483_647;
+    const looksNumeric = /^\d+$/.test(identifier);
+    const found =
+      looksNumeric && !isNumeric
+        ? { rows: [] as { id: number; customer_name: string }[] }
+        : await query<{ id: number; customer_name: string }>(
+            isNumeric ? 'SELECT id, customer_name FROM resolution_cases WHERE id = $1' : 'SELECT id, customer_name FROM resolution_cases WHERE case_number = $1',
+            [isNumeric ? Number(identifier) : identifier.slice(0, 50)],
+          );
     const caseRow = found.rows[0];
     // A missing case and a case without this caller's session look the same.
     await authorizeCaseSession(pool, {

@@ -66,3 +66,12 @@ export async function allowCaseLinkResend(
   return hit(db, `case-link-${input.scope}:${input.key}`, input.limit, now);
 }
 
+/** Whether another case with an access email may be opened in this window, for a client address or an access email (hashed). */
+export async function allowCaseCreation(
+  db: Db,
+  input: { scope: 'client' | 'email'; key: string; limit: number },
+  now: Date = new Date(),
+): Promise<boolean> {
+  return hit(db, `case-create-${input.scope}:${input.key}`, input.limit, now);
+}
+

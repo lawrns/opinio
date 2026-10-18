@@ -45,10 +45,10 @@ let ipCounter = 0;
 
 const newKey = () => `e2e-submission-${Date.now()}-${++keyCounter}`;
 
-function createCase(server: AppServer, fields: Record<string, unknown>) {
+function createCase(server: AppServer, fields: Record<string, unknown>, ip = `198.18.${Math.floor(++ipCounter / 250)}.${ipCounter % 250}`) {
   return fetch(`${server.origin}/api/v1/cases`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: { 'content-type': 'application/json', 'x-forwarded-for': ip },
     body: JSON.stringify({
       business_id: bizA,
       customer_name: BUYER,
@@ -192,6 +192,46 @@ describe('new-case contract (switch on)', () => {
   });
 });
 
+describe('case creation limits', () => {
+  it('limits new cases per client address and per access email, with no case and no email past the limit', async () => {
+    const cases = async () => Number((await db.client.query('SELECT count(*) FROM resolution_cases')).rows[0].count);
+    // Per client: 5 per window.
+    const ip = '198.51.100.77';
+    let before = await cases();
+    let mails = mail.messages.length;
+    for (let i = 0; i < 5; i++) expect((await createCase(app, { access_email: `ip-${i}@example.test`, submission_key: newKey() }, ip)).status).toBe(201);
+    const over = await createCase(app, { access_email: 'ip-over@example.test', submission_key: newKey() }, ip);
+    expect(over.status).toBe(429);
+    expect(await cases()).toBe(before + 5);
+    await new Promise((r) => setTimeout(r, 500));
+    expect(mail.messages.length - mails).toBe(5);
+    for (const m of mail.messages.slice(mails)) secrets.add(m.text.match(/token=([A-Za-z0-9_-]+)/)![1]);
+    // Per access email: 3 per window, across client addresses.
+    before = await cases();
+    mails = mail.messages.length;
+    const keys: string[] = [];
+    for (let i = 0; i < 3; i++) {
+      keys.push(newKey());
+      expect((await createCase(app, { access_email: 'many@example.test', submission_key: keys[i] })).status).toBe(201);
+    }
+    expect((await createCase(app, { access_email: 'many@example.test', submission_key: newKey() })).status).toBe(429);
+    expect(await cases()).toBe(before + 3);
+    // A retry of an accepted submission is still answered, without a new case or email.
+    const retry = await createCase(app, { access_email: 'many@example.test', submission_key: keys[0] });
+    expect(retry.status).toBe(200);
+    expect((await retry.json()).access_link).toBe('already_sent');
+    await new Promise((r) => setTimeout(r, 500));
+    expect(mail.messages.length - mails).toBe(3);
+    for (const m of mail.messages.slice(mails)) secrets.add(m.text.match(/token=([A-Za-z0-9_-]+)/)![1]);
+  });
+
+  it('reports a retry honestly when the first email was never accepted', async () => {
+    const key = newKey();
+    expect((await (await createCase(noMail, { access_email: 'retry-fail@example.test', submission_key: key })).json()).access_link).toBe('not_sent');
+    expect((await (await createCase(noMail, { access_email: 'retry-fail@example.test', submission_key: key })).json()).access_link).toBe('not_sent');
+  });
+});
+
 describe('link exchange (ticket verification)', () => {
   it('previews without consuming, exchanges once by same-origin POST, proves only that case, then revokes', async () => {
     const { id, token } = await caseWithLink('verify@example.test');
@@ -283,11 +323,60 @@ describe('link exchange (ticket verification)', () => {
   });
 });
 
+describe('in a real browser', () => {
+  it('strips the fragment, posts only on the button and lands on the verified case', async () => {
+    const { id, token } = await caseWithLink('browser@example.test');
+    const browser = await chromium.launch();
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    const urls: string[] = [];
+    page.on('request', (r) => urls.push(r.url()));
+    await page.goto(`${browserOrigin}/caso/acceso#token=${token}`);
+    await page.getByRole('button', { name: 'Ver mi caso' }).waitFor();
+    expect(page.url()).toBe(`${browserOrigin}/caso/acceso`);
+    expect((await tokenRow(token)).consumed_at).toBeNull(); // opening the page consumed nothing
+    const post = page.waitForRequest((r) => r.url().endsWith('/caso/acceso/entrar'));
+    await page.getByRole('button', { name: 'Ver mi caso' }).click();
+    expect((await post).method()).toBe('POST');
+    await page.waitForURL(`${browserOrigin}/caso/${id}`);
+    await page.getByTestId('case-access-verified').waitFor();
+    expect(urls.filter((u) => u.includes(token))).toEqual([]); // the token never travelled in a URL
+    for (const c of await context.cookies()) secrets.add(c.value);
+    await browser.close();
+  });
+
+  it('keeps an already-loaded gtag silent while navigating into /caso/acceso', async () => {
+    const browser = await chromium.launch();
+    const context = await browser.newContext();
+    await context.addInitScript(() => window.localStorage.setItem('opinio.analytics-consent', 'granted'));
+    const page = await context.newPage();
+    const beacons: string[] = [];
+    await page.route(/googletagmanager\.com\/gtag\/js/, (r) => r.fulfill({ contentType: 'text/javascript', body: '/* stub */' }));
+    await page.route(/google-analytics\.com|analytics\.google\.com|googletagmanager\.com\/g\/collect/, (r) => {
+      beacons.push(r.request().url());
+      return r.abort();
+    });
+    await page.goto(`${browserOrigin}/`);
+    await page.waitForFunction(() => JSON.stringify((window.dataLayer ?? []).map((a) => Array.from(a as ArrayLike<unknown>))).includes('page_view'));
+    const before = await page.evaluate(() => window.dataLayer!.length);
+    const marker = 'SENTINEL_CASE_TOKEN_NOT_A_SECRET';
+    for (const p of [`/caso/acceso#token=${marker}`, '/caso/acceso/reenviar']) {
+      await page.evaluate((u) => window.history.pushState(null, '', u), p);
+      await page.waitForTimeout(300);
+      expect(await page.evaluate(() => Object.keys(window).filter((k) => k.startsWith('ga-disable-')).every((k) => (window as unknown as Record<string, unknown>)[k] === true)), p).toBe(true);
+    }
+    const added = await page.evaluate((i) => JSON.stringify((window.dataLayer ?? []).slice(i).map((a) => Array.from(a as ArrayLike<unknown>))), before);
+    for (const leak of ['/caso/acceso', marker, 'page_view']) expect(added, leak).not.toContain(leak);
+    expect(beacons).toEqual([]);
+    await browser.close();
+  });
+});
+
 describe('buyer writes need the case session (guessable ids are not proof)', () => {
-  const post = (server: AppServer, id: string | number, body: Record<string, unknown>, cookie = '') =>
+  const post = (server: AppServer, id: string | number, body: Record<string, unknown>, cookie = '', origin: string | null = server.origin) =>
     fetch(`${server.origin}/api/v1/cases/${id}/messages`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', ...(cookie ? { cookie } : {}) },
+      headers: { 'content-type': 'application/json', ...(cookie ? { cookie } : {}), ...(origin ? { origin } : {}) },
       body: JSON.stringify(body),
     });
   const messages = async (caseId: number) =>
@@ -305,6 +394,7 @@ describe('buyer writes need the case session (guessable ids are not proof)', () 
       ["another case's session, by case number", other.caseNumber, cookie],
       ["another case's session under this case's cookie name", other.id, `opinio_case_${other.id}=${cookie.split('=')[1]}`],
       ['unknown case', 999_999, cookie],
+      ['id beyond INTEGER', '99999999999', cookie],
     ] as const) {
       const res = await post(app, id, { sender_type: 'consumer', sender_name: 'Comprador', message: 'SENTINEL_CASE_TEXT_B6 intruso' }, c);
       expect(res.status, label).toBe(401);
@@ -321,6 +411,12 @@ describe('buyer writes need the case session (guessable ids are not proof)', () 
     expect(last).toEqual({ sender_type: 'consumer', sender_name: BUYER, message: 'Sigo esperando', is_private: false });
     // By case number too.
     expect((await post(app, own.caseNumber, { sender_type: 'consumer', message: 'Por número' }, cookie)).status).toBe(201);
+    // Cross-site or origin-less, even with the session: refused, nothing written.
+    const count = (await messages(own.id)).length;
+    expect((await post(app, own.id, { sender_type: 'consumer', message: 'csrf' }, cookie, 'https://evil.example')).status).toBe(403);
+    expect((await post(app, own.id, { sender_type: 'consumer', message: 'csrf' }, cookie, null)).status).toBe(403);
+    expect((await messages(own.id)).length).toBe(count);
+    expect(await proofStatus(99999999999 as number, cookie)).toBe(401); // beyond INTEGER: an ordinary denial, not a 503 database error
     // Merchant/mediator messages stay contained, session or not; confirmation stays refused.
     expect((await post(app, own.id, { sender_type: 'merchant', sender_name: 'x', message: 'hola' }, cookie)).status).toBe(403);
     expect((await post(app, own.id, { sender_type: 'consumer', message: 'ok', status: 'resolved_consumer_confirmed' }, cookie)).status).toBe(403);
@@ -371,6 +467,30 @@ describe('resend', () => {
     await new Promise((r) => setTimeout(r, 700));
     expect(mail.messages.length - before).toBe(2); // 1 used above + 2 here = 3 per window
     for (const m of mail.messages.slice(before)) secrets.add(m.text.match(/token=([A-Za-z0-9_-]+)/)![1]);
+  });
+
+  it('bounds resends per client address across cases', async () => {
+    const { caseNumber } = await caseWithLink('client-limit@example.test');
+    const ip = '203.0.113.250';
+    for (let i = 0; i < 10; i++) await resend(`CASO-NONE-2026-${1000 + i}`, 'nobody@example.test', ip); // 10 per window, all mismatches
+    const since = mail.messages.length;
+    const res = await resend(caseNumber, 'client-limit@example.test', ip); // a real match, over the client limit
+    expect(res.headers.get('location')).toBe('/caso/acceso/reenviar?resultado=revisa');
+    await new Promise((r) => setTimeout(r, 700));
+    expect(mail.messages.length).toBe(since);
+  });
+
+  it('lets a buyer whose first email failed get a working link by resend', async () => {
+    const body = await (await createCase(noMail, { access_email: 'after-fail@example.test', submission_key: newKey() })).json();
+    expect(body.access_link).toBe('not_sent');
+    const since = mail.messages.length;
+    await resend(body.case.case_number, 'after-fail@example.test');
+    const message = await mail.waitFor('after-fail@example.test', since);
+    const token = message.text.match(/token=([A-Za-z0-9_-]+)/)![1];
+    secrets.add(token);
+    const res = await exchange(token);
+    expect(res.headers.get('location')).toBe(`/caso/${body.case.id}`);
+    secrets.add(res.headers.get('set-cookie')!.split(';')[0].split('=')[1]);
   });
 
   it('never sends for a legacy case that has no access email', async () => {

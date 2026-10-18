@@ -3,7 +3,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { pool, query } from '@/lib/db';
 import { toPublicCase } from '@/lib/case-access';
 import { CASE_TRUST_FIELDS, TRUST_FIELD_ERROR, trustFieldsIn } from '@/lib/trust-fields';
-import { PHONE_CONTACT, parseEmail } from '@/lib/authz/policy';
+import { CASE_CREATIONS_PER_CLIENT, CASE_CREATIONS_PER_EMAIL, PHONE_CONTACT, parseEmail } from '@/lib/authz/policy';
+import { hashSecret } from '@/lib/authz/secrets';
+import { allowCaseCreation, clientAddress } from '@/lib/auth/rate-limit';
 import { inTransaction } from '@/lib/authz/transaction';
 import { issueCaseAccessToken, recordTransportOutcome } from '@/lib/authz/buyer-access';
 import { sendCaseAccessLink } from '@/lib/auth/case-email';
@@ -225,6 +227,21 @@ async function createCaseWithAccessEmail(request: NextRequest) {
     const business = (await query<BusinessRow>('SELECT id, slug, brand_name, observed_orders_count FROM businesses WHERE id = $1', [body.business_id])).rows[0];
     if (!business) return bad(`Negocio con ID ${body.business_id} no existe`, 404);
 
+    // A retry of an earlier submission is answered before any limit: it sends nothing new.
+    const earlier = submissionKey
+      ? (await query<CaseRow>('SELECT * FROM resolution_cases WHERE business_id = $1 AND submission_key = $2', [business.id, submissionKey])).rows[0]
+      : undefined;
+    if (earlier) return NextResponse.json({ success: true, message: 'Caso de resolución abierto con éxito', case: toPublicCase(earlier), access_link: await firstLinkStatus(earlier.id) }, { status: 200 });
+
+    // Each new case emails its access address: bound it per client address and per recipient (hashed).
+    const client = clientAddress(request.headers.get('x-forwarded-for'));
+    if (
+      !(await allowCaseCreation(pool, { scope: 'client', key: client, limit: CASE_CREATIONS_PER_CLIENT })) ||
+      !(await allowCaseCreation(pool, { scope: 'email', key: hashSecret(accessEmail), limit: CASE_CREATIONS_PER_EMAIL }))
+    ) {
+      return bad('Recibimos muchos casos en poco tiempo. Intenta de nuevo en unos minutos.', 429);
+    }
+
     const outcome = await inTransaction(pool, async (client) => {
       if (submissionKey) {
         const existing = (await client.query<CaseRow>('SELECT * FROM resolution_cases WHERE business_id = $1 AND submission_key = $2', [business.id, submissionKey])).rows[0];
@@ -274,7 +291,7 @@ async function createCaseWithAccessEmail(request: NextRequest) {
         message: 'Caso de resolución abierto con éxito',
         case: toPublicCase(outcome.row),
         // Only whether the transport took the email; never the link itself.
-        access_link: outcome.created ? (linkSent ? 'sent' : 'not_sent') : 'already_sent',
+        access_link: outcome.created ? (linkSent ? 'sent' : 'not_sent') : await firstLinkStatus(outcome.row.id),
       },
       { status: outcome.created ? 201 : 200 },
     );
@@ -282,6 +299,15 @@ async function createCaseWithAccessEmail(request: NextRequest) {
     console.error('[api/v1/cases POST] case with access email failed');
     return bad('Error al abrir el caso de resolución', 500);
   }
+}
+
+/** For a repeated submission: whether the case's first link was accepted by the transport ('already_sent') or not ('not_sent'). */
+async function firstLinkStatus(caseId: number): Promise<'already_sent' | 'not_sent'> {
+  const first = (await query<{ transport_accepted_at: string | null }>(
+    'SELECT transport_accepted_at FROM case_access_tokens WHERE case_id = $1 ORDER BY id LIMIT 1',
+    [caseId],
+  )).rows[0];
+  return first?.transport_accepted_at ? 'already_sent' : 'not_sent';
 }
 
 export async function GET() {

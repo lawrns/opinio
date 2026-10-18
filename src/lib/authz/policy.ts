@@ -76,6 +76,9 @@ export const STAFF_INVITATION_EMAILS_PER_WINDOW = 10;
 /** Buyer access-link resends allowed per window, per case and per client address. */
 export const CASE_LINK_RESENDS_PER_CASE = 3;
 export const CASE_LINK_RESENDS_PER_CLIENT = 10;
+/** New cases with an access email per window: per client address and per access email (each sends one email). */
+export const CASE_CREATIONS_PER_CLIENT = 5;
+export const CASE_CREATIONS_PER_EMAIL = 3;
 /** A Mexican phone contact: digits with optional + and separators, 10–15 digits. Never an email. */
 export const PHONE_CONTACT = /^\+?[\d\s()-]{10,20}$/;
 
