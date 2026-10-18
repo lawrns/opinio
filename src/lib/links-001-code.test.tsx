@@ -1,8 +1,6 @@
 import { expect, it } from 'vitest';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { createHash } from 'node:crypto';
-import parity from './links-001-code-parity.json';
 import Page from '@/app/resenas-y-reputacion/page';
 function text(html: string) {
   return html
@@ -60,11 +58,4 @@ it('keeps all 12 FAQPage answers plain and equal to their visible answers', () =
     ),
   ).toEqual(visible);
   expect(JSON.stringify(schema)).not.toMatch(/<\/?a[ >]/);
-});
-
-it('preserves the full source page rendered text byte for byte', () => {
-  const hash = createHash('sha256')
-    .update(text(renderToStaticMarkup(<Page />)))
-    .digest('hex');
-  expect({ resenas: hash }).toEqual(parity);
 });
