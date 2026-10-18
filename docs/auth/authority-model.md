@@ -1,6 +1,6 @@
-# Authority model (B02)
+# Authority model (B02, B03)
 
-Issue [#28](https://github.com/lawrns/opinio/issues/28). Policy: [ADR 0001](../adr/0001-separate-buyer-business-and-machine-authority.md), [0002](../adr/0002-manual-first-owner-and-requested-recovery.md), [0003](../adr/0003-auth-policy-defaults.md). Terms: [GLOSSARY.md](../../GLOSSARY.md).
+Issues [#28](https://github.com/lawrns/opinio/issues/28) and [#29](https://github.com/lawrns/opinio/issues/29). Policy: [ADR 0001](../adr/0001-separate-buyer-business-and-machine-authority.md), [0002](../adr/0002-manual-first-owner-and-requested-recovery.md), [0003](../adr/0003-auth-policy-defaults.md). Terms: [GLOSSARY.md](../../GLOSSARY.md).
 
 ## Records (`db/migrations`)
 
@@ -8,8 +8,9 @@ Issue [#28](https://github.com/lawrns/opinio/issues/28). Policy: [ADR 0001](../a
 |---|---|
 | `0001_authjs_identity.sql` | Auth.js `users`, `accounts`, `sessions` (cookie stored as SHA-256), `verification_token` |
 | `0002_business_case_machine_authority.sql` | `ownership_approvals`, `business_memberships` (owner/staff, active/revoked), `staff_invitations`, `case_access_tokens`, `case_sessions`, `business_machine_keys`, and `audit_logs.actor_type`/`actor_id` |
+| `0003_owner_login.sql` | `platform_administrators` (with granter), approval `evidence_subject` / `authority_basis` / `evidence_reference` and revocation columns, one active owner per business (partial unique index), `auth_rate_limits` |
 
-Both are additive. They change no existing row and backfill nothing: claimed listings, RFC/CLEE identities and supplied contacts mint no membership. The schema enforces that an owner membership references an approval for that same business and person, that a person has at most one active membership per business, that revoked rows carry a revocation time, and that machine scopes are only `order_events` and `invitations`. Every secret column holds a SHA-256 digest.
+All are additive. They change no existing row and backfill nothing: claimed listings, RFC/CLEE identities and supplied contacts mint no membership. The schema enforces that an owner membership references an approval for that same business and person, that a person has at most one active membership per business, that revoked rows carry a revocation time, and that machine scopes are only `order_events` and `invitations`. Every secret column holds a SHA-256 digest.
 
 ```sh
 DATABASE_URL=postgres://… node scripts/migrate-auth.mjs          # dry run: lists pending, writes nothing
@@ -36,3 +37,22 @@ Every call reads Postgres, so a revoked membership, session or key fails on the 
 `/api/spike/authz/businesses/[id]` (member read, owner write), `/api/spike/authz/cases/[id]` (buyer read) and `/api/spike/authz/order-events` (machine write) exist only with `OPINIO_AUTH_SPIKE=1` and return 404 otherwise. No containment or merchant operation is reopened here; B08–B15 reopen operations one at a time.
 
 `pnpm test:e2e` runs the migration upgrade over synthetic legacy data and the HTTP denial matrix. The suite asserts from Postgres's own statement log that denied requests run no private query or write.
+
+## Merchant login and first owners (B03)
+
+Everything here is 404 unless `OPINIO_MERCHANT_AUTH=1`.
+
+| Step | Where | Guard |
+|---|---|---|
+| Request a link | `/acceso` server action | `parseEmail` checks length before any pattern; rate limits per client (10), per client and email (3) and per email (10) every 15 minutes, client counted first; same answer for every outcome |
+| Open the link | `/acceso/confirmar#token=…&email=…` | the fragment never reaches the server; the page strips it and loads no analytics |
+| Exchange | `POST /acceso/confirmar/entrar` | same-origin only (`Sec-Fetch-Site`, else `Origin`); calls Auth.js's callback in-process so the token never appears in a request URL |
+| Closed to outside callers | `POST /api/auth/signin/*`, `GET /api/auth/callback/nodemailer` | 404, so links can't be requested around the rate limits or exchanged by URL |
+| Account | `/cuenta`, `/cuenta/negocios/[id]` | `listMemberBusinesses` / `authorizeMerchant` on every request |
+| Approve or revoke a first owner | `/admin/aprobaciones` | platform administrators only (404 otherwise); `approveFirstOwner` and `revokeOwnerApproval` run in one transaction each and are audited |
+| Grant an administrator | `scripts/grant-admin.mjs` | outside the app only; after the first, names an existing administrator as granter; audited; remote hosts need `--confirm-host` |
+
+An approval records how control was checked (`domain_email`, `dns` or `business_callback`), what was checked (the domain, or the business's own phone in E.164), the documented authority and a restricted evidence reference such as `VER-1042`. Revoking it revokes the owner membership it backs, so access ends on the next request.
+
+The per-client limit keys on the last `X-Forwarded-For` entry, which the single reverse proxy in front of the app appends. With more than one proxy, or none, that assumption must be revisited before production.
+

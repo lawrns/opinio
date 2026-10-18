@@ -145,17 +145,17 @@ export async function authorizeMerchant(
 export async function listMemberBusinesses(
   db: Db,
   userId: number | null | undefined,
-): Promise<{ businessId: number; slug: string; role: BusinessRole }[]> {
+): Promise<{ businessId: number; slug: string; brandName: string; role: BusinessRole }[]> {
   if (!isPositiveInt(userId)) throw new Unauthenticated();
-  const rows = await authorityQuery<{ business_id: number; slug: string; role: BusinessRole }>(
+  const rows = await authorityQuery<{ business_id: number; slug: string; brand_name: string; role: BusinessRole }>(
     db,
-    `SELECT m.business_id, b.slug, m.role
+    `SELECT m.business_id, b.slug, b.brand_name, m.role
        FROM business_memberships m JOIN businesses b ON b.id = m.business_id
       WHERE m.user_id = $1 AND m.status = 'active'
       ORDER BY b.slug`,
     [userId],
   );
-  return rows.map((r) => ({ businessId: r.business_id, slug: r.slug, role: r.role }));
+  return rows.map((r) => ({ businessId: r.business_id, slug: r.slug, brandName: r.brand_name, role: r.role }));
 }
 
 /** Allows a buyer only through an unrevoked, unexpired session for this exact case. */
@@ -202,6 +202,8 @@ export async function authorizeMachineKey(
 /** Controlled audit event names. Add new ones here, never free text. */
 export type AuditAction =
   | 'ownership.approved'
+  | 'ownership.approval_revoked'
+  | 'administrator.granted'
   | 'ownership.transferred'
   | 'membership.granted'
   | 'membership.revoked'

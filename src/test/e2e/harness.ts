@@ -5,7 +5,7 @@
  * temp directory, and the sink accepts every message and stores it in memory.
  */
 import { spawn, execFileSync, type ChildProcess } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, existsSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdtempSync, readFileSync, rmSync, existsSync, writeFileSync } from 'node:fs';
 import { createServer, type AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -153,14 +153,22 @@ export async function startMailSink(): Promise<MailSink> {
 }
 
 /** Runs `next build` into a dedicated dist dir unless it is already built. */
+/** Synthetic Google Analytics id baked into the e2e build. */
+export const E2E_GA_ID = 'G-E2ETEST000';
+
 export function buildApp(distDir: string): string {
   const serverJs = path.join(ROOT, distDir, 'standalone', 'server.js');
   if (process.env.OPINIO_E2E_SKIP_BUILD === '1' && existsSync(serverJs)) return serverJs;
   execFileSync(process.execPath, [path.join(ROOT, 'node_modules/next/dist/bin/next'), 'build'], {
     cwd: ROOT,
-    env: { ...process.env, OPINIO_NEXT_DIST_DIR: distDir, NEXT_TELEMETRY_DISABLED: '1' },
+    // A synthetic GA id makes the build render the analytics component, so
+    // tests can check it stays silent on private pages.
+    env: { ...process.env, OPINIO_NEXT_DIST_DIR: distDir, NEXT_TELEMETRY_DISABLED: '1', NEXT_PUBLIC_GA_MEASUREMENT_ID: E2E_GA_ID },
     stdio: 'pipe',
   });
+  // Standalone output leaves static assets out; browser tests need them served.
+  cpSync(path.join(ROOT, distDir, 'static'), path.join(ROOT, distDir, 'standalone', distDir, 'static'), { recursive: true });
+  cpSync(path.join(ROOT, 'public'), path.join(ROOT, distDir, 'standalone', 'public'), { recursive: true });
   return serverJs;
 }
 

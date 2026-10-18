@@ -4,6 +4,7 @@ import PostgresAdapter from '@auth/pg-adapter';
 import { pool } from '@/lib/db';
 import { strictAdapter } from '@/lib/auth/adapter';
 import { sanitizedAuthLogger } from '@/lib/auth/logger';
+import { sendLoginEmail } from '@/lib/auth/login-email';
 import { ACCESS_LINK_TTL_MS, SESSION_TTL_MS } from '@/lib/authz/policy';
 
 // Approved defaults (spec #26), single-sourced in the authority policy.
@@ -11,9 +12,9 @@ export const EMAIL_LINK_MAX_AGE_SECONDS = ACCESS_LINK_TTL_MS / 1000;
 export const SESSION_MAX_AGE_SECONDS = SESSION_TTL_MS / 1000;
 
 /**
- * Merchant email login (B01 spike, issue #27). Test runs point
- * AUTH_EMAIL_SERVER at a local mail sink; no production sender is configured
- * or approved. Every entry point is gated by `authSpikeEnabled()`.
+ * Merchant email login (B01 #27, B03 #29). Test runs point AUTH_EMAIL_SERVER
+ * at a local mail sink; no production sender is configured or approved.
+ * Every entry point is gated by `merchantAuthEnabled()` or the B01 spike.
  *
  * The config is built lazily, per request, and the Nodemailer provider is
  * added only when a mail server is configured: the provider throws without
@@ -28,9 +29,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth(() => ({
           server: process.env.AUTH_EMAIL_SERVER,
           from: process.env.AUTH_EMAIL_FROM,
           maxAge: EMAIL_LINK_MAX_AGE_SECONDS,
+          sendVerificationRequest: sendLoginEmail,
         }),
       ]
     : [],
   session: { strategy: 'database', maxAge: SESSION_MAX_AGE_SECONDS },
+  pages: { signIn: '/acceso', verifyRequest: '/acceso/revisa-tu-correo', error: '/acceso/error' },
   logger: sanitizedAuthLogger,
 }));

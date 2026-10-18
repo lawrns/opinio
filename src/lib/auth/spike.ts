@@ -7,6 +7,15 @@ export function authSpikeEnabled(): boolean {
   return process.env.OPINIO_AUTH_SPIKE === '1';
 }
 
+/**
+ * Merchant login switch (B03, issue #29): /acceso, /cuenta, /admin/aprobaciones
+ * and the Auth.js endpoints. Off unless OPINIO_MERCHANT_AUTH=1; production
+ * stays off until the email sender and secrets administrator are designated.
+ */
+export function merchantAuthEnabled(): boolean {
+  return process.env.OPINIO_MERCHANT_AUTH === '1';
+}
+
 /** Private, non-cacheable, non-indexable response headers for auth surfaces. */
 export const PRIVATE_HEADERS = {
   'Cache-Control': 'private, no-store',
