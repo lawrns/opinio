@@ -159,7 +159,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: true,
-        message: 'Invitación de opinión enviada exitosamente',
+        message: 'Invitación de opinión registrada',
         invitation: createdInvitation,
         review_url: `https://opinio.mx/opinar/${token}`,
         business_metrics: {
@@ -174,7 +174,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('[api/v1/invitations POST] Error:', error);
     return NextResponse.json(
-      { success: false, error: 'Error al enviar la invitación' },
+      { success: false, error: 'Error al registrar la invitación' },
       { status: 500 }
     );
   }

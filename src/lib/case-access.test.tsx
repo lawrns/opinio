@@ -268,13 +268,17 @@ describe('merchant flows keep working once re-enabled', () => {
     ]);
   });
 
-  it('merchant and buyer messages are still accepted', async () => {
-    for (const sender_type of ['merchant', 'consumer'] as const) {
-      const res = await postMessage(
-        jsonRequest('http://localhost/api/v1/cases/7/messages', 'POST', { sender_type, sender_name: 'Comprador', message: 'Hola' }),
-        caseParams
-      );
-      expect(res.status).toBe(201);
-    }
+  it('the public messages route still records only the buyer (OPINIO-CASES-AUTHZ-2)', async () => {
+    const buyer = await postMessage(
+      jsonRequest('http://localhost/api/v1/cases/7/messages', 'POST', { sender_type: 'consumer', sender_name: 'Comprador', message: 'Hola' }),
+      caseParams
+    );
+    expect(buyer.status).toBe(201);
+    // Merchant replies need an authenticated identity, not this public route.
+    const merchant = await postMessage(
+      jsonRequest('http://localhost/api/v1/cases/7/messages', 'POST', { sender_type: 'merchant', sender_name: 'Soporte', message: 'Hola' }),
+      caseParams
+    );
+    expect(merchant.status).toBe(403);
   });
 });

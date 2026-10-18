@@ -17,6 +17,40 @@ const nextConfig: NextConfig = {
         ],
       },
       {
+        // Login, account and approval screens: never indexed, never forward
+        // their URL (the login confirmation page handles a token fragment).
+        source: "/:area(acceso|cuenta|admin)/:path*",
+        headers: [
+          { key: "Referrer-Policy", value: "no-referrer" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow" },
+        ],
+      },
+      {
+        source: "/:area(acceso|cuenta|admin)",
+        headers: [
+          { key: "Referrer-Policy", value: "no-referrer" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow" },
+        ],
+      },
+      {
+        // Buyer case access (B06): the landing page handles a token fragment
+        // and the exchange/resend routes carry case identifiers.
+        source: "/caso/:area(acceso|recuperar)/:path*",
+        headers: [
+          { key: "Referrer-Policy", value: "no-referrer" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow" },
+          { key: "Cache-Control", value: "private, no-store" },
+        ],
+      },
+      {
+        source: "/caso/:area(acceso|recuperar)",
+        headers: [
+          { key: "Referrer-Policy", value: "no-referrer" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow" },
+          { key: "Cache-Control", value: "private, no-store" },
+        ],
+      },
+      {
         // Embeddable widgets are served for cross-origin <iframe> use on
         // merchant sites (see src/components/WidgetsCustomizer.tsx), so they
         // must stay frameable and must not forward the host page URL.

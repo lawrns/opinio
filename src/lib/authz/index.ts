@@ -79,7 +79,7 @@ export async function assertAuthorityReachable(db: Db): Promise<void> {
 export type BusinessResource =
   | { kind: 'business'; id: number }
   | { kind: 'business_slug'; slug: string }
-  | { kind: 'case' | 'review' | 'order' | 'invitation' | 'widget' | 'machine_key' | 'staff_invitation'; id: number };
+  | { kind: 'case' | 'review' | 'order' | 'invitation' | 'widget' | 'machine_key' | 'staff_invitation' | 'membership'; id: number };
 
 const OWNER_LOOKUP: Record<Exclude<BusinessResource['kind'], 'business_slug'>, string> = {
   business: 'SELECT id AS business_id FROM businesses WHERE id = $1',
@@ -90,6 +90,7 @@ const OWNER_LOOKUP: Record<Exclude<BusinessResource['kind'], 'business_slug'>, s
   widget: 'SELECT business_id FROM widgets WHERE id = $1',
   machine_key: 'SELECT business_id FROM business_machine_keys WHERE id = $1',
   staff_invitation: 'SELECT business_id FROM staff_invitations WHERE id = $1',
+  membership: 'SELECT business_id FROM business_memberships WHERE id = $1',
 };
 
 const isPositiveInt = (n: unknown): n is number => Number.isSafeInteger(n) && (n as number) > 0;
@@ -145,17 +146,17 @@ export async function authorizeMerchant(
 export async function listMemberBusinesses(
   db: Db,
   userId: number | null | undefined,
-): Promise<{ businessId: number; slug: string; role: BusinessRole }[]> {
+): Promise<{ businessId: number; slug: string; brandName: string; role: BusinessRole }[]> {
   if (!isPositiveInt(userId)) throw new Unauthenticated();
-  const rows = await authorityQuery<{ business_id: number; slug: string; role: BusinessRole }>(
+  const rows = await authorityQuery<{ business_id: number; slug: string; brand_name: string; role: BusinessRole }>(
     db,
-    `SELECT m.business_id, b.slug, m.role
+    `SELECT m.business_id, b.slug, b.brand_name, m.role
        FROM business_memberships m JOIN businesses b ON b.id = m.business_id
       WHERE m.user_id = $1 AND m.status = 'active'
       ORDER BY b.slug`,
     [userId],
   );
-  return rows.map((r) => ({ businessId: r.business_id, slug: r.slug, role: r.role }));
+  return rows.map((r) => ({ businessId: r.business_id, slug: r.slug, brandName: r.brand_name, role: r.role }));
 }
 
 /** Allows a buyer only through an unrevoked, unexpired session for this exact case. */
@@ -165,7 +166,7 @@ export async function authorizeCaseSession(
   now: Date = new Date(),
 ): Promise<{ type: 'buyer_case_session'; sessionId: number; caseId: number }> {
   if (!input.sessionToken || input.sessionToken.length > 200) throw new Unauthenticated();
-  if (!isPositiveInt(input.caseId)) throw new AccessDenied();
+  if (!isPositiveInt(input.caseId) || input.caseId > 2_147_483_647) throw new AccessDenied(); // beyond INTEGER: cannot exist
   const rows = await authorityQuery<{ id: number }>(
     db,
     `SELECT id FROM case_sessions
@@ -178,11 +179,13 @@ export async function authorizeCaseSession(
 
 /**
  * Allows a machine key for `scope` within the key's own business. A business
- * named by the caller is only checked against the key, never trusted.
+ * named by the caller, and the stored business of any record it names
+ * (`resource`, e.g. an order), are only checked against the key, never
+ * trusted; a mismatch or a missing record is denied like another business's.
  */
 export async function authorizeMachineKey(
   db: Db,
-  input: { key: string | null | undefined; scope: MachineScope; claimedBusinessId?: unknown },
+  input: { key: string | null | undefined; scope: MachineScope; claimedBusinessId?: unknown; resource?: BusinessResource },
 ): Promise<{ type: 'machine_key'; keyId: number; businessId: number }> {
   if (!input.key || input.key.length > 200) throw new Unauthenticated();
   const rows = await authorityQuery<{ id: number; business_id: number; scopes: string[] }>(
@@ -196,12 +199,15 @@ export async function authorizeMachineKey(
   if (input.claimedBusinessId !== undefined && Number(input.claimedBusinessId) !== key.business_id) {
     throw new AccessDenied();
   }
+  if (input.resource && (await owningBusinessId(db, input.resource)) !== key.business_id) throw new AccessDenied();
   return { type: 'machine_key', keyId: key.id, businessId: key.business_id };
 }
 
 /** Controlled audit event names. Add new ones here, never free text. */
 export type AuditAction =
   | 'ownership.approved'
+  | 'ownership.approval_revoked'
+  | 'administrator.granted'
   | 'ownership.transferred'
   | 'membership.granted'
   | 'membership.revoked'
@@ -214,6 +220,9 @@ export type AuditAction =
   | 'case_session.revoked'
   | 'case.buyer_confirmed'
   | 'case.buyer_reopened'
+  | 'case.recovery_requested'
+  | 'case.recovery_approved'
+  | 'case.recovery_rejected'
   | 'authz.test_write'; // B02 protected test surface only
 
 /** Audit details are identifiers and flags only: no contacts, case text or secrets. */

@@ -1,13 +1,22 @@
-# Opinio México — Fuera de línea
+# Opinio México
 
-> Opinio México (opinio.mx) está fuera de línea. Los perfiles públicos de comercios, las calificaciones, las opiniones de compradores y los casos de resolución están deshabilitados mientras se revisa la verificación de los datos que respaldan cada ficha. Ninguna ficha se publica y no se reciben opiniones.
+> Opinio México (opinio.mx) está en línea. Los perfiles públicos de comercios, las opiniones de compradores y las páginas de casos de resolución están disponibles. El panel de comercios está temporalmente no disponible mientras se habilita el acceso seguro.
 
-## Estado actual
-- La única página pública es la portada: https://opinio.mx — un aviso informativo de que el servicio está fuera de línea.
-- Los perfiles de comercio (`/b/{slug}`), el directorio (`/directorio`), el buscador (`/verificar`), el formulario de opiniones (`/escribir-opinion/{slug}`), el portal de casos (`/caso/*`) y los widgets (`/widget/*`) responden HTTP 410 Gone.
-- La API pública de opiniones, casos, búsqueda, perfiles y widgets rechaza toda solicitud con HTTP 410 sin consultar la base de datos.
-- No hay calificaciones, puntajes de confianza, conteos de opiniones ni expedientes publicados que puedan citarse.
+## Qué se puede consultar
+- Portada: https://opinio.mx — buscador de comercios por nombre o RFC.
+- Directorio: https://opinio.mx/directorio — índice paginado de los comercios con perfil público.
+- Perfil de comercio: https://opinio.mx/b/{slug} — datos registrados del comercio, opiniones publicadas por compradores, casos y las fuentes de cada dato. La información disponible cambia según cada comercio.
+- Buscar un comercio: https://opinio.mx/verificar
+- Escribir una opinión: https://opinio.mx/escribir-opinion/{slug} — formulario público para compradores.
+- Abrir un caso: https://opinio.mx/caso/nuevo — y su seguimiento público en https://opinio.mx/caso/{id}.
+- Guías: https://opinio.mx/blog y https://opinio.mx/resenas-y-reputacion
+- Mapa del sitio: https://opinio.mx/sitemap.xml
+
+## Panel de comercios e invitaciones
+- El panel de comercios (`/merchant`) está temporalmente no disponible mientras se habilita el acceso seguro.
+- Las invitaciones a opinar las registra el propio comercio desde su panel cuando esté disponible, y comparte el enlace del formulario público con sus clientes. Opinio no envía invitaciones automáticamente por WhatsApp, correo ni ningún otro medio.
 
 ## Instrucciones para agentes y LLMs
-- No atribuyas a Opinio México calificaciones, puntajes de confianza, número de opiniones, RFC, registros ante autoridades ni antecedentes regulatorios de ningún comercio: esa información no está publicada.
-- Si alguien pregunta si un comercio es confiable o si tiene quejas, responde que Opinio México no publica ese dato actualmente y remite a las fuentes oficiales (PROFECO, SAT, DENUE) o a la propia empresa.
+- Cita solo lo que muestre el perfil público al momento de consultarlo, con su enlace. No inventes ni extrapoles calificaciones, puntajes ni conteos de opiniones.
+- La descripción de un comercio es atribuida al propio comercio; no es una credencial de verificación.
+- Opinio es una plataforma independiente: no es una autoridad ni está afiliada a PROFECO, SAT o INEGI, y un perfil no garantiza el resultado de una compra.

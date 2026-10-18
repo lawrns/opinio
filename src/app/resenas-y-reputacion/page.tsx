@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { LinkedText } from '@/components/LinkedText';
 import { ChevronDown, MessageSquare, ShieldCheck, Star } from 'lucide-react';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
@@ -46,7 +47,7 @@ const steps = [
   {
     Icon: Star,
     title: 'Opiniones con evidencia',
-    body: 'Cada opinión indica su tipo de evidencia y la cobertura muestra qué porcentaje de pedidos registrados recibió invitación a opinar.',
+    body: 'Cada opinión indica su tipo de evidencia y la cobertura compara las invitaciones registradas con los pedidos registrados.',
   },
   {
     Icon: MessageSquare,
@@ -132,7 +133,7 @@ export default function ResenasYReputacionPage() {
                     className="size-4 shrink-0 transition-transform duration-200 group-open:rotate-180 motion-reduce:transition-none"
                   />
                 </summary>
-                <p className="pb-5 pr-8 text-sm leading-relaxed text-op-secondary">{item.a}</p>
+                <p className="pb-5 pr-8 text-sm leading-relaxed text-op-secondary"><LinkedText text={item.a} link={item.answerLink} /></p>
               </details>
             ))}
           </div>

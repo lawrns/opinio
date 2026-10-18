@@ -32,7 +32,23 @@ const AUTHORITY_TABLES = [
   'case_access_tokens',
   'case_sessions',
   'business_machine_keys',
+  'platform_administrators',
+  'case_recovery_requests',
 ] as const;
+
+const MIGRATIONS = [
+  '0001_authjs_identity.sql',
+  '0002_business_case_machine_authority.sql',
+  '0003_owner_login.sql',
+  '0004_staff_and_transfer.sql',
+  '0005_buyer_case_access.sql',
+  '0006_case_recovery.sql',
+];
+
+/** Columns the migrations add to legacy tables; digests compare legacy columns only, and these are checked NULL separately. */
+const ADDED_COLUMNS: Partial<Record<(typeof LEGACY_TABLES)[number], string[]>> = {
+  resolution_cases: ['access_email', 'submission_key'],
+};
 
 let db: TestDatabase;
 
@@ -64,7 +80,7 @@ async function snapshot(client: Client) {
   const out: Record<string, string> = {};
   for (const table of LEGACY_TABLES) {
     const { rows } = await client.query(
-      `SELECT count(*)::int AS n, md5(coalesce(string_agg(to_jsonb(t)::text, '|' ORDER BY t.id), '')) AS digest FROM ${table} t`,
+      `SELECT count(*)::int AS n, md5(coalesce(string_agg((to_jsonb(t)${(ADDED_COLUMNS[table] ?? []).map((c) => ` - '${c}'`).join('')})::text, '|' ORDER BY t.id), '')) AS digest FROM ${table} t`,
     );
     out[table] = `${rows[0].n}:${rows[0].digest}`;
   }
@@ -83,10 +99,7 @@ afterAll(async () => {
 describe('auth migrations over existing data', () => {
   it('dry run lists both migrations and changes nothing', async () => {
     const before = await snapshot(db.client);
-    expect(await applyAuthMigrations(db.client, { dryRun: true })).toEqual([
-      '0001_authjs_identity.sql',
-      '0002_business_case_machine_authority.sql',
-    ]);
+    expect(await applyAuthMigrations(db.client, { dryRun: true })).toEqual(MIGRATIONS);
     expect(await snapshot(db.client)).toEqual(before);
     const { rows } = await db.client.query(
       "SELECT to_regclass('business_memberships') AS a, to_regclass('auth_schema_migrations') AS b",
@@ -100,7 +113,7 @@ describe('auth migrations over existing data', () => {
     await second.connect();
     const [a, b] = await Promise.all([applyAuthMigrations(db.client), applyAuthMigrations(second)]);
     await second.end();
-    expect([...a, ...b].sort()).toEqual(['0001_authjs_identity.sql', '0002_business_case_machine_authority.sql']);
+    expect([...a, ...b].sort()).toEqual(MIGRATIONS);
     expect(await applyAuthMigrations(db.client)).toEqual([]);
 
     const after = await snapshot(db.client);
@@ -112,6 +125,9 @@ describe('auth migrations over existing data', () => {
     for (const table of LEGACY_TABLES.filter((t) => t !== 'audit_logs')) {
       expect(after[table], table).toBe(before[table]);
     }
+    // Legacy cases gain no access email or submission key: no retroactive campaign.
+    const { rows: added } = await db.client.query('SELECT count(*)::int AS n FROM resolution_cases WHERE access_email IS NOT NULL OR submission_key IS NOT NULL');
+    expect(added[0].n).toBe(0);
   });
 
   it('mints no identity, membership, key or case access from claimed listings, RFCs or contacts', async () => {
@@ -157,8 +173,8 @@ describe('auth migrations over existing data', () => {
     const {
       rows: [approval],
     } = await c.query(
-      `INSERT INTO ownership_approvals (business_id, subject_user_id, kind, evidence_method, approved_by_user_id)
-       VALUES (1, 2, 'first_owner', 'dns', 1) RETURNING id`,
+      `INSERT INTO ownership_approvals (business_id, subject_user_id, kind, evidence_method, approved_by_user_id, authority_basis, evidence_reference)
+       VALUES (1, 2, 'first_owner', 'dns', 1, 'owner_of_record', 'VER-1') RETURNING id`,
     );
     // The same approval cannot back an owner of another business, or another person.
     await expect(
