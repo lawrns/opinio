@@ -220,6 +220,9 @@ export type AuditAction =
   | 'case_session.revoked'
   | 'case.buyer_confirmed'
   | 'case.buyer_reopened'
+  | 'case.recovery_requested'
+  | 'case.recovery_approved'
+  | 'case.recovery_rejected'
   | 'authz.test_write'; // B02 protected test surface only
 
 /** Audit details are identifiers and flags only: no contacts, case text or secrets. */

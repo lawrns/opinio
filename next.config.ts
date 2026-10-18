@@ -35,7 +35,7 @@ const nextConfig: NextConfig = {
       {
         // Buyer case access (B06): the landing page handles a token fragment
         // and the exchange/resend routes carry case identifiers.
-        source: "/caso/acceso/:path*",
+        source: "/caso/:area(acceso|recuperar)/:path*",
         headers: [
           { key: "Referrer-Policy", value: "no-referrer" },
           { key: "X-Robots-Tag", value: "noindex, nofollow" },
@@ -43,7 +43,7 @@ const nextConfig: NextConfig = {
         ],
       },
       {
-        source: "/caso/acceso",
+        source: "/caso/:area(acceso|recuperar)",
         headers: [
           { key: "Referrer-Policy", value: "no-referrer" },
           { key: "X-Robots-Tag", value: "noindex, nofollow" },

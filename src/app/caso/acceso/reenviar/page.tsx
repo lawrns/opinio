@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { AuthShell, buttonClass, inputClass, labelClass } from '@/components/auth/AuthShell';
@@ -31,6 +32,12 @@ export default async function ResendPage({ searchParams }: { searchParams: Promi
           </div>
           <button type="submit" className={buttonClass}>Enviar enlace nuevo</button>
         </form>
+      )}
+      {!done && (
+        <p>
+          ¿Abriste tu caso antes de que pidiéramos un correo privado?{' '}
+          <Link href="/caso/recuperar" className="font-bold underline">Solicita recuperar el acceso</Link>.
+        </p>
       )}
     </AuthShell>
   );

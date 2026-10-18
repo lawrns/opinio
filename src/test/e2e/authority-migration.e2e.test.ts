@@ -33,6 +33,7 @@ const AUTHORITY_TABLES = [
   'case_sessions',
   'business_machine_keys',
   'platform_administrators',
+  'case_recovery_requests',
 ] as const;
 
 const MIGRATIONS = [
@@ -41,6 +42,7 @@ const MIGRATIONS = [
   '0003_owner_login.sql',
   '0004_staff_and_transfer.sql',
   '0005_buyer_case_access.sql',
+  '0006_case_recovery.sql',
 ];
 
 /** Columns the migrations add to legacy tables; digests compare legacy columns only, and these are checked NULL separately. */

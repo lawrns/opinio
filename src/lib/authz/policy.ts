@@ -79,6 +79,11 @@ export const CASE_LINK_RESENDS_PER_CLIENT = 10;
 /** New cases with an access email per window: per client address and per access email (each sends one email). */
 export const CASE_CREATIONS_PER_CLIENT = 5;
 export const CASE_CREATIONS_PER_EMAIL = 3;
+/** Legacy recovery requests per client address per window. */
+export const CASE_RECOVERY_REQUESTS_PER_CLIENT = 10;
+/** How an administrator verified a legacy recovery out of band (ADR 0005). */
+export const RECOVERY_BASES = ['order_record', 'merchant_record', 'buyer_callback', 'other_documented'] as const;
+export type RecoveryBasis = (typeof RECOVERY_BASES)[number];
 /** A Mexican phone contact: digits with optional + and separators, 10–15 digits. Never an email. */
 export const PHONE_CONTACT = /^\+?[\d\s()-]{10,20}$/;
 
