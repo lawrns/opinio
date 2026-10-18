@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { query } from '@/lib/db';
+import { pool, query } from '@/lib/db';
 import { CONSUMER_CONFIRMATION_PENDING_ERROR, consumerConfirmationAttempt } from '@/lib/case-access';
 import { TRUST_FIELD_ERROR } from '@/lib/trust-fields';
+import { authorizeCaseSession } from '@/lib/authz';
+import { authzErrorResponse } from '@/lib/authz/http';
+import { servedOverHttps } from '@/lib/authz/https';
+import { caseSessionCookieName } from '@/lib/authz/policy';
+import { buyerProofEnabled } from '@/lib/auth/spike';
 
 interface MessageInput {
   sender_type?: unknown;
@@ -57,6 +62,14 @@ export async function POST(
     // need an authenticated identity (merchant actions, B-series auth).
     if ((body.sender_type !== undefined && body.sender_type !== null && body.sender_type !== 'consumer') || body.is_private === true) {
       return NextResponse.json({ success: false, error: TRUST_FIELD_ERROR }, { status: 403 });
+    }
+
+    // B06: with buyer proof on, a buyer message needs that case's session
+    // from the emailed link; a guessable id or case number is never enough.
+    // Every message reaching this point is a buyer's (sender_type 'consumer'
+    // or absent), so all of them take this branch.
+    if (buyerProofEnabled()) {
+      return postBuyerMessage(request, identifier, body.message);
     }
 
     if (!body.sender_name || typeof body.sender_name !== 'string' || body.sender_name.trim().length === 0) {
@@ -126,3 +139,37 @@ export async function POST(
     );
   }
 }
+
+/**
+ * A buyer message under B06: the case session for the resolved case is
+ * required, and the sender is always that case's buyer. Client-sent name,
+ * privacy and type fields are ignored.
+ */
+async function postBuyerMessage(request: NextRequest, identifier: string, rawMessage: unknown) {
+  const message = typeof rawMessage === 'string' && rawMessage.length <= 5000 ? rawMessage.trim() : '';
+  if (!message) {
+    return NextResponse.json({ success: false, error: 'El mensaje no puede estar vacío' }, { status: 400 });
+  }
+  try {
+    const isNumeric = /^\d{1,12}$/.test(identifier);
+    const found = await query<{ id: number; customer_name: string }>(
+      isNumeric ? 'SELECT id, customer_name FROM resolution_cases WHERE id = $1' : 'SELECT id, customer_name FROM resolution_cases WHERE case_number = $1',
+      [isNumeric ? Number(identifier) : identifier.slice(0, 50)],
+    );
+    const caseRow = found.rows[0];
+    // A missing case and a case without this caller's session look the same.
+    await authorizeCaseSession(pool, {
+      sessionToken: caseRow ? request.cookies.get(caseSessionCookieName(caseRow.id, servedOverHttps()))?.value : undefined,
+      caseId: caseRow?.id ?? 0,
+    });
+    const created = await query<CaseMessageRow>(
+      `INSERT INTO case_messages (case_id, sender_type, sender_name, message, is_private, created_at)
+       VALUES ($1, 'consumer', $2, $3, false, NOW()) RETURNING *`,
+      [caseRow.id, caseRow.customer_name, message],
+    );
+    return NextResponse.json({ success: true, message: 'Mensaje agregado al caso exitosamente', data: created.rows[0] }, { status: 201 });
+  } catch (error) {
+    return authzErrorResponse(error);
+  }
+}
+

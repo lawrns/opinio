@@ -283,6 +283,65 @@ describe('link exchange (ticket verification)', () => {
   });
 });
 
+describe('buyer writes need the case session (guessable ids are not proof)', () => {
+  const post = (server: AppServer, id: string | number, body: Record<string, unknown>, cookie = '') =>
+    fetch(`${server.origin}/api/v1/cases/${id}/messages`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...(cookie ? { cookie } : {}) },
+      body: JSON.stringify(body),
+    });
+  const messages = async (caseId: number) =>
+    (await db.client.query('SELECT sender_type, sender_name, message, is_private FROM case_messages WHERE case_id = $1 ORDER BY id', [caseId])).rows;
+
+  it('refuses a buyer message by id or case number without that case’s session', async () => {
+    const own = await caseWithLink('writer@example.test');
+    const other = await caseWithLink('other-writer@example.test');
+    const cookie = await prove(own.token);
+    const before = (await messages(other.id)).length;
+    for (const [label, id, c] of [
+      ['no session, by id', other.id, ''],
+      ['no session, by case number', other.caseNumber, ''],
+      ["another case's session, by id", other.id, cookie],
+      ["another case's session, by case number", other.caseNumber, cookie],
+      ["another case's session under this case's cookie name", other.id, `opinio_case_${other.id}=${cookie.split('=')[1]}`],
+      ['unknown case', 999_999, cookie],
+    ] as const) {
+      const res = await post(app, id, { sender_type: 'consumer', sender_name: 'Comprador', message: 'SENTINEL_CASE_TEXT_B6 intruso' }, c);
+      expect(res.status, label).toBe(401);
+    }
+    expect((await messages(other.id)).length).toBe(before);
+  });
+
+  it('writes as the case’s own buyer with the session, ignoring client name, privacy and type fields', async () => {
+    const own = await caseWithLink('writer2@example.test');
+    const cookie = await prove(own.token);
+    const res = await post(app, own.id, { sender_type: 'consumer', sender_name: 'Impostor', is_private: true, message: 'Sigo esperando' }, cookie);
+    expect(res.status).toBe(201);
+    const last = (await messages(own.id)).at(-1);
+    expect(last).toEqual({ sender_type: 'consumer', sender_name: BUYER, message: 'Sigo esperando', is_private: false });
+    // By case number too.
+    expect((await post(app, own.caseNumber, { sender_type: 'consumer', message: 'Por número' }, cookie)).status).toBe(201);
+    // Merchant/mediator messages stay contained, session or not; confirmation stays refused.
+    expect((await post(app, own.id, { sender_type: 'merchant', sender_name: 'x', message: 'hola' }, cookie)).status).toBe(403);
+    expect((await post(app, own.id, { sender_type: 'consumer', message: 'ok', status: 'resolved_consumer_confirmed' }, cookie)).status).toBe(403);
+    const patch = await fetch(`${app.origin}/api/v1/cases/${own.id}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json', cookie },
+      body: JSON.stringify({ status: 'resolved_consumer_confirmed', is_consumer_confirmed: true }),
+    });
+    expect(patch.status).toBe(403);
+    expect((await db.client.query('SELECT status, is_consumer_confirmed FROM resolution_cases WHERE id = $1', [own.id])).rows[0]).toEqual({
+      status: 'opened',
+      is_consumer_confirmed: false,
+    });
+  });
+
+  it('with the switch off, keeps the legacy buyer message path as on main', async () => {
+    const legacy = await (await createCase(off, { customer_contact: 'legacy-writer@example.test' })).json();
+    expect((await post(off, legacy.case.id, { sender_type: 'consumer', sender_name: 'Comprador', message: 'Mensaje legado' })).status).toBe(201);
+  });
+});
+
 describe('resend', () => {
   it('answers every request the same, sends only on a match, and is bounded per case', async () => {
     const { caseNumber, token: original } = await caseWithLink('resend@example.test');
