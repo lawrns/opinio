@@ -5,11 +5,16 @@ import { pool } from '@/lib/db';
 import { listOpenRecoveries } from '@/lib/authz/case-recovery';
 import { isPlatformAdministrator } from '@/lib/authz/owners';
 import { currentMerchantUserId } from '@/lib/authz/session';
-import { buyerProofEnabled, merchantAuthEnabled } from '@/lib/auth/spike';
+import { buyerProofEnabled, gatedMetadata, merchantAuthEnabled } from '@/lib/auth/spike';
 import { approveRecoveryAction, rejectRecoveryAction } from './actions';
 
 export const dynamic = 'force-dynamic';
-export const metadata: Metadata = { title: 'Recuperaciones — Opinio', robots: { index: false, follow: false } };
+/** Metadata only for platform administrators with both switches on; everyone else gets a plain 404 (no route title). */
+export async function generateMetadata(): Promise<Metadata> {
+  const admin =
+    merchantAuthEnabled() && buyerProofEnabled() && (await isPlatformAdministrator(pool, await currentMerchantUserId().catch(() => null)));
+  return gatedMetadata(admin, { title: 'Recuperaciones — Opinio', robots: { index: false, follow: false } });
+}
 
 const RESULT: Record<string, string> = {
   aprobada: 'Aprobada. Enviamos un enlace de un solo uso al contacto original del caso.',

@@ -312,6 +312,14 @@ describe('switch off (production default)', () => {
     ] as const) {
       expect((await fetch(`${off.origin}${path}`, { method, headers: { origin: off.origin, cookie: cookies[ADMIN] } })).status, `${method} ${path}`).toBe(404);
     }
+    // QA-048: no route title on those 404s, nor on the queue for a signed-in non-administrator.
+    const titleOf = (html: string) => html.match(/<title>([^<]*)<\/title>/)?.[1];
+    const plain = titleOf(await (await fetch(`${off.origin}/no-existe-${Date.now()}`)).text());
+    for (const path of ['/caso/recuperar', '/admin/recuperaciones']) {
+      const html = await (await fetch(`${off.origin}${path}`, { headers: { cookie: cookies[ADMIN] } })).text();
+      expect(titleOf(html), path).toBe(plain);
+    }
+    expect(await (await fetch(`${app.origin}/admin/recuperaciones`, { headers: { cookie: cookies[NOT_ADMIN] } })).text()).not.toContain('Recuperaciones — Opinio');
   });
 });
 
