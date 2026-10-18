@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ChevronDown } from 'lucide-react';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
+import { Breadcrumbs } from '@/components/Breadcrumbs';
 import { getPostBySlug, getPostSlugs } from '@/lib/blog/posts';
 import { renderMarkdown } from '@/lib/blog/markdown';
 import { buildArticleJsonLd, buildBlogFaqPageJsonLd } from '@/lib/blog/json-ld';
@@ -80,11 +80,11 @@ export default async function BlogPostPage({ params }: PageProps) {
       <main id="contenido" tabIndex={-1} className="flex-1">
         <section className="border-b border-op-border bg-op-shaded">
           <div className="mx-auto max-w-7xl px-4 pb-12 pt-14 sm:px-6 lg:px-8">
-            <p className="op-eyebrow mb-3">
-              <Link href="/blog" className="hover:underline">
-                Blog
-              </Link>
-            </p>
+            <Breadcrumbs siteUrl={SITE_URL} items={[
+              { name: 'Inicio', href: '/' },
+              { name: 'Blog', href: '/blog' },
+              { name: post.title, href: `/blog/${post.slug}` },
+            ]} />
             <h1 className="max-w-4xl text-3xl font-black tracking-[-0.03em] sm:text-4xl lg:text-5xl">
               {post.title}
             </h1>
