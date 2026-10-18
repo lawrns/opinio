@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isOperationEnabled } from '@/lib/containment';
+import { parseConversionContext } from '@/lib/conversion/context';
+import { afterResponse } from '@/lib/conversion/after';
+import { recordMilestone } from '@/lib/conversion/ledger';
 import { query, withTransaction } from '@/lib/db';
 import { TRUST_FIELD_ERROR, reviewTrustFieldsIn } from '@/lib/trust-fields';
 import { toPublicReview } from '@/lib/public-reviews';
@@ -20,6 +23,8 @@ interface ReviewInput {
   author_masked_contact?: string;
   verification_level?: 'confirmed_payment' | 'confirmed_store_order' | 'reviewed_proof' | 'unverified_experience';
   product_name?: string;
+  /** CONVERSION-001 browser association; re-validated server-side. */
+  conversion?: unknown;
 }
 
 interface ReviewRow {
@@ -301,6 +306,22 @@ export async function POST(request: NextRequest) {
 
       return { createdReview: review, newPassport: passport };
     });
+
+    // CONVERSION-001: the published review write has committed (and its
+    // passport update, when one runs; a contained unverified review skips it).
+    // This milestone is not proof of a genuine customer or merchant activation.
+    // It runs after the response is sent (fire-and-forget), never throws and
+    // never delays or fails the request.
+    const context = parseConversionContext(body.conversion);
+    afterResponse(() =>
+      recordMilestone({
+        entityType: 'review',
+        entityId: String(createdReview.id),
+        milestone: 'review_published',
+        journey: 'consumer_review',
+        context,
+      }),
+    );
 
     return NextResponse.json(
       {

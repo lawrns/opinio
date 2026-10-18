@@ -87,12 +87,14 @@ export default function ResenasYReputacionPage() {
             <div className="mt-7 flex flex-wrap items-center gap-3">
               <Link
                 href="/merchant"
+                data-cta="reputation_merchant_panel"
                 className="inline-flex min-h-11 items-center rounded-full bg-op-action-accent px-6 py-3 text-sm font-semibold text-op-sheet transition-colors hover:bg-op-action-ink"
               >
                 Panel para comercios
               </Link>
               <Link
                 href="/directorio"
+                data-cta="reputation_directory"
                 className="inline-flex min-h-11 items-center rounded-full border border-op-border-strong px-6 py-3 text-sm font-medium"
               >
                 Ver el directorio

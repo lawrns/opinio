@@ -790,6 +790,7 @@ export default async function BusinessPassportPage({ params }: PageProps) {
 
               <Link
                 href={`/escribir-opinion/${business.slug}`}
+                data-cta="passport_write_review"
                 className="inline-flex min-h-11 items-center px-5 py-2.5 rounded-full text-sm font-semibold bg-[var(--op-action-accent)] hover:bg-[var(--op-action-ink)] text-[var(--op-sheet)] shadow-2xs transition-colors"
               >
                 Escribir opinión

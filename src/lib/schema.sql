@@ -179,3 +179,39 @@ CREATE INDEX IF NOT EXISTS idx_cases_business_id ON resolution_cases(business_id
 CREATE INDEX IF NOT EXISTS idx_orders_business_id ON orders(business_id);
 CREATE INDEX IF NOT EXISTS idx_invitations_token ON invitations(token);
 CREATE INDEX IF NOT EXISTS idx_widgets_token ON widgets(token);
+
+-- CONVERSION-001: minimal first-party conversion ledger. Opaque analytics IDs
+-- and stage names only (no contact data, review text, business data or
+-- payloads). One row per entity + stage (dedupe_key). Delivery to GA4 is
+-- optional, consent-gated and claimed ('sending') so it happens once.
+CREATE TABLE IF NOT EXISTS conversion_identities (
+  entity_type VARCHAR(20) NOT NULL CHECK (entity_type IN ('review')),
+  entity_id VARCHAR(64) NOT NULL,
+  analytics_id VARCHAR(40) NOT NULL CHECK (analytics_id ~ '^acct_[0-9a-f]{32}$'),
+  journey_id VARCHAR(40) CHECK (journey_id IS NULL OR journey_id ~ '^jrn_[0-9a-f]{32}$'),
+  consent_state VARCHAR(20) NOT NULL DEFAULT 'denied' CHECK (consent_state IN ('granted', 'unspecified', 'denied')),
+  first_touch JSONB,
+  last_touch JSONB,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (entity_type, entity_id),
+  CHECK (consent_state = 'granted' OR (journey_id IS NULL AND first_touch IS NULL AND last_touch IS NULL))
+);
+
+CREATE TABLE IF NOT EXISTS conversion_stage_events (
+  event_id VARCHAR(40) PRIMARY KEY CHECK (event_id ~ '^evt_[0-9a-f]{32}$'),
+  dedupe_key VARCHAR(160) NOT NULL UNIQUE,
+  entity_type VARCHAR(20) NOT NULL CHECK (entity_type IN ('review')),
+  entity_id VARCHAR(64) NOT NULL,
+  analytics_id VARCHAR(40),
+  stage VARCHAR(40) NOT NULL CHECK (stage IN ('milestone_review_published')),
+  journey VARCHAR(30) NOT NULL CHECK (journey IN ('consumer_discovery', 'consumer_review', 'consumer_case', 'merchant_panel')),
+  occurred_at TIMESTAMP WITH TIME ZONE NOT NULL,
+  consent_state VARCHAR(20) NOT NULL CHECK (consent_state IN ('granted', 'unspecified', 'denied')),
+  source VARCHAR(20) NOT NULL DEFAULT 'live' CHECK (source IN ('live', 'reconciled')),
+  delivery_state VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (delivery_state IN ('pending', 'sending', 'sent', 'failed', 'skipped_consent', 'expired')),
+  delivery_attempts INT NOT NULL DEFAULT 0 CHECK (delivery_attempts BETWEEN 0 AND 10),
+  last_attempt_at TIMESTAMP WITH TIME ZONE,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_conversion_stage_delivery ON conversion_stage_events(delivery_state, occurred_at);
