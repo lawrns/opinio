@@ -7,7 +7,7 @@
 export const CONTAINED_OPERATIONS = {
   merchant_panel: 'All /merchant/** pages (dashboard, inbox, requests, reviews, settings, widgets, insights, integrations)',
   case_merchant_update: 'PATCH /api/v1/cases/[id] (merchant status, remedy, summary)',
-  case_merchant_message: 'POST /api/v1/cases/[id]/messages as merchant or mediator; sendCaseMessageAction',
+  case_merchant_message: 'sendCaseMessageAction (the public POST /api/v1/cases/[id]/messages always records the buyer and refuses other senders)',
   case_remedy: 'updateCaseRemedyAction',
   review_response: 'POST /api/v1/reviews/[id]/responses; postReviewResponseAction',
   business_settings: 'updateBusinessSettingsAction (business profile, RFC and CLEE identity records)',
