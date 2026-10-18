@@ -70,7 +70,7 @@ describe('splitFaqSection', () => {
     const { faqs } = splitFaqSection(stripLeadingTitle(body, 'título'));
     expect(faqs[0].q).toBe('¿La invitación se manda sola por WhatsApp?');
     expect(faqs[0].a).toBe(
-      'Sí: en el panel de comercios registras el teléfono (+52) del cliente y la invitación sale por WhatsApp (o email) con el formulario público de opiniones de tu negocio. Queda registrada para que la veas en la cobertura de tu perfil.',
+      'No. En el panel de comercios registras el teléfono (+52) del cliente y compartes tú el formulario público de opiniones de tu negocio por WhatsApp (o email). Opinio registra la invitación, pero no envía el mensaje ni confirma su entrega. La invitación registrada cuenta en la cobertura de tu perfil.',
     );
   });
 

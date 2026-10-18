@@ -1,11 +1,28 @@
 import React from 'react';
 import type { Metadata } from 'next';
+import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { query } from '@/lib/db';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { publicCaseColumnsSql, toPublicCase, toPublicMessages } from '@/lib/case-access';
 import { CasePortalClient, CaseData } from './CasePortalClient';
+import { pool } from '@/lib/db';
+import { authorizeCaseSession } from '@/lib/authz';
+import { caseSessionCookieName } from '@/lib/authz/policy';
+import { servedOverHttps } from '@/lib/authz/https';
+import { buyerProofEnabled } from '@/lib/auth/spike';
+
+/** True when the request carries a live buyer session for this exact case (B06). Never throws. */
+async function hasCaseProof(caseId: number): Promise<boolean> {
+  if (!buyerProofEnabled()) return false;
+  const token = (await cookies()).get(caseSessionCookieName(caseId, servedOverHttps()))?.value;
+  if (!token) return false;
+  return authorizeCaseSession(pool, { sessionToken: token, caseId }).then(
+    () => true,
+    () => false,
+  );
+}
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -64,12 +81,22 @@ export default async function CasoDetailPage({ params }: PageProps) {
   );
 
   const messages = toPublicMessages(messagesRes.rows);
+  const verified = await hasCaseProof(caseData.id);
 
   return (
     <div className="min-h-screen bg-[var(--op-canvas)] text-[var(--op-ink-primary)] flex flex-col font-sans selection:bg-[var(--op-verified-ink)] selection:text-[var(--op-sheet)]">
       <Navbar />
       <main id="contenido" className="flex-1 py-8 sm:py-12">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          {verified && (
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--op-border-hairline)] bg-[var(--op-sheet)] p-4 text-sm" data-testid="case-access-verified">
+              <p>Entraste a este caso con el enlace de tu correo. Confirmar una solución todavía no está disponible.</p>
+              <form method="post" action="/caso/acceso/salir">
+                <input type="hidden" name="caseId" value={caseData.id} />
+                <button type="submit" className="font-bold underline">Salir de este caso</button>
+              </form>
+            </div>
+          )}
           <CasePortalClient
             initialCase={caseData}
             initialMessages={messages}

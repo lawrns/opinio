@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, Search, Loader2 } from 'lucide-react';
+import { trackStepStarted } from '@/lib/conversion/client';
 
 interface SearchResult {
   id: number;
@@ -56,6 +57,8 @@ export function HomeSearch() {
   function submit(event: React.FormEvent) {
     event.preventDefault();
     if (!trimmed) return;
+    // Intent only; the search text is never sent.
+    trackStepStarted('consumer_discovery', 'search_submitted');
     setOpen(false);
     router.push(active >= 0 && results[active] ? `/b/${results[active].slug}` : searchHref);
   }
@@ -64,7 +67,7 @@ export function HomeSearch() {
     <div ref={wrapper} className="relative w-full" onBlur={(event) => {
       if (!event.currentTarget.contains(event.relatedTarget as Node)) setOpen(false);
     }}>
-      <form role="search" onSubmit={submit} className="relative">
+      <form role="search" onSubmit={submit} data-cta="home_search_submit" className="relative">
         <label htmlFor={id} className="mb-2.5 block text-sm font-semibold text-op-ink">¿Qué comercio quieres conocer?</label>
         <div className="flex items-center gap-2 rounded-op-card border border-op-strong bg-op-sheet p-2 shadow-flat transition-colors focus-within:border-op-green">
           <Search aria-hidden="true" className="ml-2 hidden size-5 shrink-0 text-op-muted sm:block" />

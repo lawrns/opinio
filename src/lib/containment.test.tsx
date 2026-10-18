@@ -51,7 +51,7 @@ vi.mock('@/lib/db', () => ({
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 
 import { proxy, config as proxyConfig } from '@/proxy';
-import { CONTAINED_OPERATIONS, isOperationEnabled } from '@/lib/containment';
+import { CONTAINED_OPERATIONS, isOperationEnabled, MERCHANT_UNAVAILABLE_HTML } from '@/lib/containment';
 import * as actions from '@/lib/merchant-actions';
 import { PATCH as patchCase } from '@/app/api/v1/cases/[id]/route';
 import { POST as postMessage } from '@/app/api/v1/cases/[id]/messages/route';
@@ -117,6 +117,11 @@ describe('merchant pages are unavailable and carry no case data', () => {
     }
   });
 
+  it('stays readable in a dark-mode browser: light color scheme with explicit colors', () => {
+    expect(MERCHANT_UNAVAILABLE_HTML).toContain('<meta name="color-scheme" content="light">');
+    expect(MERCHANT_UNAVAILABLE_HTML).toMatch(/<body style="background:#ffffff;color:#1a1a1a;/);
+  });
+
   it('server-action POSTs to /merchant are stopped by the proxy too', () => {
     const res = proxy(new NextRequest('http://localhost/merchant/inbox', { method: 'POST', headers: { 'Next-Action': 'abc' } }));
     expect(res.status).toBe(503);
@@ -171,8 +176,6 @@ describe('every unauthenticated merchant write is refused before the database', 
 
   it.each([
     ['PATCH /cases/[id]', () => patchCase(json('http://localhost/api/v1/cases/7', 'PATCH', { status: 'remedy_offered', remedy_offered: 'x' }), caseParams)],
-    ['POST /cases/[id]/messages as merchant', () => postMessage(json('http://localhost/api/v1/cases/7/messages', 'POST', { sender_type: 'merchant', sender_name: 'Soporte', message: 'Hola' }), caseParams)],
-    ['POST /cases/[id]/messages as mediator', () => postMessage(json('http://localhost/api/v1/cases/7/messages', 'POST', { sender_type: 'mediator', sender_name: 'Opinio', message: 'Hola' }), caseParams)],
     ['POST /reviews/[id]/responses', () => postResponse(json('http://localhost/api/v1/reviews/1/responses', 'POST', { response_text: 'Gracias por tu opinión' }), { params: Promise.resolve({ id: '1' }) })],
     ['POST /order-events', () => postOrderEvent(json('http://localhost/api/v1/order-events', 'POST', { business_slug: 'comercio-demo', external_order_id: 'A1' }))],
     ['POST /invitations', () => postInvitation(json('http://localhost/api/v1/invitations', 'POST', { business_id: 1, recipient_target: 'x@example.invalid' }))],
@@ -184,15 +187,27 @@ describe('every unauthenticated merchant write is refused before the database', 
   });
 });
 
+// OPINIO-CASES-AUTHZ-2: the public messages route refuses any non-buyer
+// sender outright (not as a contained operation), switch on or off; see
+// cases-authz.test.ts. Still 403 before any database call.
+it.each([
+  ['merchant', 'Soporte'],
+  ['mediator', 'Opinio'],
+])('POST /cases/[id]/messages as %s → 403, no query', async (sender_type, sender_name) => {
+  const res = await postMessage(json('http://localhost/api/v1/cases/7/messages', 'POST', { sender_type, sender_name, message: 'Hola' }), caseParams);
+  expect(res.status).toBe(403);
+  expect(db.state.calls).toHaveLength(0);
+});
+
 describe('buyer flows and public pages keep working', () => {
   it('a buyer message on the case page is still accepted', async () => {
     const res = await postMessage(json('http://localhost/api/v1/cases/7/messages', 'POST', { sender_type: 'consumer', sender_name: 'Comprador', message: 'Hola' }), caseParams);
     expect(res.status).toBe(201);
   });
 
-  it('a buyer review is published but claims cannot raise verification or move the stored score', async () => {
+  it('a buyer review is published unverified, without moving the stored score; a purchase claim is refused (OPINIO-CASES-AUTHZ-2)', async () => {
     const res = await postReview(json('http://localhost/api/v1/reviews', 'POST', {
-      business_id: 1, rating: 5, body: 'Muy buena atención', author_name: 'Ana', order_id: 3, verification_level: 'confirmed_payment',
+      business_id: 1, rating: 5, body: 'Muy buena atención', author_name: 'Ana', verification_level: 'unverified_experience',
     }));
     expect(res.status).toBe(201);
     const insert = writes().find((c) => /INSERT INTO reviews/.test(c.text))!;
@@ -200,6 +215,13 @@ describe('buyer flows and public pages keep working', () => {
     expect(insert.params[7]).toBe('unverified_experience');
     expect(writes().some((c) => /UPDATE businesses/.test(c.text))).toBe(false);
     expect(db.state.calls.some((c) => /FROM orders/.test(c.text))).toBe(false);
+
+    db.state.calls.length = 0;
+    const claim = await postReview(json('http://localhost/api/v1/reviews', 'POST', {
+      business_id: 1, rating: 5, body: 'Muy buena atención', author_name: 'Ana', order_id: 3, verification_level: 'confirmed_payment',
+    }));
+    expect(claim.status).toBe(403);
+    expect(db.state.calls).toHaveLength(0);
   });
 
   it('public case, business and passport reads still render without contact data', async () => {

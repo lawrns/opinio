@@ -42,10 +42,17 @@ async function start(env: Record<string, string>, port?: number) {
   return server;
 }
 
+/**
+ * The emailed link is the first-party confirmation page with the callback
+ * parameters in its fragment (B03); this returns the callback URL that page
+ * submits when the person presses the button.
+ */
 const linkIn = (text: string) => {
-  const match = text.match(/https?:\/\/\S+\/api\/auth\/callback\/nodemailer\?\S+/);
+  const match = text.match(/https?:\/\/\S+\/acceso\/confirmar#\S+/);
   if (!match) throw new Error('no sign-in link in captured mail');
-  return new URL(match[0]);
+  const emailed = new URL(match[0]);
+  expect(emailed.search).toBe(''); // nothing reaches the server until the button is pressed
+  return new URL(`/api/auth/callback/nodemailer?${emailed.hash.slice(1)}`, emailed.origin);
 };
 
 /** Requests an email link through the real Auth.js sign-in endpoint. */
@@ -126,7 +133,7 @@ const sessionCount = async () => Number((await db.client.query('SELECT count(*) 
 
 beforeAll(async () => {
   [db, mail] = await Promise.all([
-    startDatabase(['src/lib/schema.sql', 'src/lib/auth/schema.sql']),
+    startDatabase(['src/lib/schema.sql'], { migrate: true }),
     startMailSink(),
   ]);
   serverJs = buildApp('.next-e2e');

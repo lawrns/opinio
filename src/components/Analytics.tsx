@@ -3,7 +3,8 @@
 import Script from 'next/script';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { usePathname } from 'next/navigation';
-import { analyticsPageLocation, analyticsReferrer, isPublicAnalyticsPath } from '@/lib/analytics';
+import { analyticsPageLocation, analyticsReferrer, isPublicAnalyticsPath, stripLandingTracking } from '@/lib/analytics';
+import { bindCtaTracking, clearConversionJourney, flushBufferedConversionEvents, recordConversionLanding, retryPendingWithdrawal } from '@/lib/conversion/client';
 
 declare global {
   interface Window {
@@ -85,11 +86,37 @@ export function Analytics({ measurementId }: { measurementId: string }) {
       });
       initialized.current = true;
     }
-    if (pageLocation && lastPage.current !== pageLocation) {
+    // Keyed on the real path: two blog articles share the template location
+    // and are still two page views.
+    const pagePath = pageLocation ? window.location.pathname : null;
+    if (pagePath && lastPage.current !== pagePath) {
       window.gtag('event', 'page_view', context);
     }
-    lastPage.current = pageLocation;
+    lastPage.current = pagePath;
+    // CONVERSION-001: allowlisted landing touch (once per load), consented
+    // only; then any step started before GA4 was configured.
+    recordConversionLanding();
+    flushBufferedConversionEvents();
   }, [consent, measurementId, pathname, publicPage, ready]);
+
+  // A withdrawal the server has not confirmed yet is retried on every load,
+  // whatever the consent is now (after a withdrawal it is denied).
+  useEffect(() => {
+    void retryPendingWithdrawal();
+  }, []);
+
+  // CONVERSION-001 CTA intent, consented only. Only an explicit "denied"
+  // clears (and withdraws) the journey: hydration renders with the server
+  // snapshot "pending" before the stored choice, so clearing on "pending"
+  // wiped the first touch on every full load.
+  useEffect(() => {
+    if (consent === 'denied') {
+      void clearConversionJourney();
+      return;
+    }
+    if (consent !== 'granted') return;
+    return bindCtaTracking();
+  }, [consent]);
 
   function chooseConsent(choice: 'granted' | 'denied') {
     window[`ga-disable-${measurementId}`] = choice !== 'granted';
@@ -118,8 +145,19 @@ export function Analytics({ measurementId }: { measurementId: string }) {
     <>
       {consent === 'granted' && (
         <>
-          {/* Keep Google's documented arguments-object command queue. */}
-          <Script id="opinio-ga-bootstrap" strategy="afterInteractive" onReady={() => setReady(true)}>
+          {/* Keep Google's documented arguments-object command queue. The
+              landing touch is recorded from the URL as loaded, then its
+              tracking params leave the URL (QA-042), and only then is gtag.js
+              mounted. */}
+          <Script
+            id="opinio-ga-bootstrap"
+            strategy="afterInteractive"
+            onReady={() => {
+              recordConversionLanding();
+              stripLandingTracking();
+              setReady(true);
+            }}
+          >
             {`window.dataLayer = window.dataLayer || [];
 window.gtag = function () { window.dataLayer.push(arguments); };
 window.gtag('consent', 'default', {

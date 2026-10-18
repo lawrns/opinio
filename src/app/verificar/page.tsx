@@ -196,7 +196,7 @@ function VerificarContent() {
               <div><p className="text-xs text-op-muted">Pedidos con invitación</p><p className="mt-1 font-data font-semibold">{business.observed_orders_count > 0 && business.coverage_percentage !== null ? `${numberFormat.format(Number(business.coverage_percentage))}%` : 'Sin datos'}</p></div>
             </div>
             <p className="mb-5 mt-3 text-xs font-medium text-op-green-dark">{evidenceLabel(business)}</p>
-            <Link href={writeReview ? `/escribir-opinion/${encodeURIComponent(business.slug)}` : profileUrl} className="mt-auto flex min-h-12 items-center justify-between gap-3 rounded-xl border border-op-blue-border bg-op-blue-soft px-4 py-3 text-sm font-semibold text-op-blue-dark transition-colors hover:bg-op-blue hover:text-white"><span>{writeReview ? `Opinar sobre ${business.brand_name}` : 'Ver opiniones y perfil'}</span><ArrowRight className="shrink-0" size={17} aria-hidden="true" /></Link>
+            <Link href={writeReview ? `/escribir-opinion/${encodeURIComponent(business.slug)}` : profileUrl} data-cta={writeReview ? 'search_write_review' : 'search_open_passport'} className="mt-auto flex min-h-12 items-center justify-between gap-3 rounded-xl border border-op-blue-border bg-op-blue-soft px-4 py-3 text-sm font-semibold text-op-blue-dark transition-colors hover:bg-op-blue hover:text-white"><span>{writeReview ? `Opinar sobre ${business.brand_name}` : 'Ver opiniones y perfil'}</span><ArrowRight className="shrink-0" size={17} aria-hidden="true" /></Link>
           </article>;
         })}</div> : (
           <div className="mx-auto max-w-2xl rounded-2xl border border-op-border bg-op-sheet p-8 text-center sm:p-12">

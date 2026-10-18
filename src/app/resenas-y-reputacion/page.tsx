@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { LinkedText } from '@/components/LinkedText';
 import { ChevronDown, MessageSquare, ShieldCheck, Star } from 'lucide-react';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
@@ -47,7 +48,7 @@ const steps = [
   {
     Icon: Star,
     title: 'Opiniones con evidencia',
-    body: 'Cada opinión indica su tipo de evidencia y la cobertura muestra qué porcentaje de pedidos registrados recibió invitación a opinar.',
+    body: 'Cada opinión indica su tipo de evidencia y la cobertura compara las invitaciones registradas con los pedidos registrados.',
   },
   {
     Icon: MessageSquare,
@@ -91,12 +92,14 @@ export default function ResenasYReputacionPage() {
             <div className="mt-7 flex flex-wrap items-center gap-3">
               <Link
                 href="/merchant"
+                data-cta="reputation_merchant_panel"
                 className="inline-flex min-h-11 items-center rounded-full bg-op-action-accent px-6 py-3 text-sm font-semibold text-op-sheet transition-colors hover:bg-op-action-ink"
               >
                 Panel para comercios
               </Link>
               <Link
                 href="/directorio"
+                data-cta="reputation_directory"
                 className="inline-flex min-h-11 items-center rounded-full border border-op-border-strong px-6 py-3 text-sm font-medium"
               >
                 Ver el directorio
@@ -137,7 +140,7 @@ export default function ResenasYReputacionPage() {
                     className="size-4 shrink-0 transition-transform duration-200 group-open:rotate-180 motion-reduce:transition-none"
                   />
                 </summary>
-                <p className="pb-5 pr-8 text-sm leading-relaxed text-op-secondary">{item.a}</p>
+                <p className="pb-5 pr-8 text-sm leading-relaxed text-op-secondary"><LinkedText text={item.a} link={item.answerLink} /></p>
               </details>
             ))}
           </div>
