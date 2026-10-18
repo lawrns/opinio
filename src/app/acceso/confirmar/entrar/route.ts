@@ -2,29 +2,11 @@ import { NextRequest } from 'next/server';
 import { handlers } from '@/auth';
 import { merchantAuthEnabled, PRIVATE_HEADERS } from '@/lib/auth/spike';
 import { parseEmail } from '@/lib/authz/policy';
+import { sameOrigin } from '@/lib/auth/same-origin';
 
 export const dynamic = 'force-dynamic';
 
 const TOKEN = /^[A-Za-z0-9_-]{16,200}$/;
-
-/**
- * True when the browser says this POST comes from a page on this site.
- * Browsers send Sec-Fetch-Site; the confirmation page's no-referrer policy
- * makes them send `Origin: null`, so Origin is the fallback for clients
- * without Fetch Metadata.
- */
-function sameOrigin(request: NextRequest): boolean {
-  const site = request.headers.get('sec-fetch-site');
-  if (site) return site === 'same-origin';
-  const origin = request.headers.get('origin');
-  const host = request.headers.get('x-forwarded-host') ?? request.headers.get('host');
-  if (!origin || !host) return false;
-  try {
-    return new URL(origin).host === host;
-  } catch {
-    return false;
-  }
-}
 
 /**
  * Exchanges the emailed login token for a session (spec #26: a same-origin

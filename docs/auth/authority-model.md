@@ -1,6 +1,6 @@
-# Authority model (B02, B03)
+# Authority model (B02–B04)
 
-Issues [#28](https://github.com/lawrns/opinio/issues/28) and [#29](https://github.com/lawrns/opinio/issues/29). Policy: [ADR 0001](../adr/0001-separate-buyer-business-and-machine-authority.md), [0002](../adr/0002-manual-first-owner-and-requested-recovery.md), [0003](../adr/0003-auth-policy-defaults.md). Terms: [GLOSSARY.md](../../GLOSSARY.md).
+Issues [#28](https://github.com/lawrns/opinio/issues/28), [#29](https://github.com/lawrns/opinio/issues/29) and [#30](https://github.com/lawrns/opinio/issues/30). Policy: [ADR 0001](../adr/0001-separate-buyer-business-and-machine-authority.md), [0002](../adr/0002-manual-first-owner-and-requested-recovery.md), [0003](../adr/0003-auth-policy-defaults.md). Terms: [GLOSSARY.md](../../GLOSSARY.md).
 
 ## Records (`db/migrations`)
 
@@ -9,6 +9,7 @@ Issues [#28](https://github.com/lawrns/opinio/issues/28) and [#29](https://githu
 | `0001_authjs_identity.sql` | Auth.js `users`, `accounts`, `sessions` (cookie stored as SHA-256), `verification_token` |
 | `0002_business_case_machine_authority.sql` | `ownership_approvals`, `business_memberships` (owner/staff, active/revoked), `staff_invitations`, `case_access_tokens`, `case_sessions`, `business_machine_keys`, and `audit_logs.actor_type`/`actor_id` |
 | `0003_owner_login.sql` | `platform_administrators` (with granter), approval `evidence_subject` / `authority_basis` / `evidence_reference` and revocation columns, one active owner per business (partial unique index), `auth_rate_limits` |
+| `0004_staff_and_transfer.sql` | staff invitation revocation (`revoked_by_user_id`), one pending invitation per business and address, `business_memberships.staff_invitation_id` |
 
 All are additive. They change no existing row and backfill nothing: claimed listings, RFC/CLEE identities and supplied contacts mint no membership. The schema enforces that an owner membership references an approval for that same business and person, that a person has at most one active membership per business, that revoked rows carry a revocation time, and that machine scopes are only `order_events` and `invitations`. Every secret column holds a SHA-256 digest.
 
@@ -55,4 +56,17 @@ Everything here is 404 unless `OPINIO_MERCHANT_AUTH=1`.
 An approval records how control was checked (`domain_email`, `dns` or `business_callback`), what was checked (the domain, or the business's own phone in E.164), the documented authority and a restricted evidence reference such as `VER-1042`. Revoking it revokes the owner membership it backs, so access ends on the next request.
 
 The per-client limit keys on the last `X-Forwarded-For` entry, which the single reverse proxy in front of the app appends. With more than one proxy, or none, that assumption must be revisited before production.
+
+## Staff and transfers (B04)
+
+Policy: [ADR 0004](../adr/0004-staff-and-transfer-policy.md). Code: `src/lib/authz/staff.ts`, `approveOwnershipTransfer` in `src/lib/authz/owners.ts`.
+
+| Operation | Who | Effect |
+|---|---|---|
+| `createStaffInvitation` | active owner (`manage_staff`) | hashed 24 h single-use invitation bound to business and email; neutral email with a fragment link to `/cuenta/invitacion` |
+| `acceptStaffInvitation` | signed-in user whose login email matches | staff membership, only while the inviter is still the active owner; same-origin `POST /cuenta/invitacion/aceptar` |
+| `revokeStaffInvitation`, `removeStaffMembership` | active owner | pending invitation withdrawn / staff access ends on the next request; owners are never removed here |
+| `approveOwnershipTransfer` | platform administrator | revokes every approval, membership (staff included), pending invitation and machine key of that business, each with its own audit row, then records the transfer and the new owner; the form warns the administrator first |
+
+Revoking an owner's approval (`revokeOwnerApproval`) ends the same authority as a transfer, and `approveFirstOwner` refuses a business that still has any active access. Each runs in one transaction that locks the business row first, and is audited. Invitation emails are limited to 10 per business per 15 minutes.
 

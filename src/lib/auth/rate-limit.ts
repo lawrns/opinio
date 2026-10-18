@@ -5,6 +5,7 @@ import {
   LOGIN_LIMIT_PER_EMAIL,
   LOGIN_LIMIT_PER_EMAIL_AND_CLIENT,
   LOGIN_RATE_WINDOW_MS,
+  STAFF_INVITATION_EMAILS_PER_WINDOW,
 } from '@/lib/authz/policy';
 
 const windowStart = (now: Date) => new Date(Math.floor(now.valueOf() / LOGIN_RATE_WINDOW_MS) * LOGIN_RATE_WINDOW_MS);
@@ -49,4 +50,9 @@ export async function allowLoginLink(
 export function clientAddress(forwardedFor: string | null): string {
   const last = (forwardedFor ?? '').split(',').at(-1)?.trim() ?? '';
   return last && last.length <= 64 ? last : 'unknown';
+}
+
+/** Whether a business may send another staff invitation email in this window. */
+export async function allowStaffInvitationEmail(db: Db, businessId: number, now: Date = new Date()): Promise<boolean> {
+  return hit(db, `staff-invite:${businessId}`, STAFF_INVITATION_EMAILS_PER_WINDOW, now);
 }

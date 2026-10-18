@@ -455,7 +455,9 @@ describe('approved owner', () => {
     expect((await get(`/cuenta/negocios/${bizA}`, cookies.owner)).status).toBe(404);
     expect(await (await get('/cuenta', cookies.owner)).text()).toContain('data-testid="access-pending"');
     const audit = (await db.client.query("SELECT details FROM audit_logs WHERE action = 'ownership.approval_revoked'")).rows;
-    expect(audit).toEqual([{ details: { approval_id: approval.id, revoked_memberships: 1 } }]);
+    expect(audit).toEqual([
+      { details: { approval_id: approval.id, revoked_memberships: 1, revoked_invitations: 0, revoked_keys: 0 } },
+    ]);
     // Revoking twice finds nothing to revoke.
     const again = await submit('/admin/aprobaciones', revokeId, { approvalId: String(approval.id) }, { cookie: cookies.admin });
     expect(new URL(again.headers.get('location')!, app.origin).searchParams.get('resultado')).toBe('approval_not_found');
@@ -552,7 +554,13 @@ describe('private payloads and analytics', () => {
     const loadedCount = await page.evaluate(() => window.dataLayer!.length);
 
     const marker = 'SENTINEL_TOKEN_NOT_A_SECRET';
-    for (const path of ['/acceso', `/acceso/confirmar#token=${marker}&email=sentinel%40example.test`, '/cuenta', `/cuenta/negocios/${bizA}`]) {
+    for (const path of [
+      '/acceso',
+      `/acceso/confirmar#token=${marker}&email=sentinel%40example.test`,
+      '/cuenta',
+      `/cuenta/negocios/${bizA}`,
+      `/cuenta/invitacion#token=${marker}`, // B04 staff invitation page
+    ]) {
       await page.evaluate((p) => window.history.pushState(null, '', p), path);
       await page.waitForTimeout(300);
       expect(await page.evaluate((id) => window[`ga-disable-${id}` as `ga-disable-${string}`], E2E_GA_ID), path).toBe(true);
@@ -570,6 +578,22 @@ describe('switch off (production default)', () => {
     for (const p of ['/acceso', '/acceso/confirmar', '/acceso/revisa-tu-correo', '/acceso/error', '/cuenta', `/cuenta/negocios/${bizA}`, '/admin/aprobaciones', '/api/auth/csrf']) {
       expect((await fetch(`${off.origin}${p}`, { headers: { cookie: cookies.admin } })).status, p).toBe(404);
     }
+  });
+
+  it('gives those 404s the same title as a route that does not exist (QA-048)', async () => {
+    const titleOf = (html: string) => html.match(/<title>([^<]*)<\/title>/)?.[1];
+    const plain = await (await fetch(`${off.origin}/no-existe-${Date.now()}`)).text();
+    const routeTitles = /Entrar — Opinio|Confirmar acceso|Revisa tu correo|Enlace no válido|Tu acceso — Opinio|Acceso al comercio|Aprobaciones — Opinio|Invitación — Opinio/;
+    for (const p of ['/acceso', '/acceso/confirmar', '/acceso/revisa-tu-correo', '/acceso/error', '/cuenta', `/cuenta/negocios/${bizA}`, '/admin/aprobaciones', '/cuenta/invitacion']) {
+      const html = await (await fetch(`${off.origin}${p}`)).text();
+      expect(titleOf(html), p).toBe(titleOf(plain));
+      const rsc = await (await fetch(`${off.origin}${p}`, { headers: { RSC: '1' } })).text();
+      expect(html + rsc, p).not.toMatch(routeTitles);
+    }
+    // With the switch on, a signed-in non-administrator's 404 on the approvals page carries no route title either.
+    const notAdmin = await (await fetch(`${app.origin}/admin/aprobaciones`, { headers: { cookie: cookies.owner } })).text();
+    expect(notAdmin).not.toContain('Aprobaciones — Opinio');
+    expect(await (await fetch(`${app.origin}/admin/aprobaciones`, { headers: { cookie: cookies.admin } })).text()).toContain('Aprobaciones — Opinio');
   });
 });
 

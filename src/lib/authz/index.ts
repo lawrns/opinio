@@ -79,7 +79,7 @@ export async function assertAuthorityReachable(db: Db): Promise<void> {
 export type BusinessResource =
   | { kind: 'business'; id: number }
   | { kind: 'business_slug'; slug: string }
-  | { kind: 'case' | 'review' | 'order' | 'invitation' | 'widget' | 'machine_key' | 'staff_invitation'; id: number };
+  | { kind: 'case' | 'review' | 'order' | 'invitation' | 'widget' | 'machine_key' | 'staff_invitation' | 'membership'; id: number };
 
 const OWNER_LOOKUP: Record<Exclude<BusinessResource['kind'], 'business_slug'>, string> = {
   business: 'SELECT id AS business_id FROM businesses WHERE id = $1',
@@ -90,6 +90,7 @@ const OWNER_LOOKUP: Record<Exclude<BusinessResource['kind'], 'business_slug'>, s
   widget: 'SELECT business_id FROM widgets WHERE id = $1',
   machine_key: 'SELECT business_id FROM business_machine_keys WHERE id = $1',
   staff_invitation: 'SELECT business_id FROM staff_invitations WHERE id = $1',
+  membership: 'SELECT business_id FROM business_memberships WHERE id = $1',
 };
 
 const isPositiveInt = (n: unknown): n is number => Number.isSafeInteger(n) && (n as number) > 0;

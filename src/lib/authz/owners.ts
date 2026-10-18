@@ -7,7 +7,8 @@
  * listings, RFC/CLEE and listing contacts play no part.
  */
 import type { Pool, PoolClient } from 'pg';
-import { AccessDenied, Unauthenticated, recordAuditEvent, type Db } from '@/lib/authz';
+import { inTransaction } from '@/lib/authz/transaction';
+import { AccessDenied, Unauthenticated, recordAuditEvent, type AuditAction, type Db } from '@/lib/authz';
 import {
   AUTHORITY_BASES,
   EVIDENCE_METHODS,
@@ -17,22 +18,6 @@ import {
   type AuthorityBasis,
   type EvidenceMethod,
 } from '@/lib/authz/policy';
-
-/** Runs `fn` in one transaction on a client from `db`. */
-async function inTransaction<T>(db: Pool, fn: (client: PoolClient) => Promise<T>): Promise<T> {
-  const client = await db.connect();
-  try {
-    await client.query('BEGIN');
-    const result = await fn(client);
-    await client.query('COMMIT');
-    return result;
-  } catch (error) {
-    await client.query('ROLLBACK').catch(() => {});
-    throw error;
-  } finally {
-    client.release();
-  }
-}
 
 const isPositiveInt = (n: unknown): n is number => Number.isSafeInteger(n) && (n as number) > 0;
 
@@ -55,7 +40,10 @@ export type ApprovalRejection =
   | 'applicant_not_signed_in'
   | 'self_approval'
   | 'owner_exists'
-  | 'approval_not_found';
+  | 'approval_not_found'
+  | 'no_current_owner'
+  | 'already_owner'
+  | 'stale_access';
 
 export class ApprovalRejected extends Error {
   constructor(readonly reason: ApprovalRejection) {
@@ -104,6 +92,53 @@ export function parseFirstOwnerApproval(input: Record<string, unknown>): FirstOw
 }
 
 /**
+ * Ends every authority a business holds: its unrevoked approvals, every
+ * active membership (owner and staff), pending staff invitations and machine
+ * keys, each with its own audit row marked with `cause`. The caller must
+ * hold the business row lock. Other businesses are not touched.
+ */
+async function endBusinessAuthority(
+  client: PoolClient,
+  businessId: number,
+  admin: { type: 'administrator'; userId: number },
+  cause: 'by_transfer' | 'by_revocation',
+  now: Date,
+): Promise<{ memberships: number; invitations: number; keys: number }> {
+  const ended = [now, admin.userId, businessId];
+  await client.query(
+    `UPDATE ownership_approvals SET revoked_at = $1, revoked_by_user_id = $2
+      WHERE business_id = $3 AND revoked_at IS NULL`,
+    ended,
+  );
+  const memberships = await client.query(
+    `UPDATE business_memberships SET status = 'revoked', revoked_at = $1, revoked_by_user_id = $2
+      WHERE business_id = $3 AND status = 'active' RETURNING id`,
+    ended,
+  );
+  const invitations = await client.query(
+    `UPDATE staff_invitations SET revoked_at = $1, revoked_by_user_id = $2
+      WHERE business_id = $3 AND accepted_at IS NULL AND revoked_at IS NULL RETURNING id`,
+    ended,
+  );
+  const keys = await client.query(
+    `UPDATE business_machine_keys SET revoked_at = $1, revoked_by_user_id = $2
+      WHERE business_id = $3 AND revoked_at IS NULL RETURNING id`,
+    ended,
+  );
+  const revocations: [AuditAction, string, { id: number }[]][] = [
+    ['membership.revoked', 'membership_id', memberships.rows],
+    ['staff_invitation.revoked', 'invitation_id', invitations.rows],
+    ['machine_key.revoked', 'key_id', keys.rows],
+  ];
+  for (const [action, idKey, rows] of revocations) {
+    for (const row of rows) {
+      await recordAuditEvent(client, { businessId, actor: admin, action, details: { [idKey]: row.id, [cause]: true } });
+    }
+  }
+  return { memberships: memberships.rowCount ?? 0, invitations: invitations.rowCount ?? 0, keys: keys.rowCount ?? 0 };
+}
+
+/**
  * Records an administrator's first-owner approval and the owner membership,
  * atomically. The applicant must already have signed in once (so the
  * approval binds to a verified login email). A business that already has an
@@ -127,6 +162,15 @@ export async function approveFirstOwner(
       [request.businessId],
     );
     if (owner.rowCount !== 0) throw new ApprovalRejected('owner_exists');
+    // Defense in depth: a business without an owner must hold no other access either.
+    const stale = await client.query(
+      `SELECT 1 FROM business_memberships WHERE business_id = $1 AND status = 'active'
+       UNION ALL SELECT 1 FROM business_machine_keys WHERE business_id = $1 AND revoked_at IS NULL
+       UNION ALL SELECT 1 FROM staff_invitations WHERE business_id = $1 AND accepted_at IS NULL AND revoked_at IS NULL
+       LIMIT 1`,
+      [request.businessId],
+    );
+    if (stale.rowCount !== 0) throw new ApprovalRejected('stale_access');
 
     const approval = await client.query(
       `INSERT INTO ownership_approvals
@@ -160,36 +204,121 @@ export async function approveFirstOwner(
 }
 
 /**
- * Revokes an unrevoked approval and every active membership it backs, in one
- * transaction and audited. Access ends on the owner's next request.
+ * Revokes an unrevoked approval and, under the business lock, ends all of
+ * that business's authority (owner, staff, pending invitations, machine keys;
+ * ADR 0004), audited per item. A later first-owner approval inherits nothing.
  */
 export async function revokeOwnerApproval(
   db: Pool,
   administratorUserId: number | null | undefined,
   approvalId: number,
+  now: Date = new Date(),
 ): Promise<{ revokedMemberships: number }> {
   const admin = await requireAdministrator(db, administratorUserId);
   if (!isPositiveInt(approvalId)) throw new ApprovalRejected('approval_not_found');
   return inTransaction(db, async (client) => {
-    const approval = await client.query(
-      `UPDATE ownership_approvals SET revoked_at = now(), revoked_by_user_id = $2
-        WHERE id = $1 AND revoked_at IS NULL RETURNING business_id`,
-      [approvalId, admin.userId],
-    );
-    if (approval.rowCount === 0) throw new ApprovalRejected('approval_not_found');
-    const businessId: number = approval.rows[0].business_id;
-    const memberships = await client.query(
-      `UPDATE business_memberships SET status = 'revoked', revoked_at = now(), revoked_by_user_id = $2
-        WHERE approval_id = $1 AND status = 'active'`,
-      [approvalId, admin.userId],
-    );
-    const revokedMemberships = memberships.rowCount ?? 0;
+    const businessId: number | undefined = (
+      await client.query('SELECT business_id FROM ownership_approvals WHERE id = $1', [approvalId])
+    ).rows[0]?.business_id;
+    if (!businessId) throw new ApprovalRejected('approval_not_found');
+    await client.query('SELECT id FROM businesses WHERE id = $1 FOR UPDATE', [businessId]);
+    const current = await client.query('SELECT 1 FROM ownership_approvals WHERE id = $1 AND revoked_at IS NULL', [approvalId]);
+    if (current.rowCount === 0) throw new ApprovalRejected('approval_not_found');
+    const revoked = await endBusinessAuthority(client, businessId, admin, 'by_revocation', now);
     await recordAuditEvent(client, {
       businessId,
       actor: admin,
       action: 'ownership.approval_revoked',
-      details: { approval_id: approvalId, revoked_memberships: revokedMemberships },
+      details: {
+        approval_id: approvalId,
+        revoked_memberships: revoked.memberships,
+        revoked_invitations: revoked.invitations,
+        revoked_keys: revoked.keys,
+      },
     });
-    return { revokedMemberships };
+    return { revokedMemberships: revoked.memberships };
   });
 }
+
+/**
+ * Records an administrator-approved ownership transfer (ADR 0004), atomically:
+ * the business's previous authority ends (its approvals, every active owner
+ * and staff membership, pending staff invitations and machine keys), then the
+ * new owner's approval and membership are written. Other businesses are not
+ * touched. The new owner must have signed in once; with no current owner the
+ * first-owner approval applies instead.
+ */
+export async function approveOwnershipTransfer(
+  db: Pool,
+  administratorUserId: number | null | undefined,
+  request: FirstOwnerApproval,
+  now: Date = new Date(),
+): Promise<{
+  approvalId: number;
+  membershipId: number;
+  revoked: { memberships: number; invitations: number; keys: number };
+}> {
+  const admin = await requireAdministrator(db, administratorUserId);
+  return inTransaction(db, async (client) => {
+    const business = await client.query('SELECT id FROM businesses WHERE id = $1 FOR UPDATE', [request.businessId]);
+    if (business.rowCount === 0) throw new ApprovalRejected('business_not_found');
+    const applicantId: number | undefined = (
+      await client.query('SELECT id FROM users WHERE lower(email) = $1', [request.applicantEmail])
+    ).rows[0]?.id;
+    if (!applicantId) throw new ApprovalRejected('applicant_not_signed_in');
+    if (applicantId === admin.userId) throw new ApprovalRejected('self_approval');
+    const previousOwnerId: number | undefined = (
+      await client.query(
+        "SELECT user_id FROM business_memberships WHERE business_id = $1 AND role = 'owner' AND status = 'active'",
+        [request.businessId],
+      )
+    ).rows[0]?.user_id;
+    if (!previousOwnerId) throw new ApprovalRejected('no_current_owner');
+    if (previousOwnerId === applicantId) throw new ApprovalRejected('already_owner');
+
+    const revoked = await endBusinessAuthority(client, request.businessId, admin, 'by_transfer', now);
+
+    const approvalId: number = (
+      await client.query(
+        `INSERT INTO ownership_approvals
+           (business_id, subject_user_id, kind, evidence_method, evidence_subject, authority_basis, evidence_reference,
+            previous_owner_user_id, approved_by_user_id, approved_at)
+         VALUES ($1, $2, 'transfer', $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
+        [
+          request.businessId,
+          applicantId,
+          request.evidenceMethod,
+          request.evidenceSubject,
+          request.authorityBasis,
+          request.evidenceReference,
+          previousOwnerId,
+          admin.userId,
+          now,
+        ],
+      )
+    ).rows[0].id;
+    const membershipId: number = (
+      await client.query(
+        `INSERT INTO business_memberships (business_id, user_id, role, approval_id, granted_by_user_id, created_at)
+         VALUES ($1, $2, 'owner', $3, $4, $5) RETURNING id`,
+        [request.businessId, applicantId, approvalId, admin.userId, now],
+      )
+    ).rows[0].id;
+    await recordAuditEvent(client, {
+      businessId: request.businessId,
+      actor: admin,
+      action: 'ownership.transferred',
+      details: {
+        approval_id: approvalId,
+        membership_id: membershipId,
+        subject_user_id: applicantId,
+        previous_owner_user_id: previousOwnerId,
+        revoked_memberships: revoked.memberships,
+        revoked_invitations: revoked.invitations,
+        revoked_keys: revoked.keys,
+      },
+    });
+    return { approvalId, membershipId, revoked };
+  });
+}
+

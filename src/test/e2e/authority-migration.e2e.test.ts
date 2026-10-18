@@ -35,7 +35,12 @@ const AUTHORITY_TABLES = [
   'platform_administrators',
 ] as const;
 
-const MIGRATIONS = ['0001_authjs_identity.sql', '0002_business_case_machine_authority.sql', '0003_owner_login.sql'];
+const MIGRATIONS = [
+  '0001_authjs_identity.sql',
+  '0002_business_case_machine_authority.sql',
+  '0003_owner_login.sql',
+  '0004_staff_and_transfer.sql',
+];
 
 let db: TestDatabase;
 

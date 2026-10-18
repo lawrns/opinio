@@ -1,12 +1,14 @@
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import { AuthShell, buttonClass, inputClass, labelClass } from '@/components/auth/AuthShell';
-import { merchantAuthEnabled } from '@/lib/auth/spike';
+import { gatedMetadata, merchantAuthEnabled } from '@/lib/auth/spike';
 import { currentMerchantUserId } from '@/lib/authz/session';
 import { requestLoginLink } from './actions';
 
 export const dynamic = 'force-dynamic';
-export const metadata: Metadata = { title: 'Entrar — Opinio', robots: { index: false, follow: false } };
+export function generateMetadata(): Metadata {
+  return gatedMetadata(merchantAuthEnabled(), { title: 'Entrar — Opinio', robots: { index: false, follow: false } });
+}
 
 export default async function LoginPage() {
   if (!merchantAuthEnabled()) notFound();

@@ -4,14 +4,22 @@ import { AuthShell, buttonClass, inputClass, labelClass } from '@/components/aut
 import { pool } from '@/lib/db';
 import { isPlatformAdministrator } from '@/lib/authz/owners';
 import { currentMerchantUserId } from '@/lib/authz/session';
-import { merchantAuthEnabled } from '@/lib/auth/spike';
+import { gatedMetadata, merchantAuthEnabled } from '@/lib/auth/spike';
 import { approveFirstOwnerAction, revokeOwnerApprovalAction } from './actions';
 
 export const dynamic = 'force-dynamic';
-export const metadata: Metadata = { title: 'Aprobaciones — Opinio', robots: { index: false, follow: false } };
+/** Metadata only for platform administrators; everyone else gets a plain 404 (no route title). */
+export async function generateMetadata(): Promise<Metadata> {
+  const admin = merchantAuthEnabled() && (await isPlatformAdministrator(pool, await currentMerchantUserId().catch(() => null)));
+  return gatedMetadata(admin, { title: 'Aprobaciones — Opinio', robots: { index: false, follow: false } });
+}
 
 const RESULT: Record<string, string> = {
   aprobado: 'Propietario aprobado.',
+  transferido: 'Transferencia aprobada. El acceso anterior, las invitaciones pendientes y las claves del comercio quedaron revocados.',
+  no_current_owner: 'Este comercio no tiene propietario; usa la aprobación de primer propietario.',
+  already_owner: 'Esa persona ya es la propietaria.',
+  stale_access: 'Este comercio aún tiene accesos activos sin propietario. Revócalos antes de aprobar.',
   invalid_request:
     'Revisa los datos: método, lo verificado (dominio o teléfono +52…), autoridad y referencia (por ejemplo VER-1042) son obligatorios.',
   revocado: 'Aprobación revocada. El acceso del propietario terminó.',
@@ -36,7 +44,7 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
   );
 
   return (
-    <AuthShell title="Aprobar primer propietario">
+    <AuthShell title="Aprobar propietario">
       <p>
         Aprueba solo después de verificar, por un medio independiente del listado, que la persona controla el comercio
         (correo del dominio, DNS o llamada a un número verificado) y su autoridad documentada. Un listado reclamado, el
@@ -44,6 +52,19 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
       </p>
       {result && <p role="status" data-testid="approval-result">{result}</p>}
       <form action={approveFirstOwnerAction} className="space-y-4">
+        <fieldset className="space-y-1.5">
+          <legend className={labelClass}>Tipo de aprobación</legend>
+          <label className="flex items-center gap-2">
+            <input type="radio" name="kind" value="first_owner" defaultChecked /> Primer propietario
+          </label>
+          <label className="flex items-center gap-2">
+            <input type="radio" name="kind" value="transfer" /> Transferencia (revoca todo acceso actual del comercio)
+          </label>
+          <p data-testid="transfer-warning">
+            Una transferencia revoca el acceso del propietario anterior y de todo su equipo, las invitaciones pendientes y
+            las claves de integración del comercio. El nuevo propietario debe invitar de nuevo a su equipo.
+          </p>
+        </fieldset>
         <div className="space-y-1.5">
           <label htmlFor="businessSlug" className={labelClass}>Comercio (slug)</label>
           <input id="businessSlug" name="businessSlug" required className={inputClass} />
