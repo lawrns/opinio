@@ -1,4 +1,4 @@
-# Authority model (B02–B06)
+# Authority model (B02–B07)
 
 Issues [#28](https://github.com/lawrns/opinio/issues/28), [#29](https://github.com/lawrns/opinio/issues/29) and [#30](https://github.com/lawrns/opinio/issues/30). Policy: [ADR 0001](../adr/0001-separate-buyer-business-and-machine-authority.md), [0002](../adr/0002-manual-first-owner-and-requested-recovery.md), [0003](../adr/0003-auth-policy-defaults.md). Terms: [GLOSSARY.md](../../GLOSSARY.md).
 
@@ -11,6 +11,7 @@ Issues [#28](https://github.com/lawrns/opinio/issues/28), [#29](https://github.c
 | `0003_owner_login.sql` | `platform_administrators` (with granter), approval `evidence_subject` / `authority_basis` / `evidence_reference` and revocation columns, one active owner per business (partial unique index), `auth_rate_limits` |
 | `0004_staff_and_transfer.sql` | staff invitation revocation (`revoked_by_user_id`), one pending invitation per business and address, `business_memberships.staff_invitation_id` |
 | `0005_buyer_case_access.sql` | `resolution_cases.access_email` and `submission_key` (unique per business), transport outcome on `case_access_tokens` |
+| `0006_case_recovery.sql` | `case_recovery_requests` (one open request per case; an approval records basis, reference and the issued token) |
 
 All are additive. They change no existing row and backfill nothing: claimed listings, RFC/CLEE identities and supplied contacts mint no membership. The schema enforces that an owner membership references an approval for that same business and person, that a person has at most one active membership per business, that revoked rows carry a revocation time, and that machine scopes are only `order_events` and `invitations`. Every secret column holds a SHA-256 digest.
 
@@ -92,4 +93,16 @@ Buyer messages (`POST /api/v1/cases/<id>/messages` as consumer) come from the sa
 Per-client limits (case creation, resend) key on the last `X-Forwarded-For` entry, as merchant login does. Without exactly one appending reverse proxy, every caller shares one `unknown` bucket. That's a deployment prerequisite.
 
 Nothing here confirms, reopens or otherwise changes a case. Buyer confirmation stays blocked until its own ticket.
+
+## Legacy case recovery (B07)
+
+Issue [#33](https://github.com/lawrns/opinio/issues/33). Policy: [ADR 0005](../adr/0005-legacy-case-recovery-manual-review.md) (accepted by Chief, delegated by the user). Code: `src/lib/authz/case-recovery.ts`. Behind `OPINIO_BUYER_PROOF`; the review queue also needs merchant login (`OPINIO_MERCHANT_AUTH`) and a platform administrator.
+
+| Step | Where | Guard |
+|---|---|---|
+| Request | `/caso/recuperar` → `POST /caso/recuperar/enviar` | same answer for every input; 10 per client address every 15 minutes; a legacy email case is queued only when the supplied email matches its stored original contact; phone-only and ambiguous cases are queued as `needs_manual_verification`; the supplied address is never stored; **nothing is ever sent from here** |
+| Review | `/admin/recuperaciones` | platform administrators only (404 otherwise); an email request is approved with how it was verified and a `VER-…` reference; any request can be closed without sending |
+| Approve | `approveCaseRecovery` | one transaction: retires the case's unused links, revokes its active sessions, sets its access email to the stored original contact, and issues one link; two simultaneous approvals give one link; audited; the link then goes to that address only |
+
+Nothing here changes a case's status or confirmation, or touches other cases.
 
