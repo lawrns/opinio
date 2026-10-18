@@ -204,8 +204,10 @@ export async function maintainLedger(deps: Deps = defaultDeps()): Promise<{ reco
  * Consent withdrawn for a browser journey: every undelivered row of its
  * identities is stopped (`skipped_consent`, analytics ID removed), then the
  * identities are unlinked (journey and touches erased). A row being sent right
- * now keeps its claim check, so it cannot be flipped back. Returns the number
- * of rows stopped. Never sends anything.
+ * now keeps its `sending` state so its real outcome is recorded (GA4 may
+ * already have it); it loses its analytics ID and consent, so if that send
+ * fails it is never retried. Returns the number of rows stopped. Never sends
+ * anything.
  */
 export async function withdrawJourney(journeyId: string, deps: Pick<Deps, 'query'> = defaultDeps()): Promise<number> {
   if (!isOpaqueId('journey', journeyId)) return 0;
@@ -213,8 +215,15 @@ export async function withdrawJourney(journeyId: string, deps: Pick<Deps, 'query
     `UPDATE conversion_stage_events e SET delivery_state = 'skipped_consent', analytics_id = NULL, consent_state = 'denied'
        FROM conversion_identities i
       WHERE i.entity_type = e.entity_type AND i.entity_id = e.entity_id AND i.journey_id = $1
-        AND e.delivery_state IN ('pending', 'failed', 'sending')
+        AND e.delivery_state IN ('pending', 'failed')
       RETURNING e.event_id`,
+    [journeyId],
+  );
+  await deps.query(
+    `UPDATE conversion_stage_events e SET analytics_id = NULL, consent_state = 'denied'
+       FROM conversion_identities i
+      WHERE i.entity_type = e.entity_type AND i.entity_id = e.entity_id AND i.journey_id = $1
+        AND e.delivery_state = 'sending'`,
     [journeyId],
   );
   await deps.query(

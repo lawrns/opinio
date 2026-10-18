@@ -302,8 +302,9 @@ export async function POST(request: NextRequest) {
       return { createdReview: review, newPassport: passport };
     });
 
-    // CONVERSION-001: the review and its passport update have committed. This
-    // milestone is not proof of a genuine customer or merchant activation.
+    // CONVERSION-001: the published review write has committed (and its
+    // passport update, when one runs; a contained unverified review skips it).
+    // This milestone is not proof of a genuine customer or merchant activation.
     // It runs after the response is sent (fire-and-forget), never throws and
     // never delays or fails the request.
     const context = parseConversionContext(body.conversion);

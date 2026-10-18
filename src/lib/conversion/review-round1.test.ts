@@ -103,7 +103,7 @@ describe('the readout never shows an unsupported metric as zero', () => {
     expect(rows['review_abandonment']).toMatchObject({ status: 'unavailable' });
     const readout = read('scripts/conversion-readout.ts');
     expect(readout).toMatch(/bun run scripts\/conversion-readout\.ts/);
-    expect(readout).toMatch(/unavailable: STAGE_COVERAGE\.filter/);
+    expect(readout).toMatch(/\.\.\.coverageByStatus\(\)/);
     expect(readout).toMatch(/e\.source/); // live vs reconciled split (seeded/imported reviews only appear as reconciled)
     expect(read('scripts/conversion-maintenance.ts')).toMatch(/bun run scripts\/conversion-maintenance\.ts/);
   });

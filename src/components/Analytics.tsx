@@ -4,7 +4,7 @@ import Script from 'next/script';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { usePathname } from 'next/navigation';
 import { analyticsPageLocation, analyticsReferrer, isPublicAnalyticsPath, stripLandingTracking } from '@/lib/analytics';
-import { bindCtaTracking, clearConversionJourney, recordConversionLanding, retryPendingWithdrawal } from '@/lib/conversion/client';
+import { bindCtaTracking, clearConversionJourney, flushBufferedConversionEvents, recordConversionLanding, retryPendingWithdrawal } from '@/lib/conversion/client';
 
 declare global {
   interface Window {
@@ -86,12 +86,17 @@ export function Analytics({ measurementId }: { measurementId: string }) {
       });
       initialized.current = true;
     }
-    if (pageLocation && lastPage.current !== pageLocation) {
+    // Keyed on the real path: two blog articles share the template location
+    // and are still two page views.
+    const pagePath = pageLocation ? window.location.pathname : null;
+    if (pagePath && lastPage.current !== pagePath) {
       window.gtag('event', 'page_view', context);
     }
-    lastPage.current = pageLocation;
-    // CONVERSION-001: allowlisted landing touch (once per load), consented only.
+    lastPage.current = pagePath;
+    // CONVERSION-001: allowlisted landing touch (once per load), consented
+    // only; then any step started before GA4 was configured.
     recordConversionLanding();
+    flushBufferedConversionEvents();
   }, [consent, measurementId, pathname, publicPage, ready]);
 
   // A withdrawal the server has not confirmed yet is retried on every load,

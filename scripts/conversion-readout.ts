@@ -3,12 +3,14 @@
  *   DATABASE_URL=... bun run scripts/conversion-readout.ts [days]
  * Prints aggregates only: review_published counts by week (America/Mexico_City),
  * first-touch category/page, consent split and source (live vs reconciled),
- * delivery states, and the coverage table. Step denominators, failures and
- * abandonment are listed under `unavailable`, never shown as zero. Reconcile counts against the
+ * delivery states, and the coverage table grouped as `measured`,
+ * `intentOnly` (GA4 intent: CTA clicks, step starts and step denominators,
+ * read in a GA4 exploration) and `unavailable` (failures, abandonment and the
+ * owner stages), never shown as zero. Reconcile counts against the
  * reviews table (status = 'published').
  */
 import { pool } from '../src/lib/db';
-import { STAGE_COVERAGE, OWNER_LINKAGE_PREREQUISITE } from '../src/lib/conversion/coverage';
+import { coverageByStatus, OWNER_LINKAGE_PREREQUISITE } from '../src/lib/conversion/coverage';
 
 async function main() {
   const days = Math.min(Math.max(Number(process.argv[2]) || 90, 1), 365);
@@ -31,7 +33,7 @@ async function main() {
       [days],
     );
     const ga4 = { measurementIdConfigured: Boolean(process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID), serverSendConfigured: Boolean(process.env.GA4_API_SECRET) };
-    console.log(JSON.stringify({ days, timezone: 'America/Mexico_City', ga4, weekly: weekly.rows, delivery: delivery.rows, reconcile: reconcile.rows[0], unavailable: STAGE_COVERAGE.filter((r) => r.status !== 'measured'), coverage: STAGE_COVERAGE, prerequisite: OWNER_LINKAGE_PREREQUISITE }, null, 2));
+    console.log(JSON.stringify({ days, timezone: 'America/Mexico_City', ga4, weekly: weekly.rows, delivery: delivery.rows, reconcile: reconcile.rows[0], ...coverageByStatus(), prerequisite: OWNER_LINKAGE_PREREQUISITE }, null, 2));
   } finally {
     client.release();
     await pool.end();

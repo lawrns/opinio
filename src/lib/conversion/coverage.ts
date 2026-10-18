@@ -24,6 +24,12 @@ export const STAGE_COVERAGE: readonly StageCoverage[] = [
   { stage: 'week2_return (business)', status: 'unavailable', source: 'none', note: 'needs trusted owner linkage; anonymous visitor return is not merchant retention' },
 ];
 
+/** The readout's grouping: intent-only GA4 stages are never listed as unavailable. */
+export function coverageByStatus(rows: readonly StageCoverage[] = STAGE_COVERAGE) {
+  const of = (status: StageCoverage['status']) => rows.filter((r) => r.status === status);
+  return { measured: of('measured'), intentOnly: of('intent_only'), unavailable: of('unavailable') };
+}
+
 /** Minimal product prerequisite for the unavailable stages (separately approved; not built here). */
 export const OWNER_LINKAGE_PREREQUISITE =
   'A verified owner account linked to exactly one business (opinio #26–#30), a protected profile-completion transition, and review authenticity proof (buyer link, #32). Billing for a paid stage.';

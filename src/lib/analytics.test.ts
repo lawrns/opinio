@@ -48,22 +48,22 @@ describe('QA-042: landing tracking params leave the URL before gtag.js loads', (
       history: { state: { __NA: true }, replaceState: (state: unknown, _t: string, url: string) => void calls.push([state, url]) },
     }) as unknown as Pick<Window, 'location' | 'history'>;
 
-  it('drops utm, click IDs and personal-looking params from a landing; keeps the router state', () => {
+  it('drops utm, click IDs and personal-looking params from a landing; hands the router a null state so it adopts the clean URL', () => {
     expect(stripLandingTracking(win('/', '?utm_source=qa_test&utm_medium=qa&email=x&name=QaProbe&gclid=abc'))).toBe(true);
-    expect(calls.pop()).toEqual([{ __NA: true }, '/']);
+    expect(calls.pop()).toEqual([null, '/']);
   });
 
   it('keeps the search and filter keys /verificar reads, so reload and sharing still work', () => {
     expect(stripLandingTracking(win('/verificar', '?q=luuna&categoria=Muebles&sort=rating&utm_source=x&email=x', '#resultados'))).toBe(true);
-    expect(calls.pop()).toEqual([{ __NA: true }, '/verificar?q=luuna&categoria=Muebles&sort=rating#resultados']);
+    expect(calls.pop()).toEqual([null, '/verificar?q=luuna&categoria=Muebles&sort=rating#resultados']);
     expect(stripLandingTracking(win('/verificar', '?q=luuna&accion=opinar'))).toBe(false);
   });
 
   it('keeps pagination on /directorio and the prefilled business on /caso/nuevo', () => {
     expect(stripLandingTracking(win('/directorio', '?page=8&fbclid=abc'))).toBe(true);
-    expect(calls.pop()).toEqual([{ __NA: true }, '/directorio?page=8']);
+    expect(calls.pop()).toEqual([null, '/directorio?page=8']);
     expect(stripLandingTracking(win('/caso/nuevo', '?b=luuna&name=QaProbe'))).toBe(true);
-    expect(calls.pop()).toEqual([{ __NA: true }, '/caso/nuevo?b=luuna']);
+    expect(calls.pop()).toEqual([null, '/caso/nuevo?b=luuna']);
   });
 
   it('leaves clean URLs and non-analytics routes alone', () => {

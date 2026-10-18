@@ -3,6 +3,7 @@
 import { clearJourney, conversionContextForServer, recordLanding, trackIntent, windowEnv } from './browser';
 import { isOpaqueId, type ConversionJourney, type StepId } from './contract';
 import { ctaIdFor, journeyForCta } from './cta';
+import { readConsent } from './consent';
 import { pageForPath } from './pages';
 
 /**
@@ -10,6 +11,10 @@ import { pageForPath } from './pages';
  * through the consented gtag queue (src/components/Analytics.tsx); without an
  * explicit "granted" choice nothing is stored or sent.
  */
+/** Consented events raised before gtag is configured (a step started on a full page load). */
+const MAX_BUFFERED = 20;
+let buffered: Array<[string, Record<string, string>]> = [];
+
 function env() {
   return windowEnv((name, params) => {
     // Explicit page context, so the event never inherits the document title
@@ -17,8 +22,21 @@ function env() {
     const page = pageForPath(window.location.pathname);
     if (!page) return;
     const origin = window.location.origin;
-    window.gtag?.('event', name, { ...params, page_location: origin + page.templatePath, page_title: page.pageId, page_referrer: origin + '/' });
+    const event: Record<string, string> = { ...params, page_location: origin + page.templatePath, page_title: page.pageId, page_referrer: origin + '/' };
+    if (window.gtag) window.gtag('event', name, event);
+    else if (buffered.length < MAX_BUFFERED) buffered.push([name, event]);
   });
+}
+
+/**
+ * Sends the events buffered before gtag existed. Analytics calls it once GA4
+ * is configured; anything buffered is dropped if consent is no longer granted.
+ */
+export function flushBufferedConversionEvents(): void {
+  const pending = buffered;
+  buffered = [];
+  if (typeof window === 'undefined' || !window.gtag || readConsent(window) !== 'granted') return;
+  for (const [name, event] of pending) window.gtag('event', name, event);
 }
 
 let landingRecorded = false;
@@ -56,12 +74,34 @@ export function conversionContext(): Record<string, unknown> {
 }
 
 const WITHDRAWAL_KEY = 'opinio.conversion-withdrawal';
+const MAX_PENDING_WITHDRAWALS = 10;
 
 function storage(): Storage | null {
   try {
     return typeof window === 'undefined' ? null : window.localStorage;
   } catch {
     return null;
+  }
+}
+
+/** Withdrawn journeys the server has not confirmed yet (a list: a second withdrawal never overwrites the first). */
+function pendingWithdrawals(): string[] {
+  try {
+    const raw = storage()?.getItem(WITHDRAWAL_KEY) ?? null;
+    if (!raw) return [];
+    const parsed: unknown = raw.startsWith('[') ? JSON.parse(raw) : [raw];
+    return Array.isArray(parsed) ? parsed.filter((id): id is string => isOpaqueId('journey', id)) : [];
+  } catch {
+    return [];
+  }
+}
+
+function savePendingWithdrawals(ids: string[]): void {
+  try {
+    if (ids.length === 0) storage()?.removeItem(WITHDRAWAL_KEY);
+    else storage()?.setItem(WITHDRAWAL_KEY, JSON.stringify(ids.slice(-MAX_PENDING_WITHDRAWALS)));
+  } catch {
+    // storage full or blocked: the send below is still tried once
   }
 }
 
@@ -74,7 +114,7 @@ async function sendWithdrawal(journeyId: string): Promise<void> {
       body: JSON.stringify({ journeyId, consent: 'denied' }),
       keepalive: true,
     });
-    if (response.status === 204) storage()?.removeItem(WITHDRAWAL_KEY);
+    if (response.status === 204) savePendingWithdrawals(pendingWithdrawals().filter((id) => id !== journeyId));
   } catch {
     // stays queued for the next load
   }
@@ -86,22 +126,18 @@ async function sendWithdrawal(journeyId: string): Promise<void> {
  * stop its undelivered events.
  */
 export async function clearConversionJourney(): Promise<void> {
+  buffered = [];
   const store = storage();
   if (!store) return;
   const journeyId = clearJourney({ storage: store });
   if (!journeyId) return;
-  try {
-    store.setItem(WITHDRAWAL_KEY, journeyId);
-  } catch {
-    // storage full or blocked: still try once
-  }
+  savePendingWithdrawals([...pendingWithdrawals().filter((id) => id !== journeyId), journeyId]);
   await sendWithdrawal(journeyId);
 }
 
-/** Retries an unconfirmed withdrawal. Runs on every load, whatever the current consent. */
+/** Retries every unconfirmed withdrawal. Runs on every load, whatever the current consent. */
 export async function retryPendingWithdrawal(): Promise<void> {
-  const pending = storage()?.getItem(WITHDRAWAL_KEY) ?? null;
-  if (isOpaqueId('journey', pending)) await sendWithdrawal(pending);
+  for (const journeyId of pendingWithdrawals()) await sendWithdrawal(journeyId);
 }
 
 /** One delegated listener for reviewed `data-cta` placements (no DOM text or href is read). */
