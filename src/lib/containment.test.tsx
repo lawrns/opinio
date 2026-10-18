@@ -51,7 +51,7 @@ vi.mock('@/lib/db', () => ({
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 
 import { proxy, config as proxyConfig } from '@/proxy';
-import { CONTAINED_OPERATIONS, isOperationEnabled } from '@/lib/containment';
+import { CONTAINED_OPERATIONS, isOperationEnabled, MERCHANT_UNAVAILABLE_HTML } from '@/lib/containment';
 import * as actions from '@/lib/merchant-actions';
 import { PATCH as patchCase } from '@/app/api/v1/cases/[id]/route';
 import { POST as postMessage } from '@/app/api/v1/cases/[id]/messages/route';
@@ -115,6 +115,11 @@ describe('merchant pages are unavailable and carry no case data', () => {
       expect(html).toContain('noindex');
       expectNoContact(html);
     }
+  });
+
+  it('stays readable in a dark-mode browser: light color scheme with explicit colors', () => {
+    expect(MERCHANT_UNAVAILABLE_HTML).toContain('<meta name="color-scheme" content="light">');
+    expect(MERCHANT_UNAVAILABLE_HTML).toMatch(/<body style="background:#ffffff;color:#1a1a1a;/);
   });
 
   it('server-action POSTs to /merchant are stopped by the proxy too', () => {
