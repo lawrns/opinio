@@ -537,6 +537,14 @@ describe('switch off (production default)', () => {
     ] as const) {
       expect((await fetch(`${off.origin}${path}`, { method, headers: { origin: off.origin } })).status, `${method} ${path}`).toBe(404);
     }
+    // QA-048: the gated pages' 404s carry the same title as a route that does not exist.
+    const titleOf = (html: string) => html.match(/<title>([^<]*)<\/title>/)?.[1];
+    const plain = titleOf(await (await fetch(`${off.origin}/no-existe-${Date.now()}`)).text());
+    for (const p of ['/caso/acceso', '/caso/acceso/reenviar']) {
+      const html = await (await fetch(`${off.origin}${p}`)).text();
+      expect(titleOf(html), p).toBe(plain);
+      expect(html, p).not.toMatch(/Acceso a tu caso|Nuevo enlace para tu caso/);
+    }
     const form = await (await fetch(`${off.origin}/caso/nuevo`)).text();
     expect(form).toContain('Correo o teléfono de contacto');
     expect(form).not.toContain('Correo privado para acceder a tu caso');

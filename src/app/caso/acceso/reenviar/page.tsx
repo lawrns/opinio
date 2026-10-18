@@ -1,10 +1,12 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { AuthShell, buttonClass, inputClass, labelClass } from '@/components/auth/AuthShell';
-import { buyerProofEnabled } from '@/lib/auth/spike';
+import { buyerProofEnabled, gatedMetadata } from '@/lib/auth/spike';
 
 export const dynamic = 'force-dynamic';
-export const metadata: Metadata = { title: 'Nuevo enlace para tu caso — Opinio', robots: { index: false, follow: false } };
+export function generateMetadata(): Metadata {
+  return gatedMetadata(buyerProofEnabled(), { title: 'Nuevo enlace para tu caso — Opinio', robots: { index: false, follow: false } });
+}
 
 /** Bounded resend. The answer never says whether a case or address exists. */
 export default async function ResendPage({ searchParams }: { searchParams: Promise<{ resultado?: string }> }) {

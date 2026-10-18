@@ -2,11 +2,13 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { AuthShell } from '@/components/auth/AuthShell';
-import { buyerProofEnabled } from '@/lib/auth/spike';
+import { buyerProofEnabled, gatedMetadata } from '@/lib/auth/spike';
 import { ConfirmCaseAccess } from './ConfirmCaseAccess';
 
 export const dynamic = 'force-dynamic';
-export const metadata: Metadata = { title: 'Acceso a tu caso — Opinio', robots: { index: false, follow: false } };
+export function generateMetadata(): Metadata {
+  return gatedMetadata(buyerProofEnabled(), { title: 'Acceso a tu caso — Opinio', robots: { index: false, follow: false } });
+}
 
 const RESULT: Record<string, string> = {
   invalido: 'Este enlace ya no es válido: venció, ya se usó o se pidió uno más nuevo.',
