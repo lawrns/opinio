@@ -33,6 +33,24 @@ const nextConfig: NextConfig = {
         ],
       },
       {
+        // Buyer case access (B06): the landing page handles a token fragment
+        // and the exchange/resend routes carry case identifiers.
+        source: "/caso/acceso/:path*",
+        headers: [
+          { key: "Referrer-Policy", value: "no-referrer" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow" },
+          { key: "Cache-Control", value: "private, no-store" },
+        ],
+      },
+      {
+        source: "/caso/acceso",
+        headers: [
+          { key: "Referrer-Policy", value: "no-referrer" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow" },
+          { key: "Cache-Control", value: "private, no-store" },
+        ],
+      },
+      {
         // Embeddable widgets are served for cross-origin <iframe> use on
         // merchant sites (see src/components/WidgetsCustomizer.tsx), so they
         // must stay frameable and must not forward the host page URL.

@@ -17,6 +17,16 @@ export function merchantAuthEnabled(): boolean {
   return process.env.OPINIO_MERCHANT_AUTH === '1';
 }
 
+/**
+ * Buyer case access switch (B06, issue #32): new cases collect a private
+ * access email and receive a single-use link exchanged for case-scoped proof.
+ * Off unless OPINIO_BUYER_PROOF=1; production stays off until the email
+ * sender is approved. Off, case creation is unchanged.
+ */
+export function buyerProofEnabled(): boolean {
+  return process.env.OPINIO_BUYER_PROOF === '1';
+}
+
 /** Private, non-cacheable, non-indexable response headers for auth surfaces. */
 export const PRIVATE_HEADERS = {
   'Cache-Control': 'private, no-store',

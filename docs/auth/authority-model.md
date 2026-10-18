@@ -1,4 +1,4 @@
-# Authority model (B02–B04)
+# Authority model (B02–B06)
 
 Issues [#28](https://github.com/lawrns/opinio/issues/28), [#29](https://github.com/lawrns/opinio/issues/29) and [#30](https://github.com/lawrns/opinio/issues/30). Policy: [ADR 0001](../adr/0001-separate-buyer-business-and-machine-authority.md), [0002](../adr/0002-manual-first-owner-and-requested-recovery.md), [0003](../adr/0003-auth-policy-defaults.md). Terms: [GLOSSARY.md](../../GLOSSARY.md).
 
@@ -10,6 +10,7 @@ Issues [#28](https://github.com/lawrns/opinio/issues/28), [#29](https://github.c
 | `0002_business_case_machine_authority.sql` | `ownership_approvals`, `business_memberships` (owner/staff, active/revoked), `staff_invitations`, `case_access_tokens`, `case_sessions`, `business_machine_keys`, and `audit_logs.actor_type`/`actor_id` |
 | `0003_owner_login.sql` | `platform_administrators` (with granter), approval `evidence_subject` / `authority_basis` / `evidence_reference` and revocation columns, one active owner per business (partial unique index), `auth_rate_limits` |
 | `0004_staff_and_transfer.sql` | staff invitation revocation (`revoked_by_user_id`), one pending invitation per business and address, `business_memberships.staff_invitation_id` |
+| `0005_buyer_case_access.sql` | `resolution_cases.access_email` and `submission_key` (unique per business), transport outcome on `case_access_tokens` |
 
 All are additive. They change no existing row and backfill nothing: claimed listings, RFC/CLEE identities and supplied contacts mint no membership. The schema enforces that an owner membership references an approval for that same business and person, that a person has at most one active membership per business, that revoked rows carry a revocation time, and that machine scopes are only `order_events` and `invitations`. Every secret column holds a SHA-256 digest.
 
@@ -69,4 +70,20 @@ Policy: [ADR 0004](../adr/0004-staff-and-transfer-policy.md). Code: `src/lib/aut
 | `approveOwnershipTransfer` | platform administrator | revokes every approval, membership (staff included), pending invitation and machine key of that business, each with its own audit row, then records the transfer and the new owner; the form warns the administrator first |
 
 Revoking an owner's approval (`revokeOwnerApproval`) ends the same authority as a transfer, and `approveFirstOwner` refuses a business that still has any active access. Each runs in one transaction that locks the business row first, and is audited. Invitation emails are limited to 10 per business per 15 minutes.
+
+## Buyer case access (B06)
+
+Issue [#32](https://github.com/lawrns/opinio/issues/32). Everything here is behind `OPINIO_BUYER_PROOF=1`; with it off, case creation is unchanged and the new routes return 404. Code: `src/lib/authz/buyer-access.ts`, `src/lib/auth/case-email.ts`.
+
+| Step | Where | Guard |
+|---|---|---|
+| Open a case | `POST /api/v1/cases` | a required private `access_email` and an optional phone that is never emailed; case, first message and a hashed 15-minute token are written in one transaction; a repeated `submission_key` returns the same case with no second message or email; the response never carries the token |
+| Email | `sendCaseAccessLink` | neutral text and a link to `/caso/acceso#token=…` (fragment only), sent to the access email only; the transport's answer is recorded (`transport_accepted_at` / `transport_failed_at`), and acceptance is not counted as delivery |
+| Open the link | `/caso/acceso` | strips the fragment and loads no analytics; previews and prefetches consume nothing |
+| Exchange | `POST /caso/acceso/entrar` | same-origin only; a conditional UPDATE lets one exchange win; creates a 7-day revocable session for that one case (`opinio_case_<id>` cookie, HttpOnly, SameSite=Lax, `__Host-` over HTTPS); clean redirect to `/caso/<id>` |
+| Proof | `GET /api/v1/cases/<id>/acceso`, `/caso/<id>` | `authorizeCaseSession`: that case's live session only |
+| Leave | `POST /caso/acceso/salir` | revokes the session server-side and clears the cookie |
+| Resend | `/caso/acceso/reenviar` | the same answer for every input; sends to the stored access email only when the case number and address match; retires earlier unused links; at most 3 per case and 10 per client address every 15 minutes |
+
+Nothing here confirms, reopens or otherwise changes a case. Buyer confirmation stays blocked until its own ticket.
 
