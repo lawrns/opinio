@@ -50,17 +50,36 @@ describe('invitation copy matches the code (OPINIO-COPY-001)', () => {
     expect(whatsapp?.a).toMatch(/no la envía ni confirma su entrega/);
   });
 
-  // QA-057: the live site serves profiles, reviews, the review form and case
-  // pages; only the merchant panel is contained (#42). The summary AI crawlers
-  // read must not say the whole site is offline or that reviews aren't taken.
+  // QA-057 (Chief's rewrite): llms.txt / llms-full.txt are what AI crawlers
+  // read. They must describe what live opinio.mx serves (verified with curl:
+  // these routes return 200, only /merchant is 503), never the old offline notice.
+  const PUBLIC_ROUTES: [string, string][] = [
+    ['/directorio', 'directorio'],
+    ['/b/{slug}', 'b/[slug]'],
+    ['/verificar', 'verificar'],
+    ['/escribir-opinion/{slug}', 'escribir-opinion/[slug]'],
+    ['/caso/nuevo', 'caso/nuevo'],
+    ['/caso/{id}', 'caso/[id]'],
+    ['/blog', 'blog'],
+    ['/resenas-y-reputacion', 'resenas-y-reputacion'],
+  ];
   it.each([
     ['llms.txt', read('public', 'llms.txt')],
     ['llms-full.txt', read('public', 'llms-full.txt')],
-  ])('%s does not say opinio.mx is offline or takes no reviews; it names the unavailable merchant panel', (_label, text) => {
-    expect(text).not.toMatch(/opinio\.mx\) está (\*\*)?fuera de línea/i);
-    expect(text).not.toMatch(/no se reciben opiniones/i);
-    expect(text).toMatch(/opinio\.mx\) está (\*\*)?en línea/i);
-    expect(text).toMatch(/panel de comercios está temporalmente no disponible mientras se habilita el acceso seguro/);
+  ])('%s describes the live site and never the offline notice', (_label, text) => {
+    for (const stale of [/fuera de línea/i, /\b410\b/, /\bGone\b/i, /única página pública/i, /una sola URL/i, /solo portada/i, /no se reciben opiniones/i, /deshabilitad/i]) {
+      expect(text).not.toMatch(stale);
+    }
+    expect(text).toMatch(/Opinio México \(opinio\.mx\) está (\*\*)?en línea/);
+    expect(text).toMatch(/panel de comercios .*está temporalmente no disponible mientras se habilita el acceso seguro/);
+    expect(text).toMatch(/Opinio no envía invitaciones automáticamente/);
+    expect(text).toMatch(/comparte el enlace del formulario público/);
+    for (const [route, dir] of PUBLIC_ROUTES) {
+      expect(text, route).toContain(`https://opinio.mx${route}`);
+      // Every route it names exists in the app.
+      expect(fs.existsSync(path.join(process.cwd(), 'src', 'app', ...dir.split('/'))), dir).toBe(true);
+    }
+    expect(text).toContain('https://opinio.mx/sitemap.xml');
   });
 
   it('the invitation code calls no messaging provider', () => {
