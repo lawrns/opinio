@@ -64,7 +64,7 @@ Para aumentar las experiencias documentadas, puedes consultar la [guía de invit
 
 ## 3. Explica qué significa la cobertura
 
-Cuando hay pedidos conectados, Opinio define la cobertura como el porcentaje de pedidos registrados que recibió invitación a opinar. La propia plataforma aclara que **cobertura no significa satisfacción**.
+Cuando hay pedidos conectados, la cobertura de Opinio compara las invitaciones registradas con los pedidos registrados. La propia plataforma aclara que **cobertura no significa satisfacción**.
 
 Al explicar ese indicador, conserva el denominador: se refiere a los pedidos registrados en ese contexto. No lo conviertas en una afirmación sobre todas las ventas del negocio ni en un porcentaje de clientes satisfechos.
 
