@@ -33,10 +33,10 @@ describe('businesses/[slug] evidence gate', () => {
     expect(body.business.verified_reviews_count).toBe(0);
   });
 
-  it('returns the score with 5 verified reviews', async () => {
-    db.level = 'confirmed_store_order'; db.n = 5;
+  it('returns the score with 1 verified review', async () => {
+    db.level = 'confirmed_store_order'; db.n = 1;
     const body = await (await call()).json();
-    expect(body.business.verified_reviews_count).toBe(5);
+    expect(body.business.verified_reviews_count).toBe(1);
     expect(typeof body.business.trust_score).toBe('number');
     expect(body.live_metrics.opinioScore).toBe(body.business.trust_score);
   });

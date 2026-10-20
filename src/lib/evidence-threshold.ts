@@ -10,10 +10,11 @@
 /**
  * Minimum number of verified reviews (any verification_level other than
  * 'unverified_experience', see scoring.ts) required before a 0-100 score or a
- * green passport badge is shown. Conservative default of 5 from the audit
- * recommendation (OPN-24). Founder decision pending: change only here.
+ * green passport badge is shown. Set to 1 by founder decision (Laurence):
+ * a score needs at least one verified review, and unverified-only profiles stay
+ * hidden. Change only here.
  */
-export const MIN_EVIDENCE_SAMPLE = 5;
+export const MIN_EVIDENCE_SAMPLE = 1;
 
 /** SQL predicate (on the reviews table) for a verified published review. */
 export const VERIFIED_REVIEW_SQL = `verification_level <> 'unverified_experience'`;

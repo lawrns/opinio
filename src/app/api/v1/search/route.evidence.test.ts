@@ -22,23 +22,23 @@ describe('search route evidence gate', () => {
   beforeEach(() => { db.sqls.length = 0; });
 
   it('returns null score and the verified count below the threshold', async () => {
-    db.rows = [row(4)];
+    db.rows = [row(0)];
     const body = await (await call()).json();
     expect(body.results[0].trust_score).toBeNull();
-    expect(body.results[0].verified_reviews_count).toBe(4);
+    expect(body.results[0].verified_reviews_count).toBe(0);
   });
 
   it('returns the score at the threshold', async () => {
-    db.rows = [row(5)];
+    db.rows = [row(1)];
     const body = await (await call()).json();
     expect(body.results[0].trust_score).toBe(73.7);
-    expect(body.results[0].verified_reviews_count).toBe(5);
+    expect(body.results[0].verified_reviews_count).toBe(1);
   });
 
   it('ranks sub-threshold businesses after scored ones (nulls last)', async () => {
-    db.rows = [row(5)];
+    db.rows = [row(1)];
     await call('?sort=score');
-    expect(db.sqls[0]).toMatch(/CASE WHEN stats\.verified_count >= 5 THEN b\.trust_score END DESC NULLS LAST/);
+    expect(db.sqls[0]).toMatch(/CASE WHEN stats\.verified_count >= 1 THEN b\.trust_score END DESC NULLS LAST/);
     expect(db.sqls[0]).toMatch(/verification_level <> 'unverified_experience'/);
   });
 });

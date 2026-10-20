@@ -10,18 +10,19 @@ const unverified = { verification_level: 'unverified_experience' };
 const verified = { verification_level: 'confirmed_store_order' };
 
 describe('evidence threshold', () => {
-  it('uses a conservative default of 5', () => {
-    expect(MIN_EVIDENCE_SAMPLE).toBe(5);
+  it('requires one verified review (founder decision)', () => {
+    expect(MIN_EVIDENCE_SAMPLE).toBe(1);
   });
 
-  it('hides the ETN Turistar case: score 73.7 from one review', () => {
-    expect(displayableScore(73.7, 1)).toBeNull();
+  it('hides the ETN Turistar case: score 73.7 from one unverified review', () => {
+    expect(displayableScore(73.7, countVerifiedReviews([unverified]))).toBeNull();
   });
 
-  it('5 unverified reviews stay hidden, 5 verified reviews show', () => {
+  it('5 unverified reviews stay hidden, 1 verified review shows', () => {
     const five = (r: object) => Array.from({ length: 5 }, () => r);
     expect(displayableScore(80, countVerifiedReviews(five(unverified)))).toBeNull();
-    expect(displayableScore(80, countVerifiedReviews(five(verified)))).toBe(80);
+    expect(displayableScore(80, countVerifiedReviews([verified]))).toBe(80);
+    expect(displayableScore(80, countVerifiedReviews([]))).toBeNull();
     expect(countVerifiedReviews([...five(unverified), verified])).toBe(1);
   });
 
@@ -31,7 +32,7 @@ describe('evidence threshold', () => {
     expect(countVerifiedReviews([{}, { verification_level: null }])).toBe(0);
   });
 
-  it('shows at the threshold, hides just below', () => {
+  it('shows at the threshold, hides just below (0 verified)', () => {
     expect(displayableScore(80, MIN_EVIDENCE_SAMPLE - 1)).toBeNull();
     expect(displayableScore('82.5', '12')).toBe(82.5);
   });

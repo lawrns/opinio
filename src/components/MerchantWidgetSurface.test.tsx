@@ -14,11 +14,11 @@ const render = (verified: number) =>
 
 describe('MerchantWidgetSurface score gate', () => {
   it('hides the score below the verified threshold', () => {
-    const html = render(4);
+    const html = render(0);
     expect(html).not.toContain('73.7');
     expect(html).toContain('Sin evidencia suficiente');
   });
   it('shows the score at the threshold', () => {
-    expect(render(5)).toContain('73.7');
+    expect(render(1)).toContain('73.7');
   });
 });
