@@ -11,11 +11,9 @@ import { pool } from '@/lib/db';
 import { authorizeCaseSession } from '@/lib/authz';
 import { caseSessionCookieName } from '@/lib/authz/policy';
 import { servedOverHttps } from '@/lib/authz/https';
-import { buyerProofEnabled } from '@/lib/auth/spike';
 
 /** True when the request carries a live buyer session for this exact case (B06). Never throws. */
 async function hasCaseProof(caseId: number): Promise<boolean> {
-  if (!buyerProofEnabled()) return false;
   const token = (await cookies()).get(caseSessionCookieName(caseId, servedOverHttps()))?.value;
   if (!token) return false;
   return authorizeCaseSession(pool, { sessionToken: token, caseId }).then(
@@ -61,27 +59,38 @@ export default async function CasoDetailPage({ params }: PageProps) {
   }
 
   const row = caseRes.rows[0];
-  const caseData: CaseData = { ...toPublicCase(row), brand_name: row.brand_name, business_slug: row.business_slug };
+  // The thread and the free-text outcome are private to the buyer: without
+  // this case's session only the public summary renders, and the messages are
+  // never read from the database.
+  const verified = await hasCaseProof(row.id);
+  const caseData: CaseData = {
+    ...toPublicCase(row),
+    ...(verified ? {} : { remedy_offered: null, resolution_summary: null }),
+    brand_name: row.brand_name,
+    business_slug: row.business_slug,
+  };
 
-  // Query messages
-  const messagesRes = await query<{
-    id: number;
-    case_id: number;
-    sender_type: 'consumer' | 'merchant' | 'mediator';
-    sender_name: string;
-    message: string;
-    is_private: boolean;
-    created_at: string;
-  }>(
-    `SELECT id, case_id, sender_type, sender_name, message, is_private, created_at
-     FROM case_messages
-     WHERE case_id = $1
-     ORDER BY created_at ASC`,
-    [caseData.id]
-  );
-
-  const messages = toPublicMessages(messagesRes.rows);
-  const verified = await hasCaseProof(caseData.id);
+  const messages = verified
+    ? toPublicMessages(
+        (
+          await query<{
+            id: number;
+            case_id: number;
+            sender_type: 'consumer' | 'merchant' | 'mediator';
+            sender_name: string;
+            message: string;
+            is_private: boolean;
+            created_at: string;
+          }>(
+            `SELECT id, case_id, sender_type, sender_name, message, is_private, created_at
+             FROM case_messages
+             WHERE case_id = $1
+             ORDER BY created_at ASC`,
+            [caseData.id]
+          )
+        ).rows
+      )
+    : [];
 
   return (
     <div className="min-h-screen bg-[var(--op-canvas)] text-[var(--op-ink-primary)] flex flex-col font-sans selection:bg-[var(--op-verified-ink)] selection:text-[var(--op-sheet)]">
@@ -100,6 +109,7 @@ export default async function CasoDetailPage({ params }: PageProps) {
           <CasePortalClient
             initialCase={caseData}
             initialMessages={messages}
+            canViewThread={verified}
           />
         </div>
       </main>

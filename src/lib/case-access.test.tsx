@@ -49,9 +49,12 @@ const db = vi.hoisted(() => {
   return { state, query };
 });
 
+// Case page: the request carries case 7's buyer session.
+vi.mock('next/headers', () => ({ cookies: async () => ({ get: (name: string) => (name === 'opinio_case_7' ? { value: 'session-token' } : undefined), has: () => false }) }));
+vi.mock('@/lib/authz/session', () => ({ currentMerchantUserId: async () => 5 })); // a signed-in owner of business 1 (invitations list)
 vi.mock('@/lib/db', () => ({
   query: db.query,
-  pool: { query: async () => ({ rows: [{ id: 1 }], rowCount: 1 }) }, // a live buyer session exists for the case
+  pool: { query: async () => ({ rows: [{ id: 1, role: 'owner', business_id: 1 }], rowCount: 1 }) }, // a live buyer session and an owner membership exist
   withTransaction: vi.fn(),
 }));
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));

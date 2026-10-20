@@ -45,6 +45,8 @@ export interface MessageData {
 interface Props {
   initialCase: CaseData;
   initialMessages: MessageData[];
+  /** True only with this case's buyer session; otherwise no thread and no composer render. */
+  canViewThread?: boolean;
 }
 
 const STATUS_DETAILS: Record<string, { label: string; badgeClass: string; description: string }> = {
@@ -100,7 +102,7 @@ const REMEDY_LABELS: Record<string, string> = {
   clarification: 'Aclaración de estatus de guía o garantía',
 };
 
-export function CasePortalClient({ initialCase, initialMessages }: Props) {
+export function CasePortalClient({ initialCase, initialMessages, canViewThread = true }: Props) {
   const [caseData] = useState<CaseData>(initialCase);
   const [messages, setMessages] = useState<MessageData[]>(initialMessages);
   const [newMessage, setNewMessage] = useState('');
@@ -349,6 +351,21 @@ export function CasePortalClient({ initialCase, initialMessages }: Props) {
         </div>
 
         {/* Right Column: Private Chat Thread */}
+        {!canViewThread && (
+          <div className="lg:col-span-2 space-y-6">
+            <div data-testid="case-thread-locked" className="rounded-3xl border border-[var(--op-border-hairline)] bg-[var(--op-sheet)] p-6 shadow-xs space-y-3">
+              <h3 className="flex items-center gap-2 text-xs font-bold text-[var(--op-ink-primary)]">
+                <MessageSquare className="h-4 w-4 text-[var(--op-verified-ink)]" />
+                <span>Conversación privada</span>
+              </h3>
+              <p className="text-sm leading-relaxed">
+                La conversación de este caso solo la ve quien lo abrió. Entra con el enlace que enviamos a tu correo.
+                Si venció, <Link href="/caso/acceso/reenviar" className="font-bold underline">pide uno nuevo</Link>.
+              </p>
+            </div>
+          </div>
+        )}
+        {canViewThread && (
         <div className="lg:col-span-2 space-y-6">
           <div className="rounded-3xl border border-[var(--op-border-hairline)] bg-[var(--op-sheet)] p-6 shadow-xs flex min-w-0 flex-col h-[min(750px,85dvh)] min-h-[500px]">
             <div className="flex items-center justify-between pb-4 border-b border-[var(--op-border-hairline)]">
@@ -434,6 +451,7 @@ export function CasePortalClient({ initialCase, initialMessages }: Props) {
             </form>
           </div>
         </div>
+        )}
       </div>
     </div>
   );

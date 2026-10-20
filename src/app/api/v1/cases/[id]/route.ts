@@ -77,6 +77,13 @@ export async function GET(
     }
 
     const isNumeric = /^\d+$/.test(identifier);
+    // Beyond INTEGER range cannot exist: same 404 as any unknown case, not a database error.
+    if (isNumeric && Number(identifier) > 2_147_483_647) {
+      return NextResponse.json(
+        { success: false, error: `Caso no encontrado con identificador: ${identifier}` },
+        { status: 404, headers: PRIVATE_HEADERS }
+      );
+    }
     // Public projection only: no buyer contact fields (see lib/case-access).
     const caseSql = isNumeric
       ? `SELECT ${publicCaseColumnsSql('c')}, b.slug as business_slug, b.brand_name as business_brand_name, b.logo_url as business_logo_url
@@ -130,7 +137,7 @@ export async function GET(
         business_logo_url: caseData.business_logo_url ?? null,
         messages: toPublicMessages(messagesRes.rows),
       },
-    });
+    }, { headers: PRIVATE_HEADERS });
   } catch (error) {
     console.error('[api/v1/cases/[id] GET] Error:', error);
     return NextResponse.json(

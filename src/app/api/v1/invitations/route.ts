@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isOperationEnabled } from '@/lib/containment';
 import { containedResponse } from '@/lib/containment-http';
-import { query } from '@/lib/db';
+import { pool, query } from '@/lib/db';
+import { authorizeMerchant, AccessDenied, AuthorityUnavailable, Unauthenticated } from '@/lib/authz';
+import { authzErrorResponse } from '@/lib/authz/http';
+import { currentMerchantUserId } from '@/lib/authz/session';
+import { PRIVATE_HEADERS } from '@/lib/auth/spike';
 
 interface InvitationInput {
   business_id?: number;
@@ -184,6 +188,21 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const businessIdParam = searchParams.get('business_id');
+
+    // Merchant-only: a signed-in member of the named business (read_operational)
+    // sees that business's invitations. No anonymous or cross-tenant listing.
+    // Authorization runs before any invitation query.
+    const businessIdRequested = Number(businessIdParam);
+    if (!Number.isSafeInteger(businessIdRequested) || businessIdRequested <= 0) {
+      // Still unauthenticated callers learn nothing: 401 first when signed out.
+      await authorizeMerchant(pool, { userId: await currentMerchantUserId(), resource: { kind: 'business', id: 0 }, permission: 'read_operational' });
+      return NextResponse.json({ success: false, error: 'business_id es requerido' }, { status: 400, headers: PRIVATE_HEADERS });
+    }
+    await authorizeMerchant(pool, {
+      userId: await currentMerchantUserId(),
+      resource: { kind: 'business', id: businessIdRequested },
+      permission: 'read_operational',
+    });
     const statusParam = searchParams.get('status');
     const channelParam = searchParams.get('channel');
     const limitParam = searchParams.get('limit');
@@ -196,13 +215,8 @@ export async function GET(request: NextRequest) {
     const params: unknown[] = [];
     let paramIndex = 1;
 
-    if (businessIdParam) {
-      const businessId = parseInt(businessIdParam, 10);
-      if (businessId > 0) {
-        conditions.push(`i.business_id = $${paramIndex++}`);
-        params.push(businessId);
-      }
-    }
+    conditions.push(`i.business_id = $${paramIndex++}`);
+    params.push(businessIdRequested);
 
     if (statusParam) {
       conditions.push(`i.status = $${paramIndex++}`);
@@ -216,7 +230,7 @@ export async function GET(request: NextRequest) {
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
-    // Served without authentication: public-safe columns only. No recipient
+    // Merchant-scoped: still public-safe columns only. No recipient
     // contact, buyer name, order amount or invitation token (the token is the
     // review credential).
     const sql = `
@@ -248,8 +262,9 @@ export async function GET(request: NextRequest) {
       limit,
       offset,
       invitations,
-    });
+    }, { headers: PRIVATE_HEADERS });
   } catch (error) {
+    if (error instanceof Unauthenticated || error instanceof AccessDenied || error instanceof AuthorityUnavailable) return authzErrorResponse(error);
     console.error('[api/v1/invitations GET] Error:', error);
     return NextResponse.json(
       { success: false, error: 'Error al listar las invitaciones' },

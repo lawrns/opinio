@@ -44,6 +44,9 @@ const db = vi.hoisted(() => {
   return { state, query };
 });
 
+// Case page: the request carries case 7's buyer session; merchant auth is not signed in.
+vi.mock('next/headers', () => ({ cookies: async () => ({ get: (name: string) => (name === 'opinio_case_7' ? { value: 'session-token' } : undefined), has: () => false }) }));
+vi.mock('@/lib/authz/session', () => ({ currentMerchantUserId: async () => null }));
 vi.mock('@/lib/db', () => ({
   query: db.query,
   pool: { query: async () => ({ rows: [{ id: 1 }], rowCount: 1 }) }, // a live buyer session exists for the case

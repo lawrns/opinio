@@ -6,7 +6,7 @@ import {
   ResolutionMetricsInput,
   CalculatedTrustPassport,
 } from '@/lib/scoring';
-import { publicCaseColumnsSql, toPublicCase, toPublicMessages } from '@/lib/case-access';
+import { publicCaseColumnsSql } from '@/lib/case-access';
 import {
   PUBLIC_REVIEW_STATUS,
   isPublicReview,
@@ -113,16 +113,6 @@ interface CaseRow {
   resolved_at: string | null;
 }
 
-interface CaseMessageRow {
-  id: number;
-  case_id: number;
-  sender_type: 'consumer' | 'merchant' | 'mediator';
-  sender_name: string;
-  message: string;
-  is_private: boolean;
-  created_at: string;
-}
-
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
@@ -154,7 +144,7 @@ export async function GET(
     const businessId = business.id;
 
     // 2. Fetch parallel sub-resources
-    const [identitiesRes, recordsRes, reviewsRes, responsesRes, casesRes, messagesRes] =
+    const [identitiesRes, recordsRes, reviewsRes, responsesRes, casesRes] =
       await Promise.all([
         query<IdentityRow>(
           'SELECT * FROM identities WHERE business_id = $1 ORDER BY id ASC',
@@ -177,13 +167,6 @@ export async function GET(
           `SELECT ${publicCaseColumnsSql()} FROM resolution_cases WHERE business_id = $1 ORDER BY created_at DESC`,
           [businessId]
         ),
-        query<CaseMessageRow>(
-          `SELECT m.* FROM case_messages m
-           INNER JOIN resolution_cases c ON c.id = m.case_id
-           WHERE c.business_id = $1 AND m.is_private = false
-           ORDER BY m.created_at ASC`,
-          [businessId]
-        ),
       ]);
 
     // Attach responses to reviews
@@ -203,19 +186,18 @@ export async function GET(
       responses: responsesByReviewId.get(rev.id) || [],
     }));
 
-    // Attach messages to cases
-    const messagesByCaseId = new Map<number, CaseMessageRow[]>();
-    for (const msg of messagesRes.rows) {
-      const arr = messagesByCaseId.get(msg.case_id) || [];
-      arr.push(msg);
-      messagesByCaseId.set(msg.case_id, arr);
-    }
-
-    // Public endpoint: case projection without buyer contact fields, and only
-    // non-private messages with buyer names replaced (see lib/case-access).
-    const casesWithMessages = casesRes.rows.map((c) => ({
-      ...toPublicCase(c),
-      messages: toPublicMessages(messagesByCaseId.get(c.id) || []),
+    // Public endpoint: aggregate case outcomes only. No message bodies, no
+    // buyer fields, and no sequential id or case number that would let a
+    // caller walk /api/v1/cases/[id] or /caso/[id] (the thread is private to
+    // the buyer's session).
+    const publicCases = casesRes.rows.map((c) => ({
+      issue_category: c.issue_category,
+      status: c.status,
+      is_consumer_confirmed: c.is_consumer_confirmed,
+      median_first_response_minutes: c.median_first_response_minutes,
+      total_resolution_hours: c.total_resolution_hours,
+      created_at: c.created_at,
+      resolved_at: c.resolved_at,
     }));
 
     // 3. Live Scoring Engine Calculation
@@ -284,7 +266,7 @@ export async function GET(
       identities: identitiesRes.rows,
       official_records: recordsRes.rows,
       reviews: reviewsWithResponses,
-      cases: casesWithMessages,
+      cases: publicCases,
       live_metrics: calculatedPassport,
     });
   } catch (error) {
