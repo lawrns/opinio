@@ -6,12 +6,15 @@ import { recordMilestone } from '@/lib/conversion/ledger';
 import { query, withTransaction } from '@/lib/db';
 import { TRUST_FIELD_ERROR, reviewTrustFieldsIn } from '@/lib/trust-fields';
 import { toPublicReview } from '@/lib/public-reviews';
+import { VERIFICATION_WEIGHTS } from '@/lib/scoring';
+import { REVIEWS_PER_CLIENT_PER_HOUR, parseEmail } from '@/lib/authz/policy';
+import { clientAddress } from '@/lib/auth/rate-limit';
 import {
-  calculateOpinioScore,
-  ReviewCalculationItem,
-  ResolutionMetricsInput,
-  VERIFICATION_WEIGHTS,
-} from '@/lib/scoring';
+  reviewBodyHash,
+  reviewClientHash,
+  reviewEmailHash,
+  verifyCaptcha,
+} from '@/lib/review-moderation';
 
 interface ReviewInput {
   business_id: number;
@@ -21,6 +24,10 @@ interface ReviewInput {
   body: string;
   author_name: string;
   author_masked_contact?: string;
+  /** Used only to detect repeat reviews; stored as a hash, never returned. */
+  author_email?: string;
+  /** Cloudflare Turnstile token; checked only when TURNSTILE_SECRET_KEY is set. */
+  captcha_token?: string;
   verification_level?: 'confirmed_payment' | 'confirmed_store_order' | 'reviewed_proof' | 'unverified_experience';
   product_name?: string;
   /** CONVERSION-001 browser association; re-validated server-side. */
@@ -55,21 +62,6 @@ interface BusinessStatsRow {
   observed_orders_count: number;
   invited_orders_count: number;
   median_response_hours: string | number;
-}
-
-interface CaseStatsRow {
-  total: string;
-  confirmed: string;
-  responded: string;
-  reopened: string;
-  avg_hours: string | null;
-}
-
-interface ReviewItemDb {
-  rating: number;
-  verification_level: 'confirmed_payment' | 'confirmed_store_order' | 'reviewed_proof' | 'unverified_experience';
-  integrity_factor: string | number;
-  created_at: string;
 }
 
 export async function POST(request: NextRequest) {
@@ -126,6 +118,39 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Spam gates (BL-04): per-client hourly limit, then captcha (no-op unless
+    // TURNSTILE_SECRET_KEY is set), then a well-formed optional email.
+    const client = clientAddress(request.headers.get('x-forwarded-for'));
+    const clientHash = reviewClientHash(client);
+    const recent = await query<{ count: string }>(
+      "SELECT COUNT(*)::text AS count FROM reviews WHERE client_hash = $1 AND created_at > NOW() - INTERVAL '1 hour'",
+      [clientHash]
+    );
+    if ((parseInt(recent.rows[0]?.count ?? '0', 10) || 0) >= REVIEWS_PER_CLIENT_PER_HOUR) {
+      return NextResponse.json(
+        { success: false, error: 'Recibimos muchas opiniones desde tu conexión. Intenta de nuevo en una hora.' },
+        { status: 429, headers: { 'Retry-After': '3600' } }
+      );
+    }
+
+    const captcha = await verifyCaptcha(body.captcha_token, client);
+    if (captcha === 'invalid') {
+      return NextResponse.json({ success: false, error: 'No pudimos verificar que eres una persona. Intenta de nuevo.' }, { status: 400 });
+    }
+    if (captcha === 'unavailable') {
+      return NextResponse.json({ success: false, error: 'No pudimos verificar tu envío. Intenta de nuevo en unos minutos.' }, { status: 503 });
+    }
+
+    let emailHash: string | null = null;
+    if (body.author_email !== undefined && body.author_email !== null && body.author_email !== '') {
+      const email = typeof body.author_email === 'string' ? parseEmail(body.author_email) : null;
+      if (!email) {
+        return NextResponse.json({ success: false, error: 'El correo no es válido' }, { status: 400 });
+      }
+      emailHash = reviewEmailHash(email);
+    }
+    const bodyHash = reviewBodyHash(body.body);
+
     let verifiedLevel: 'confirmed_payment' | 'confirmed_store_order' | 'reviewed_proof' | 'unverified_experience' = 'unverified_experience';
     let verifiedOrderId: number | null = null;
 
@@ -177,7 +202,7 @@ export async function POST(request: NextRequest) {
       maskedContact = `${cleanName.slice(0, 2)}***@opinio.mx`;
     }
 
-    const { createdReview, newPassport } = await withTransaction(async (client) => {
+    const outcome = await withTransaction(async (client) => {
       // 1. Acquire row lock on business to prevent concurrent lost updates
       const bizRes = await client.query<BusinessStatsRow>(
         'SELECT id, observed_orders_count, invited_orders_count, median_response_hours FROM businesses WHERE id = $1 FOR UPDATE',
@@ -188,15 +213,24 @@ export async function POST(request: NextRequest) {
         throw new Error(`Negocio con ID ${body.business_id} no existe`);
       }
 
-      const business = bizRes.rows[0];
+      // 2. Duplicate body (any business) or repeat email (same business)
+      const dup = await client.query<{ id: number }>(
+        `SELECT id FROM reviews
+          WHERE body_hash = $1 OR ($2::text IS NOT NULL AND business_id = $3 AND author_email_hash = $2)
+          LIMIT 1`,
+        [bodyHash, emailHash, body.business_id]
+      );
+      if (dup.rows.length > 0) return { duplicate: true as const };
 
-      // 2. Insert Review
+      // 3. Insert Review as pending: it is not public and does not move the
+      // score until an administrator approves it (src/lib/review-moderation.ts).
       const insertRes = await client.query<ReviewRow>(
         `INSERT INTO reviews (
           business_id, order_id, rating, title, body, author_name,
           author_masked_contact, verification_level, score_weight,
-          integrity_factor, product_name, status
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'published')
+          integrity_factor, product_name, status,
+          body_hash, author_email_hash, client_hash
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'pending', $12, $13, $14)
         RETURNING *`,
         [
           body.business_id,
@@ -210,106 +244,26 @@ export async function POST(request: NextRequest) {
           scoreWeight,
           integrityFactor,
           body.product_name?.trim() || 'Experiencia Comercial',
+          bodyHash,
+          emailHash,
+          clientHash,
         ]
       );
 
-      const review = insertRes.rows[0];
-
-      // Contained: a review without proof is published with its label but does
-      // not recalculate the stored trust score.
-      if (!trustClaims && verifiedLevel === 'unverified_experience') {
-        return { createdReview: review, newPassport: null };
-      }
-
-      // 3. Recalculate Business Scores
-      const [allReviewsRes, caseStatsRes] = await Promise.all([
-        client.query<ReviewItemDb>(
-          'SELECT rating, verification_level, integrity_factor, created_at FROM reviews WHERE business_id = $1 AND status = $2',
-          [body.business_id, 'published']
-        ),
-        client.query<CaseStatsRow>(
-          `SELECT 
-             COUNT(*)::text as total,
-             COUNT(*) FILTER (WHERE is_consumer_confirmed = true)::text as confirmed,
-             COUNT(*) FILTER (WHERE status != 'opened')::text as responded,
-             COUNT(*) FILTER (WHERE status = 'reopened')::text as reopened,
-             AVG(total_resolution_hours)::text as avg_hours
-           FROM resolution_cases
-           WHERE business_id = $1`,
-          [body.business_id]
-        ),
-      ]);
-
-      const nowMs = Date.now();
-      const reviewItems: ReviewCalculationItem[] = allReviewsRes.rows.map((r) => {
-        const reviewDateMs = new Date(r.created_at).getTime();
-        const ageDays = Math.max(0, Math.floor((nowMs - reviewDateMs) / (1000 * 60 * 60 * 24)));
-        return {
-          rating: r.rating,
-          verificationLevel: r.verification_level,
-          ageDays,
-          integrityFactor: Number(r.integrity_factor) || 1.0,
-        };
-      });
-
-      const caseStats = caseStatsRes.rows[0] || {
-        total: '0',
-        confirmed: '0',
-        responded: '0',
-        reopened: '0',
-        avg_hours: null,
-      };
-
-      const casesCount = parseInt(caseStats.total, 10) || 0;
-      const consumerConfirmedCount = parseInt(caseStats.confirmed, 10) || 0;
-      const merchantRespondedCount = parseInt(caseStats.responded, 10) || 0;
-      const reopenedCount = parseInt(caseStats.reopened, 10) || 0;
-      const medianResponseHours = caseStats.avg_hours
-        ? Number(caseStats.avg_hours)
-        : Number(business.median_response_hours) || 4.5;
-
-      const resolutionInput: ResolutionMetricsInput = {
-        casesCount,
-        consumerConfirmedCount,
-        merchantRespondedCount,
-        medianResponseHours,
-        targetResponseHours: 24,
-        reopenedCount,
-      };
-
-      const passport = calculateOpinioScore(
-        reviewItems,
-        resolutionInput,
-        business.observed_orders_count || 0,
-        business.invited_orders_count || 0
-      );
-
-      // 4. Update business table with fresh scores atomically
-      await client.query(
-        `UPDATE businesses SET
-          trust_score = $1,
-          confidence_level = $2,
-          effective_reviews_count = $3,
-          resolution_rate = $4,
-          issues_per_thousand = $5,
-          updated_at = NOW()
-         WHERE id = $6`,
-        [
-          passport.opinioScore,
-          passport.confidenceLevel,
-          Math.round(passport.effectiveSampleSize),
-          passport.resolutionRate,
-          passport.issuesPerThousand,
-          body.business_id,
-        ]
-      );
-
-      return { createdReview: review, newPassport: passport };
+      return { duplicate: false as const, createdReview: insertRes.rows[0] };
     });
 
-    // CONVERSION-001: the published review write has committed (and its
-    // passport update, when one runs; a contained unverified review skips it).
-    // This milestone is not proof of a genuine customer or merchant activation.
+    if (outcome.duplicate) {
+      return NextResponse.json(
+        { success: false, error: 'Ya recibimos una opinión igual. No puedes enviarla de nuevo.' },
+        { status: 409 }
+      );
+    }
+    const { createdReview } = outcome;
+
+    // CONVERSION-001: the review write has committed as 'pending' (moderation,
+    // BL-04). The milestone keeps its 'review_published' name for ledger
+    // compatibility but now marks a submission, not publication. This milestone is not proof of a genuine customer or merchant activation.
     // It runs after the response is sent (fire-and-forget), never throws and
     // never delays or fails the request.
     const context = parseConversionContext(body.conversion);
@@ -326,9 +280,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: true,
-        message: newPassport ? 'Opinión registrada y pasaporte recalculado con éxito' : 'Opinión registrada',
+        message: 'Opinión recibida. Se publicará cuando la revisemos.',
         review: toPublicReview(createdReview),
-        updated_metrics: newPassport,
+        updated_metrics: null,
       },
       { status: 201 }
     );

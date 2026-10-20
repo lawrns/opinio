@@ -57,10 +57,10 @@ export function ReviewFormWizard({ businessId, slug, brandName, legalName, categ
         body: JSON.stringify({ business_id: businessId, rating, title: title.trim() || undefined, body: body.trim(), author_name: authorName.trim(), verification_level: 'unverified_experience', product_name: productName.trim() || undefined, conversion: conversionContext() }),
       });
       const data = await response.json();
-      if (!response.ok || !data.success) throw new Error('No pudimos publicar tu opinión. Tu texto sigue aquí; intenta de nuevo.');
+      if (!response.ok || !data.success) throw new Error(response.status === 429 || response.status === 409 ? data.error : 'No pudimos enviar tu opinión. Tu texto sigue aquí; intenta de nuevo.');
       moveTo(3);
-    } catch {
-      setErrorMsg('No pudimos publicar tu opinión. Tu texto sigue aquí; intenta de nuevo.');
+    } catch (error) {
+      setErrorMsg(error instanceof Error ? error.message : 'No pudimos enviar tu opinión. Tu texto sigue aquí; intenta de nuevo.');
     } finally {
       setSubmitting(false);
     }
@@ -88,7 +88,7 @@ export function ReviewFormWizard({ businessId, slug, brandName, legalName, categ
         <label className="flex cursor-pointer items-start gap-3 text-sm leading-relaxed"><input type="checkbox" checked={acceptTerms} onChange={(event) => setAcceptTerms(event.target.checked)} required className="mt-1 size-5 shrink-0 accent-[var(--op-verified-ink)]" /><span>Confirmo que esta opinión refleja mi experiencia real con {brandName} y que quiero publicarla con el nombre indicado.</span></label>
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between"><button type="button" disabled={submitting} onClick={() => moveTo(1)} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-[var(--op-border-strong)] px-5 text-sm font-semibold"><ArrowLeft size={17} aria-hidden="true" /> Editar opinión</button><button type="submit" disabled={submitting} className={primaryClass}>{submitting ? <><CircleNotch className="animate-spin" size={17} /> Publicando…</> : <>Publicar opinión <ArrowRight size={17} aria-hidden="true" /></>}</button></div>
       </form>}
-      {step === 3 && <div className="mt-8 space-y-6"><div role="status" className="rounded-xl border border-[var(--op-verified-border)] bg-[var(--op-verified-tint)] p-5 text-[var(--op-verified-ink)]"><Check size={24} aria-hidden="true" /><h2 className="mt-3 text-lg font-semibold">Tu opinión se publicó</h2><p className="mt-2 text-sm leading-relaxed">Ya forma parte del pasaporte de {brandName}, con la etiqueta de opinión sin comprobante verificado.</p></div><Link href={`/b/${slug}#opiniones`} className={`${primaryClass} w-full`}>Ver mi opinión <ArrowRight size={17} aria-hidden="true" /></Link></div>}
+      {step === 3 && <div className="mt-8 space-y-6"><div role="status" className="rounded-xl border border-[var(--op-verified-border)] bg-[var(--op-verified-tint)] p-5 text-[var(--op-verified-ink)]"><Check size={24} aria-hidden="true" /><h2 className="mt-3 text-lg font-semibold">Recibimos tu opinión</h2><p className="mt-2 text-sm leading-relaxed">La revisamos antes de publicarla en el pasaporte de {brandName}, con la etiqueta de opinión sin comprobante verificado.</p></div><Link href={`/b/${slug}#opiniones`} className={`${primaryClass} w-full`}>Ver el pasaporte <ArrowRight size={17} aria-hidden="true" /></Link></div>}
     </div>
   );
 }

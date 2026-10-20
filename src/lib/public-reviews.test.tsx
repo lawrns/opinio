@@ -54,7 +54,9 @@ const db = vi.hoisted(() => {
   async function query(text: string, params: unknown[] = []) {
     state.calls.push({ text, params });
     const sql = text.replace(/\s+/g, ' ').trim();
-    if (/^INSERT INTO reviews/.test(sql)) return { rows: [review(9, 'published', 0)] };
+    if (/^INSERT INTO reviews/.test(sql)) return { rows: [{ ...review(9, 'published', 0), status: 'pending' }] };
+    if (/COUNT\(\*\)::text AS count FROM reviews/.test(sql)) return { rows: [{ count: '0' }] };
+    if (/body_hash = \$1/.test(sql)) return { rows: [] };
     if (/FROM widgets w/.test(sql)) {
       return { rows: [{ ...business, b_slug: 'comercio-demo', widget_token: 'wgt_demo', widget_type: 'card', w_theme: 'light', w_config: {}, rev_count: 1, avg_rating: 4 }] };
     }
