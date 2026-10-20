@@ -16,6 +16,14 @@ function determineMatchState(business: Business): MatchState {
   return 'public_info';
 }
 
+// Mexican RFC: 3-4 letters (incl. Ñ and &), 6-digit date, 3-char homoclave.
+const RFC_PATTERN = /^[A-ZÑ&]{3,4}\d{6}[A-Z0-9]{3}$/;
+
+export function normalizeRfcQuery(q: string): string | null {
+  const normalized = q.replace(/[\s-]/g, '').toUpperCase();
+  return RFC_PATTERN.test(normalized) ? normalized : null;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const params = request.nextUrl.searchParams;
@@ -31,6 +39,18 @@ export async function GET(request: NextRequest) {
     const cleanDomain = q.replace(/^https?:\/\//i, '').replace(/^www\./i, '').replace(/\/.*$/, '').toLowerCase();
     const phoneDigits = q.replace(/\D/g, '');
     const cleanPhone = phoneDigits.length >= 7 ? phoneDigits.replace(/^52(?=\d{10}$)/, '') : '';
+    // RFC-shaped queries match exactly (normalized), never fuzzily: a seller's RFC
+    // must not surface an unrelated business via phone/ILIKE substring overlap.
+    const exactRfc = normalizeRfcQuery(q);
+    const textFilter = exactRfc
+      ? `(UPPER(b.rfc) = $9::text AND $1::text IS NOT NULL AND $2::text IS NOT NULL AND $3::text IS NOT NULL
+        AND $4::text IS NOT NULL AND $5::text IS NOT NULL)`
+      : `($1 = '' OR b.brand_name ILIKE $2 OR b.slug ILIKE $2 OR b.legal_name ILIKE $2
+        OR b.category ILIKE $2 OR b.domain ILIKE $3 OR b.rfc ILIKE $2
+        OR ($4 != '' AND (regexp_replace(b.phone, '[^0-9]', '', 'g') LIKE $5
+          OR regexp_replace(b.whatsapp, '[^0-9]', '', 'g') LIKE $5))
+        OR EXISTS (SELECT 1 FROM identities i WHERE i.business_id = b.id AND i.identifier ILIKE $2))
+        AND $9::text IS NULL`;
     const result = await query<BusinessSearchRow>(`
       SELECT b.*, stats.review_count, ROUND(stats.average_rating, 1) AS average_rating, COUNT(*) OVER()::int AS total_count
       FROM businesses b
@@ -38,16 +58,12 @@ export async function GET(request: NextRequest) {
         SELECT COUNT(*)::int AS review_count, AVG(r.rating) AS average_rating
         FROM reviews r WHERE r.business_id = b.id AND r.status = 'published'
       ) stats ON true
-      WHERE ($1 = '' OR b.brand_name ILIKE $2 OR b.slug ILIKE $2 OR b.legal_name ILIKE $2
-        OR b.category ILIKE $2 OR b.domain ILIKE $3 OR b.rfc ILIKE $2
-        OR ($4 != '' AND (regexp_replace(b.phone, '[^0-9]', '', 'g') LIKE $5
-          OR regexp_replace(b.whatsapp, '[^0-9]', '', 'g') LIKE $5))
-        OR EXISTS (SELECT 1 FROM identities i WHERE i.business_id = b.id AND i.identifier ILIKE $2))
+      WHERE ${textFilter}
       AND ($6::text IS NULL OR b.category ILIKE $6)
       AND ($7::numeric = 0 OR stats.average_rating >= $7)
       AND ($8::boolean = false OR b.observed_orders_count > 0)
       ORDER BY ${order}, b.id ASC
-      LIMIT 50`, [q, `%${q}%`, `%${cleanDomain}%`, cleanPhone, `%${cleanPhone}%`, category && category !== 'Todos' ? `%${category}%` : null, minRating, connected]);
+      LIMIT 50`, [q, `%${q}%`, `%${cleanDomain}%`, cleanPhone, `%${cleanPhone}%`, category && category !== 'Todos' ? `%${category}%` : null, minRating, connected, exactRfc]);
     const results = result.rows.map((business) => ({
       ...business,
       trust_score: Number(business.trust_score),
