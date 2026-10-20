@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { countVerifiedReviews, displayableScore } from '@/lib/evidence-threshold';
 import {
   calculateOpinioScore,
   ReviewCalculationItem,
@@ -268,11 +269,16 @@ export async function GET(
       business.invited_orders_count || 0
     );
 
+    // Scores below the verified-evidence threshold are withheld (null), not edited.
+    const verifiedReviewsCount = countVerifiedReviews(publishedReviews);
+    const publicScore = displayableScore(calculatedPassport.opinioScore, verifiedReviewsCount);
+
     return NextResponse.json({
       success: true,
       business: {
         ...business,
-        trust_score: calculatedPassport.opinioScore,
+        trust_score: publicScore,
+        verified_reviews_count: verifiedReviewsCount,
         confidence_level: calculatedPassport.confidenceLevel,
         coverage_percentage: calculatedPassport.coveragePercentage,
         issues_per_thousand: calculatedPassport.issuesPerThousand,
@@ -285,7 +291,7 @@ export async function GET(
       official_records: recordsRes.rows,
       reviews: reviewsWithResponses,
       cases: casesWithMessages,
-      live_metrics: calculatedPassport,
+      live_metrics: { ...calculatedPassport, opinioScore: publicScore },
     });
   } catch (error) {
     console.error('[api/v1/businesses/[slug]] Error:', error);
