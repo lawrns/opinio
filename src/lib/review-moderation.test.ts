@@ -17,7 +17,7 @@ vi.mock('@/lib/db', () => {
     if (/FROM businesses WHERE id/i.test(sql)) return { rows: [{ id: 7, observed_orders_count: 0, invited_orders_count: 0, median_response_hours: 4 }] };
     if (/COUNT\(\*\)::text AS count FROM reviews/i.test(sql)) return { rows: [{ count: String(db.recentCount) }] };
     if (/body_hash = \$1/i.test(sql)) return { rows: db.duplicate ? [{ id: 1 }] : [] };
-    if (/INSERT INTO reviews/i.test(sql)) return { rows: [{ id: 9, business_id: 7, rating: 4, body: params[4], status: 'pending' }] };
+    if (/INSERT INTO reviews/i.test(sql)) return { rows: [{ id: 9, business_id: 7, rating: 4, body: params[4], status: 'pending', author_masked_contact: 'x@opinio.mx', order_id: null, invitation_id: null, body_hash: 'HASH_B', author_email_hash: 'HASH_E', client_hash: 'HASH_C', moderated_by_user_id: 5, moderated_at: '2026-01-01T00:00:00Z' }] };
     return { rows: [] };
   };
   return { query, withTransaction: async (fn: (c: { query: typeof query }) => unknown) => fn({ query }) };
@@ -51,7 +51,12 @@ describe('review POST moderation', () => {
     expect(inserts()[0].sql).toMatch(/'pending'/);
     expect(inserts()[0].sql).not.toMatch(/'published'/);
     expect(db.calls.some((c) => /UPDATE businesses/i.test(c.sql))).toBe(false);
-    expect((await res.json()).updated_metrics).toBeNull();
+    const json = await res.json();
+    expect(json.updated_metrics).toBeNull();
+    for (const f of ['body_hash', 'author_email_hash', 'client_hash', 'moderated_by_user_id', 'moderated_at', 'author_masked_contact']) {
+      expect(json.review).not.toHaveProperty(f);
+    }
+    expect(JSON.stringify(json)).not.toMatch(/HASH_/);
   });
 
   it('returns 429 once a client reaches the hourly limit, before any write', async () => {

@@ -1,5 +1,6 @@
 'use server';
 
+import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { pool } from '@/lib/db';
 import { AccessDenied, Unauthenticated } from '@/lib/authz';
@@ -25,6 +26,7 @@ export async function moderateReviewAction(formData: FormData): Promise<void> {
       const done = await inTransaction(pool, (client) =>
         moderateReview(client, { reviewId, decision, administratorUserId: admin.userId }),
       );
+      if (done && decision === 'approve') revalidatePath('/b/[slug]', 'page');
       outcome = done ? (decision === 'approve' ? 'aprobada' : 'rechazada') : 'not_pending';
     }
   } catch (error) {

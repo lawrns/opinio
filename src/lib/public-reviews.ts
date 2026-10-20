@@ -29,7 +29,17 @@ export function publicReviewColumnsSql(alias?: string): string {
 }
 
 /** Fields that identify or reach the reviewer, or link to their order. */
-const PRIVATE_REVIEW_FIELDS = ['author_masked_contact', 'order_id', 'invitation_id'] as const;
+const PRIVATE_REVIEW_FIELDS = [
+  'author_masked_contact',
+  'order_id',
+  'invitation_id',
+  // Moderation and abuse-detection internals (migration 0007).
+  'author_email_hash',
+  'client_hash',
+  'body_hash',
+  'moderated_by_user_id',
+  'moderated_at',
+] as const;
 
 type PrivateReviewField = (typeof PRIVATE_REVIEW_FIELDS)[number];
 
