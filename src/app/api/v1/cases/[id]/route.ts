@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isOperationEnabled } from '@/lib/containment';
 import { containedResponse } from '@/lib/containment-http';
-import { query } from '@/lib/db';
+import { pool, query } from '@/lib/db';
+import { authorizeCaseSession, Unauthenticated, AccessDenied } from '@/lib/authz';
+import { authzErrorResponse } from '@/lib/authz/http';
+import { servedOverHttps } from '@/lib/authz/https';
+import { caseSessionCookieName } from '@/lib/authz/policy';
+import { PRIVATE_HEADERS } from '@/lib/auth/spike';
 import {
   calculateOpinioScore,
   ReviewCalculationItem,
@@ -87,14 +92,28 @@ export async function GET(
     const caseParams = isNumeric ? [parseInt(identifier, 10), identifier] : [identifier];
     const caseRes = await query<CaseRow>(caseSql, caseParams);
 
-    if (caseRes.rows.length === 0) {
-      return NextResponse.json(
+    const notFound = () =>
+      NextResponse.json(
         { success: false, error: `Caso no encontrado con identificador: ${identifier}` },
-        { status: 404 }
+        { status: 404, headers: PRIVATE_HEADERS }
       );
-    }
+
+    if (caseRes.rows.length === 0) return notFound();
 
     const caseData = caseRes.rows[0];
+
+    // Reading a case needs that case's buyer session (B06). A guessable id or
+    // case number is never enough; a case without this caller's session looks
+    // exactly like a case that does not exist.
+    try {
+      await authorizeCaseSession(pool, {
+        sessionToken: request.cookies.get(caseSessionCookieName(caseData.id, servedOverHttps()))?.value,
+        caseId: caseData.id,
+      });
+    } catch (error) {
+      if (error instanceof Unauthenticated || error instanceof AccessDenied) return notFound();
+      return authzErrorResponse(error);
+    }
 
     // Fetch messages
     const messagesRes = await query<CaseMessageRow>(

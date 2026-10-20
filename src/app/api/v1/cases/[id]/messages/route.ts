@@ -6,7 +6,6 @@ import { authorizeCaseSession } from '@/lib/authz';
 import { authzErrorResponse } from '@/lib/authz/http';
 import { servedOverHttps } from '@/lib/authz/https';
 import { caseSessionCookieName } from '@/lib/authz/policy';
-import { buyerProofEnabled } from '@/lib/auth/spike';
 import { sameOrigin } from '@/lib/auth/same-origin';
 
 interface MessageInput {
@@ -14,12 +13,6 @@ interface MessageInput {
   sender_name: string;
   message: string;
   is_private?: unknown;
-}
-
-interface CaseRow {
-  id: number;
-  business_id: number;
-  status: string;
 }
 
 interface CaseMessageRow {
@@ -65,73 +58,12 @@ export async function POST(
       return NextResponse.json({ success: false, error: TRUST_FIELD_ERROR }, { status: 403 });
     }
 
-    // B06: with buyer proof on, a buyer message needs that case's session
-    // from the emailed link; a guessable id or case number is never enough.
+    // B06: a buyer message always needs that case's session from the emailed
+    // link; a guessable id or case number is never enough. With the switch
+    // off no session can exist, so the write is refused (closed by default).
     // Every message reaching this point is a buyer's (sender_type 'consumer'
-    // or absent), so all of them take this branch.
-    if (buyerProofEnabled()) {
-      return postBuyerMessage(request, identifier, body.message);
-    }
-
-    if (!body.sender_name || typeof body.sender_name !== 'string' || body.sender_name.trim().length === 0) {
-      return NextResponse.json(
-        { success: false, error: 'sender_name es requerido' },
-        { status: 400 }
-      );
-    }
-
-    if (!body.message || typeof body.message !== 'string' || body.message.trim().length === 0) {
-      return NextResponse.json(
-        { success: false, error: 'El mensaje no puede estar vacío' },
-        { status: 400 }
-      );
-    }
-
-    const isNumeric = /^\d+$/.test(identifier);
-    const findSql = isNumeric
-      ? `SELECT id, business_id, status FROM resolution_cases
-         WHERE id = $1 OR case_number = $2
-         LIMIT 1`
-      : `SELECT id, business_id, status FROM resolution_cases
-         WHERE case_number = $1
-         LIMIT 1`;
-    const findParams = isNumeric ? [parseInt(identifier, 10), identifier] : [identifier];
-    const findRes = await query<CaseRow>(findSql, findParams);
-
-    if (findRes.rows.length === 0) {
-      return NextResponse.json(
-        { success: false, error: `Caso no encontrado: ${identifier}` },
-        { status: 404 }
-      );
-    }
-
-    const caseData = findRes.rows[0];
-    const caseId = caseData.id;
-
-    // Insert Message
-    const msgRes = await query<CaseMessageRow>(
-      `INSERT INTO case_messages (case_id, sender_type, sender_name, message, is_private, created_at)
-       VALUES ($1, $2, $3, $4, $5, NOW())
-       RETURNING *`,
-      [
-        caseId,
-        'consumer',
-        body.sender_name.trim(),
-        body.message.trim(),
-        false,
-      ]
-    );
-
-    const createdMessage = msgRes.rows[0];
-
-    return NextResponse.json(
-      {
-        success: true,
-        message: 'Mensaje agregado al caso exitosamente',
-        data: createdMessage,
-      },
-      { status: 201 }
-    );
+    // or absent), so all of them take this path.
+    return postBuyerMessage(request, identifier, body.message);
   } catch (error) {
     console.error('[api/v1/cases/[id]/messages POST] Error:', error);
     return NextResponse.json(
@@ -142,12 +74,10 @@ export async function POST(
 }
 
 /**
- * A buyer message under B06. The sender is always the case's own buyer:
- * client-sent name, privacy and type fields are ignored. A case created
- * under B06 (it has an access email) requires that case's session. A case
- * from before B06 has no access email, so its buyer can't hold a session
- * yet: it keeps the buyer-only path without one (Chief's decision), a known
- * gap that B07's requested recovery (#33) closes.
+ * A buyer message. The sender is always the case's own buyer: client-sent
+ * name, privacy and type fields are ignored. Every case, including one from
+ * before B06 (no access email), requires that case's session; a missing case
+ * and a case without this caller's session are denied alike.
  */
 async function postBuyerMessage(request: NextRequest, identifier: string, rawMessage: unknown) {
   // Cookie-authenticated write: same-origin only.
@@ -160,24 +90,22 @@ async function postBuyerMessage(request: NextRequest, identifier: string, rawMes
     // Ids beyond the INTEGER range can't exist: treated like any unknown case, not a database error.
     const isNumeric = /^\d{1,10}$/.test(identifier) && Number(identifier) <= 2_147_483_647;
     const looksNumeric = /^\d+$/.test(identifier);
-    type Found = { id: number; customer_name: string; access_email: string | null };
+    type Found = { id: number; customer_name: string };
     const found =
       looksNumeric && !isNumeric
         ? { rows: [] as Found[] }
         : await query<Found>(
             isNumeric
-              ? 'SELECT id, customer_name, access_email FROM resolution_cases WHERE id = $1'
-              : 'SELECT id, customer_name, access_email FROM resolution_cases WHERE case_number = $1',
+              ? 'SELECT id, customer_name FROM resolution_cases WHERE id = $1'
+              : 'SELECT id, customer_name FROM resolution_cases WHERE case_number = $1',
             [isNumeric ? Number(identifier) : identifier.slice(0, 50)],
           );
     const caseRow = found.rows[0];
-    if (!caseRow || caseRow.access_email !== null) {
-      // A missing case and a B06 case without this caller's session look the same.
-      await authorizeCaseSession(pool, {
-        sessionToken: caseRow ? request.cookies.get(caseSessionCookieName(caseRow.id, servedOverHttps()))?.value : undefined,
-        caseId: caseRow?.id ?? 0,
-      });
-    }
+    // A missing case and a case without this caller's session look the same.
+    await authorizeCaseSession(pool, {
+      sessionToken: caseRow ? request.cookies.get(caseSessionCookieName(caseRow.id, servedOverHttps()))?.value : undefined,
+      caseId: caseRow?.id ?? 0,
+    });
     const created = await query<CaseMessageRow>(
       `INSERT INTO case_messages (case_id, sender_type, sender_name, message, is_private, created_at)
        VALUES ($1, 'consumer', $2, $3, false, NOW()) RETURNING *`,

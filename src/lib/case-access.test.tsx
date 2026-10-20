@@ -49,7 +49,11 @@ const db = vi.hoisted(() => {
   return { state, query };
 });
 
-vi.mock('@/lib/db', () => ({ query: db.query, withTransaction: vi.fn() }));
+vi.mock('@/lib/db', () => ({
+  query: db.query,
+  pool: { query: async () => ({ rows: [{ id: 1 }], rowCount: 1 }) }, // a live buyer session exists for the case
+  withTransaction: vi.fn(),
+}));
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 
 import { GET as getCase, PATCH as patchCase } from '@/app/api/v1/cases/[id]/route';
@@ -71,6 +75,9 @@ function jsonRequest(url: string, method: string, body?: unknown) {
     body: body === undefined ? undefined : JSON.stringify(body),
   });
 }
+
+// A buyer holding case 7's session (B06), writing from the site itself.
+const buyerHeaders = { 'Content-Type': 'application/json', 'sec-fetch-site': 'same-origin', cookie: 'opinio_case_7=session-token' };
 
 function expectNoPrivateData(payload: string) {
   for (const sentinel of SENTINELS) expect(payload).not.toContain(sentinel);
@@ -115,7 +122,7 @@ beforeEach(() => {
 
 describe('public case reads carry no buyer contact or private messages', () => {
   it('GET /api/v1/cases/[id] returns the public projection', async () => {
-    const res = await getCase(jsonRequest('http://localhost/api/v1/cases/7', 'GET'), caseParams);
+    const res = await getCase(new NextRequest('http://localhost/api/v1/cases/7', { headers: buyerHeaders }), caseParams);
     expect(res.status).toBe(200);
     const body = await res.json();
     expectNoPrivateData(JSON.stringify(body));
@@ -270,7 +277,7 @@ describe('merchant flows keep working once re-enabled', () => {
 
   it('the public messages route still records only the buyer (OPINIO-CASES-AUTHZ-2)', async () => {
     const buyer = await postMessage(
-      jsonRequest('http://localhost/api/v1/cases/7/messages', 'POST', { sender_type: 'consumer', sender_name: 'Comprador', message: 'Hola' }),
+      new NextRequest('http://localhost/api/v1/cases/7/messages', { method: 'POST', headers: buyerHeaders, body: JSON.stringify({ sender_type: 'consumer', sender_name: 'Comprador', message: 'Hola' }) }),
       caseParams
     );
     expect(buyer.status).toBe(201);

@@ -24,15 +24,21 @@ vi.mock('@/lib/db', () => {
     db.calls.push({ sql, params });
     return { rows: fakeRow(sql, params) };
   };
-  return { query, withTransaction: async (fn: (c: { query: typeof query }) => unknown) => fn({ query }) };
+  // A live buyer session exists for the case (B06); the session gate itself is covered in case-session-gate.test.ts.
+  const pool = { query: async () => ({ rows: [{ id: 1 }], rowCount: 1 }) };
+  return { query, pool, withTransaction: async (fn: (c: { query: typeof query }) => unknown) => fn({ query }) };
 });
 
+import { NextRequest } from 'next/server';
 import { POST as postMessage } from '@/app/api/v1/cases/[id]/messages/route';
 import { POST as postCase } from '@/app/api/v1/cases/route';
 import { POST as postReview } from '@/app/api/v1/reviews/route';
 import { CASE_TRUST_FIELDS, TRUST_FIELD_ERROR } from '@/lib/trust-fields';
 
 const req = (body: unknown) => new Request('http://localhost/api', { method: 'POST', body: JSON.stringify(body) }) as never;
+// A buyer holding case 41's session, writing from the site itself.
+const buyerReq = (body: unknown) =>
+  new NextRequest('http://localhost/api', { method: 'POST', headers: { 'content-type': 'application/json', 'sec-fetch-site': 'same-origin', cookie: 'opinio_case_41=session-token' }, body: JSON.stringify(body) });
 const caseParams = { params: Promise.resolve({ id: '41' }) };
 const writes = () => db.calls.filter((c) => /^\s*(INSERT|UPDATE|DELETE)/i.test(c.sql));
 
@@ -46,28 +52,28 @@ describe('(1) case messages: always recorded as the buyer', () => {
   const buyer = { sender_name: 'Comprador', message: 'Sigo esperando el reembolso' };
 
   it('records a buyer message as consumer, with no status change', async () => {
-    const res = await postMessage(req({ ...buyer, sender_type: 'consumer' }), caseParams);
+    const res = await postMessage(buyerReq({ ...buyer, sender_type: 'consumer' }), caseParams);
     expect(res.status).toBe(201);
     const insert = writes().find((c) => /INSERT INTO case_messages/i.test(c.sql))!;
-    expect(insert.params[1]).toBe('consumer');
+    expect(insert.sql).toMatch(/'consumer'/);
     expect(writes().some((c) => /UPDATE resolution_cases/i.test(c.sql))).toBe(false);
   });
 
   it('records a message without a sender_type as the buyer', async () => {
-    expect((await postMessage(req(buyer), caseParams)).status).toBe(201);
-    expect(writes().find((c) => /INSERT INTO case_messages/i.test(c.sql))!.params[1]).toBe('consumer');
+    expect((await postMessage(buyerReq(buyer), caseParams)).status).toBe(201);
+    expect(writes().find((c) => /INSERT INTO case_messages/i.test(c.sql))!.sql).toMatch(/'consumer'/);
   });
 
   it.each(['merchant', 'mediator', 'staff', 'admin'])('refuses a %s sender before any write, even with the containment switch on', async (sender) => {
     vi.stubEnv('OPINIO_REENABLE_OPS', 'case_merchant_message');
-    const res = await postMessage(req({ ...buyer, sender_type: sender }), caseParams);
+    const res = await postMessage(buyerReq({ ...buyer, sender_type: sender }), caseParams);
     expect(res.status).toBe(403);
     expect(writes()).toEqual([]);
   });
 
   it('refuses a private (mediator-only) message and any confirmation attempt', async () => {
-    expect((await postMessage(req({ ...buyer, is_private: true }), caseParams)).status).toBe(403);
-    expect((await postMessage(req({ ...buyer, status: 'resolved_consumer_confirmed' }), caseParams)).status).toBe(403);
+    expect((await postMessage(buyerReq({ ...buyer, is_private: true }), caseParams)).status).toBe(403);
+    expect((await postMessage(buyerReq({ ...buyer, status: 'resolved_consumer_confirmed' }), caseParams)).status).toBe(403);
     expect(writes()).toEqual([]);
   });
 });

@@ -46,6 +46,8 @@ const db = vi.hoisted(() => {
 
 vi.mock('@/lib/db', () => ({
   query: db.query,
+  pool: { query: async () => ({ rows: [{ id: 1 }], rowCount: 1 }) }, // a live buyer session exists for the case
+
   withTransaction: async (fn: (client: { query: typeof db.query }) => unknown) => fn({ query: db.query }),
 }));
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
@@ -77,6 +79,8 @@ import BlogIndexPage from '@/app/blog/page';
 const writes = () => db.state.calls.filter((c) => /^\s*(UPDATE|INSERT|DELETE)/.test(c.text));
 const json = (url: string, method: string, body?: unknown) =>
   new NextRequest(url, { method, headers: { 'Content-Type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) });
+// A buyer holding case 7's session (B06), writing from the site itself.
+const buyerHeaders = { 'Content-Type': 'application/json', 'sec-fetch-site': 'same-origin', cookie: 'opinio_case_7=session-token' };
 const caseParams = { params: Promise.resolve({ id: '7' }) };
 const searchParams = Promise.resolve({ business: 'comercio-demo' });
 
@@ -201,7 +205,10 @@ it.each([
 
 describe('buyer flows and public pages keep working', () => {
   it('a buyer message on the case page is still accepted', async () => {
-    const res = await postMessage(json('http://localhost/api/v1/cases/7/messages', 'POST', { sender_type: 'consumer', sender_name: 'Comprador', message: 'Hola' }), caseParams);
+    const res = await postMessage(
+      new NextRequest('http://localhost/api/v1/cases/7/messages', { method: 'POST', headers: buyerHeaders, body: JSON.stringify({ sender_type: 'consumer', sender_name: 'Comprador', message: 'Hola' }) }),
+      caseParams,
+    );
     expect(res.status).toBe(201);
   });
 
@@ -225,7 +232,7 @@ describe('buyer flows and public pages keep working', () => {
   });
 
   it('public case, business and passport reads still render without contact data', async () => {
-    const caseRes = await getCase(json('http://localhost/api/v1/cases/7', 'GET'), caseParams);
+    const caseRes = await getCase(new NextRequest('http://localhost/api/v1/cases/7', { headers: buyerHeaders }), caseParams);
     expect(caseRes.status).toBe(200);
     expectNoContact(JSON.stringify(await caseRes.json()));
 
