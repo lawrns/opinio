@@ -69,6 +69,8 @@ export interface Business {
   median_response_hours: number | string;
   reopen_rate: number | string;
   effective_reviews_count: number;
+  /** Published reviews above 'unverified_experience'. Absent from payloads that do not supply it, which keeps scores hidden. */
+  verified_reviews_count?: number;
   created_at?: string;
   updated_at?: string;
 }

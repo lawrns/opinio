@@ -1,4 +1,5 @@
 import { query } from './db';
+import { VERIFIED_REVIEW_SQL } from './evidence-threshold';
 import {
   Business,
   Review,
@@ -297,6 +298,7 @@ export interface WidgetWithBusiness extends Business {
   config: Record<string, unknown>;
   calculated_rating?: number;
   review_count?: number;
+  verified_reviews_count?: number;
 }
 export interface WidgetJoinRow extends Business {
   b_slug: string;
@@ -305,6 +307,7 @@ export interface WidgetJoinRow extends Business {
   w_theme?: string;
   w_config?: Record<string, unknown>;
   rev_count?: string | number;
+  verified_cnt?: string | number;
   avg_rating?: string | number;
 }
 
@@ -312,11 +315,13 @@ export async function getWidgetDataByToken(token: string): Promise<WidgetWithBus
   const res = await query<WidgetJoinRow>(
     `SELECT b.*, b.slug as b_slug, w.token as widget_token, w.widget_type, w.theme as w_theme, w.config as w_config,
             COALESCE(r.cnt, 0)::int as rev_count,
+            COALESCE(r.verified_cnt, 0)::int as verified_cnt,
             COALESCE(r.avg_rat, 5.0)::numeric as avg_rating
      FROM widgets w
      JOIN businesses b ON b.id = w.business_id
      LEFT JOIN (
-       SELECT business_id, COUNT(*) as cnt, AVG(rating) as avg_rat
+       SELECT business_id, COUNT(*) as cnt, AVG(rating) as avg_rat,
+              COUNT(*) FILTER (WHERE ${VERIFIED_REVIEW_SQL}) as verified_cnt
        FROM reviews
        WHERE status = 'published'
        GROUP BY business_id
@@ -337,6 +342,7 @@ export async function getWidgetDataByToken(token: string): Promise<WidgetWithBus
       config: (row.w_config as Record<string, unknown>) || {},
       calculated_rating: Math.round(Number(row.avg_rating || 5.0) * 10) / 10,
       review_count: Number(row.rev_count) || 0,
+      verified_reviews_count: Number(row.verified_cnt) || 0,
     };
   }
 

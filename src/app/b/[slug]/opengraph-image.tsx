@@ -1,5 +1,6 @@
 import { ImageResponse } from 'next/og';
 import { query } from '@/lib/db';
+import { VERIFIED_REVIEW_SQL, meetsEvidenceThreshold } from '@/lib/evidence-threshold';
 import { passportMetadata } from '@/lib/passport-metadata';
 
 export const runtime = 'nodejs';
@@ -14,6 +15,7 @@ interface BusinessDbRow {
   legal_name: string | null;
   category: string | null;
   operating_area: string | null;
+  verified_reviews_count: number;
 }
 
 // Per-merchant preview card for the public passport. It states the record's own
@@ -30,13 +32,17 @@ export default async function Image({
   const { slug } = await params;
 
   const res = await query<BusinessDbRow>(
-    `SELECT brand_name, legal_name, category, operating_area FROM businesses WHERE slug = $1 LIMIT 1`,
+    `SELECT brand_name, legal_name, category, operating_area,
+            (SELECT COUNT(*)::int FROM reviews r WHERE r.business_id = businesses.id AND r.status = 'published'
+               AND r.${VERIFIED_REVIEW_SQL}) AS verified_reviews_count
+     FROM businesses WHERE slug = $1 LIMIT 1`,
     [slug]
   );
   const business = res.rows[0];
   if (!business) return new Response(null, { status: 404 });
 
   const { description } = passportMetadata(business);
+  const verifiedBadge = meetsEvidenceThreshold(business.verified_reviews_count);
 
   return new ImageResponse(
     (
@@ -84,15 +90,15 @@ export default async function Image({
               alignItems: 'center',
               padding: '8px 18px',
               borderRadius: '9999px',
-              backgroundColor: 'rgba(16, 185, 129, 0.12)',
-              border: '1px solid rgba(16, 185, 129, 0.3)',
-              color: '#34d399',
+              backgroundColor: verifiedBadge ? 'rgba(16, 185, 129, 0.12)' : 'rgba(161, 161, 170, 0.12)',
+              border: verifiedBadge ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(161, 161, 170, 0.3)',
+              color: verifiedBadge ? '#34d399' : '#a1a1aa',
               fontSize: '14px',
               fontWeight: 700,
               letterSpacing: '0.5px',
             }}
           >
-            PASAPORTE DE CONFIANZA COMERCIAL
+            {verifiedBadge ? 'PASAPORTE DE CONFIANZA COMERCIAL' : 'PASAPORTE SIN EVIDENCIA SUFICIENTE'}
           </div>
         </div>
 

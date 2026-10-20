@@ -1,4 +1,5 @@
 'use client';
+import { PublicScore } from '@/components/PublicScore';
 
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -25,6 +26,7 @@ interface BusinessItem {
   coverage_percentage: number | string | null;
   observed_orders_count: number;
   effective_reviews_count: number;
+  verified_reviews_count?: number;
   review_count: number;
   average_rating: number | string | null;
 }
@@ -175,7 +177,6 @@ function VerificarContent() {
           const publishedCount = Number(business.review_count) || 0;
           const averageRating = Number(business.average_rating);
           const hasRating = publishedCount > 0 && business.average_rating !== null && Number.isFinite(averageRating);
-          const hasScore = Number(business.effective_reviews_count) > 0 && business.trust_score !== null && Number.isFinite(Number(business.trust_score));
           const category = categoryStyle(business.category);
           const profileUrl = `/b/${encodeURIComponent(business.slug)}`;
           return <article key={business.id} className={`flex flex-col rounded-2xl border border-t-4 border-op-border bg-op-sheet p-5 shadow-flat sm:p-6 ${category.edge}`}>
@@ -192,7 +193,7 @@ function VerificarContent() {
               <Link href={`${profileUrl}#opiniones`} className="mt-1 inline-flex min-h-11 items-center text-sm font-medium text-op-blue-dark underline decoration-op-blue-border underline-offset-4 hover:decoration-current">{publishedCount.toLocaleString('es-MX')} {publishedCount === 1 ? 'opinión publicada' : 'opiniones publicadas'}</Link>
             </div>
             <div className="mt-4 grid grid-cols-2 gap-3 rounded-xl bg-op-canvas p-4 text-sm">
-              <div><p className="text-xs text-op-muted">Puntaje Opinio</p><p className="mt-1 font-data font-semibold">{hasScore ? numberFormat.format(Number(business.trust_score)) : 'Sin datos'}{hasScore && <span className="ml-1 text-xs font-normal text-op-muted">/ 100</span>}</p></div>
+              <div><p className="text-xs text-op-muted">Puntaje Opinio</p><p className="mt-1 font-data font-semibold"><PublicScore score={business.trust_score} verifiedCount={business.verified_reviews_count} /></p></div>
               <div><p className="text-xs text-op-muted">Pedidos con invitación</p><p className="mt-1 font-data font-semibold">{business.observed_orders_count > 0 && business.coverage_percentage !== null ? `${numberFormat.format(Number(business.coverage_percentage))}%` : 'Sin datos'}</p></div>
             </div>
             <p className="mb-5 mt-3 text-xs font-medium text-op-green-dark">{evidenceLabel(business)}</p>
