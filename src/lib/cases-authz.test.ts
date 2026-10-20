@@ -14,7 +14,7 @@ function fakeRow(sql: string, params: unknown[]) {
   if (/FROM resolution_cases/i.test(sql) && /SELECT/i.test(sql)) return [{ id: 41, business_id: 7, status: 'opened' }];
   if (/INSERT INTO resolution_cases/i.test(sql)) return [{ id: 41, business_id: 7, case_number: params[3], status: 'opened', is_consumer_confirmed: false, customer_contact: params[5] }];
   if (/INSERT INTO case_messages/i.test(sql)) return [{ id: 1, case_id: params[0], sender_type: params[1], sender_name: params[2], message: params[3], is_private: params[4] }];
-  if (/INSERT INTO reviews/i.test(sql)) return [{ id: 9, business_id: 7, rating: params[2], body: params[4], author_name: params[5], verification_level: params[7], status: 'published' }];
+  if (/INSERT INTO reviews/i.test(sql)) return [{ id: 9, business_id: 7, rating: params[2], body: params[4], author_name: params[5], verification_level: params[7], status: 'pending' }];
   if (/COUNT\(\*\)/i.test(sql)) return [{ count: '1' }];
   return [];
 }

@@ -43,11 +43,13 @@ const MIGRATIONS = [
   '0004_staff_and_transfer.sql',
   '0005_buyer_case_access.sql',
   '0006_case_recovery.sql',
+  '0007_review_moderation.sql',
 ];
 
 /** Columns the migrations add to legacy tables; digests compare legacy columns only, and these are checked NULL separately. */
 const ADDED_COLUMNS: Partial<Record<(typeof LEGACY_TABLES)[number], string[]>> = {
   resolution_cases: ['access_email', 'submission_key'],
+  reviews: ['body_hash', 'author_email_hash', 'client_hash', 'moderated_by_user_id', 'moderated_at'],
 };
 
 let db: TestDatabase;

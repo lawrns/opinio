@@ -124,3 +124,6 @@ export const EVIDENCE_SUBJECT: Record<EvidenceMethod, RegExp> = {
   dns: /^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/,
   business_callback: /^\+[0-9]{8,15}$/,
 };
+
+/** Public review submissions allowed per client address in a sliding hour (BL-04). */
+export const REVIEWS_PER_CLIENT_PER_HOUR = 3;
