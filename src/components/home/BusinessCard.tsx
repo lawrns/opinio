@@ -17,7 +17,7 @@ const levels: Record<string, string> = {
 
 export function BusinessCard({ business }: BusinessCardProps) {
   const hasOrders = business.observed_orders_count > 0;
-  const hasScore = meetsEvidenceThreshold(business.effective_reviews_count) && business.trust_score !== null;
+  const hasScore = meetsEvidenceThreshold(business.verified_reviews_count) && business.trust_score !== null;
   const count = Number(business.review_count || 0);
   const hasIdentity = ['identity_verified', 'connected_orders', 'transparent_coverage'].includes(business.verified_level);
   return (

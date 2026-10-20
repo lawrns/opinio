@@ -216,7 +216,7 @@ export default async function DirectorioPage({ searchParams }: PageProps) {
 
                 <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                   {items.map((b) => {
-                    const hasScore = b.trust_score !== null && Number(b.trust_score) > 0 && meetsEvidenceThreshold(b.effective_reviews_count);
+                    const hasScore = b.trust_score !== null && Number(b.trust_score) > 0 && meetsEvidenceThreshold(b.verified_reviews_count);
                     return (
                       <Link
                         key={b.id}

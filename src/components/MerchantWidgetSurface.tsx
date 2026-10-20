@@ -4,6 +4,7 @@ import { WidgetWithBusiness } from '@/lib/merchant-data';
 import { Review } from '@/lib/types';
 import type { PublicReview } from '@/lib/public-reviews';
 import { cn } from '@/lib/utils';
+import { meetsEvidenceThreshold } from '@/lib/evidence-threshold';
 
 export function MerchantWidgetSurface({
   business,
@@ -111,11 +112,17 @@ export function MerchantWidgetSurface({
             </div>
           </div>
           <div className={cn('shrink-0 text-right', accent)}>
-            <p className="font-data text-lg font-bold">
-              {business.trust_score}
-              <span className="text-xs font-normal">/100</span>
-            </p>
-            <p className={cn('text-xs', secondary)}>Índice de confianza</p>
+            {meetsEvidenceThreshold(business.verified_reviews_count) ? (
+              <>
+                <p className="font-data text-lg font-bold">
+                  {business.trust_score}
+                  <span className="text-xs font-normal">/100</span>
+                </p>
+                <p className={cn('text-xs', secondary)}>Índice de confianza</p>
+              </>
+            ) : (
+              <p className={cn('text-xs', secondary)}>Sin evidencia suficiente</p>
+            )}
           </div>
         </div>
         {format !== 'badge' && (
