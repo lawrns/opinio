@@ -1,12 +1,13 @@
 import Link from 'next/link';
 import { ArrowUpRight, ArrowRight, Fingerprint, Receipt, ChatsCircle } from '@phosphor-icons/react/dist/ssr';
 import type { Business } from '@/lib/types';
+import { meetsEvidenceThreshold } from '@/lib/evidence-threshold';
 import { BrandLogo } from '@/components/BrandLogo';
 import { StarRating } from '@/components/StarRating';
 import { HomeSearch } from './HomeSearch';
 
 export function TrustGraphHero({ business }: { business?: Business }) {
-  const score = business && Number(business.effective_reviews_count) > 0 ? Number(business.trust_score).toLocaleString('es-MX', { maximumFractionDigits: 1 }) : '—';
+  const score = business && meetsEvidenceThreshold(business.effective_reviews_count) ? Number(business.trust_score).toLocaleString('es-MX', { maximumFractionDigits: 1 }) : '—';
   return (
     <section className="border-b border-op-border">
       <div className="op-container grid items-center gap-12 py-12 md:py-16 lg:grid-cols-[1.2fr_0.85fr] lg:gap-20 lg:py-20">
@@ -37,7 +38,7 @@ export function TrustGraphHero({ business }: { business?: Business }) {
                   </div>
                 </div>
                 {Number(business.review_count) > 0 && business.average_rating != null && <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2"><StarRating rating={Number(business.average_rating)} size="sm" /><span className="text-sm font-semibold">{Number(business.average_rating).toLocaleString('es-MX', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} / 5</span><span className="text-xs text-op-secondary">{Number(business.review_count).toLocaleString('es-MX')} opiniones</span></div>}
-                <div className="my-6 h-1.5 overflow-hidden rounded-full bg-op-shaded" aria-hidden="true"><div className="h-full rounded-full bg-op-green" style={{ width: `${Number(business.effective_reviews_count) > 0 ? Math.min(100, Math.max(0, Number(business.trust_score) || 0)) : 0}%` }} /></div>
+                <div className="my-6 h-1.5 overflow-hidden rounded-full bg-op-shaded" aria-hidden="true"><div className="h-full rounded-full bg-op-green" style={{ width: `${meetsEvidenceThreshold(business.effective_reviews_count) ? Math.min(100, Math.max(0, Number(business.trust_score) || 0)) : 0}%` }} /></div>
               </> : <div className="mb-6"><h2 className="text-2xl font-semibold tracking-tight"><Link href="/blog" className="underline underline-offset-4 hover:text-op-green-dark">Más que una calificación.</Link></h2><p className="mt-2 text-sm leading-relaxed text-op-secondary">Tres preguntas para conocer mejor a un comercio.</p></div>}
               <div className="divide-y divide-op-border">
                 {[{ icon: Fingerprint, name: 'Quién vende', detail: business?.legal_name || 'Identidad y datos del comercio', label: 'EXISTE' }, { icon: Receipt, name: 'Cómo cumple', detail: business && business.observed_orders_count > 0 ? `${Number(business.coverage_percentage).toLocaleString('es-MX')}% de compradores invitados a opinar` : 'Opiniones y evidencia de compra', label: 'CUMPLE' }, { icon: ChatsCircle, name: 'Cómo responde', detail: 'Casos y seguimiento de soluciones', label: 'RESUELVE' }].map(({ icon: Icon, name, detail, label }) => <div key={label} className="flex items-start gap-3 py-4"><span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-op-green-soft text-op-green-dark"><Icon aria-hidden="true" className="size-5" weight="duotone" /></span><div className="min-w-0 flex-1"><h3 className="text-sm font-semibold">{name}</h3><p className="mt-1 text-xs leading-relaxed text-op-muted">{detail}</p></div><span className="pt-1 text-xs font-medium tracking-wider text-op-muted">{label}</span></div>)}

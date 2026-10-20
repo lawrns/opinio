@@ -1,4 +1,5 @@
 'use client';
+import { meetsEvidenceThreshold } from '@/lib/evidence-threshold';
 
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -175,7 +176,7 @@ function VerificarContent() {
           const publishedCount = Number(business.review_count) || 0;
           const averageRating = Number(business.average_rating);
           const hasRating = publishedCount > 0 && business.average_rating !== null && Number.isFinite(averageRating);
-          const hasScore = Number(business.effective_reviews_count) > 0 && business.trust_score !== null && Number.isFinite(Number(business.trust_score));
+          const hasScore = meetsEvidenceThreshold(business.effective_reviews_count) && business.trust_score !== null && Number.isFinite(Number(business.trust_score));
           const category = categoryStyle(business.category);
           const profileUrl = `/b/${encodeURIComponent(business.slug)}`;
           return <article key={business.id} className={`flex flex-col rounded-2xl border border-t-4 border-op-border bg-op-sheet p-5 shadow-flat sm:p-6 ${category.edge}`}>

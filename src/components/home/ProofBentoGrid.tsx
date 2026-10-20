@@ -60,19 +60,19 @@ export function ProofBentoGrid() {
               </p>
             </div>
 
-            {/* Simulated Digital Certificate Slip */}
+            {/* Fictional example slip: never a real company or a real SAT result. */}
             <div className="p-4 rounded-2xl bg-[#FCFBF3] border border-[#EBEAE1] space-y-2.5 text-xs font-mono">
               <div className="flex items-center justify-between border-b border-[#EBEAE1] pb-2 text-[10px] text-gray-500">
-                <span>PADRÓN TRIBUTARIO SAT</span>
-                <span className="text-[#008B5D] font-bold">VÁLIDO 4.0</span>
+                <span>EJEMPLO ILUSTRATIVO</span>
+                <span className="text-gray-600 font-bold">Datos ficticios</span>
               </div>
               <div className="space-y-1">
-                <div className="text-[11px] font-bold text-[#121511]">RFC: CZE150414AB2</div>
-                <div className="text-[10px] text-gray-500 truncate">Comercializadora Zebrands S.A. de C.V.</div>
+                <div className="text-[11px] font-bold text-[#121511]">RFC: XAXX010101000</div>
+                <div className="text-[10px] text-gray-500 truncate">Empresa Ejemplo S.A. de C.V.</div>
               </div>
               <div className="pt-2 border-t border-[#EBEAE1] flex items-center justify-between text-[10px]">
                 <span className="text-gray-500">INEGI CLEE:</span>
-                <span className="text-[#121511] font-bold">0901547891234001</span>
+                <span className="text-[#121511] font-bold">00000000000000</span>
               </div>
             </div>
           </div>

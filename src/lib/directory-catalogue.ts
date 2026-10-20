@@ -21,6 +21,7 @@ export interface DirectoryBusiness {
   legal_name: string | null;
   category: string;
   trust_score: number | string | null;
+  effective_reviews_count: number | string | null;
   operating_area: string | null;
   logo_url: string | null;
   claimed: boolean;
@@ -66,7 +67,7 @@ const getCachedBusinessSlice = unstable_cache(
          GROUP BY 1
        ),
        ranked AS (
-         SELECT b.id, b.slug, b.brand_name, b.legal_name, b.category, b.trust_score,
+         SELECT b.id, b.slug, b.brand_name, b.legal_name, b.category, b.trust_score, b.effective_reviews_count,
                 b.operating_area, b.logo_url, b.claimed,
                 ROW_NUMBER() OVER (
                   ORDER BY cc.count DESC, ${CATEGORY_SQL} ASC, b.brand_name ASC, b.id ASC
@@ -75,7 +76,7 @@ const getCachedBusinessSlice = unstable_cache(
          JOIN category_counts cc ON cc.category = ${CATEGORY_SQL}
          WHERE b.slug IS NOT NULL
        )
-       SELECT id, slug, brand_name, legal_name, category, trust_score, operating_area, logo_url, claimed
+       SELECT id, slug, brand_name, legal_name, category, trust_score, effective_reviews_count, operating_area, logo_url, claimed
        FROM ranked
        WHERE row_number > $1 AND row_number <= $2
        ORDER BY row_number`,

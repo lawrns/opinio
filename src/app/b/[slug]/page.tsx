@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { Building, Receipt, Phone, Globe, SealCheck, CheckCircle } from '@phosphor-icons/react/dist/ssr';
+import { meetsEvidenceThreshold } from '@/lib/evidence-threshold';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { BrandLogo } from '@/components/BrandLogo';
@@ -231,7 +232,7 @@ export default async function BusinessPassportPage({ params }: PageProps) {
   const folioCode = `OP-${business.id.toString().padStart(6, '0')}`;
   const confidenceLevel = business.confidence_level;
   const effectiveSampleSize = Number(business.effective_reviews_count) || 0;
-  const hasScore = effectiveSampleSize > 0;
+  const hasScore = meetsEvidenceThreshold(effectiveSampleSize);
   const hasOrdersData = business.observed_orders_count > 0;
   const coveragePercent = hasOrdersData ? Math.round(business.invited_orders_count / business.observed_orders_count * 1000) / 10 : null;
   const issuesPer1k = hasOrdersData ? Math.round(cases.length / business.observed_orders_count * 10000) / 10 : null;
@@ -391,10 +392,16 @@ export default async function BusinessPassportPage({ params }: PageProps) {
                   <span className="font-bold text-[var(--op-ink-primary)] bg-[var(--op-shaded)] border border-[var(--op-border-hairline)] px-3 py-1 rounded-md">
                     FOLIO: {folioCode}
                   </span>
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md font-bold bg-[var(--op-verified-tint)] text-[var(--op-verified-ink)] border border-[var(--op-verified-border)]">
-                    <SealCheck weight="fill" className="w-4 h-4 text-[var(--op-verified-ink)]" />
-                    <span>PASAPORTE DE CONFIANZA</span>
-                  </span>
+                  {hasScore ? (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md font-bold bg-[var(--op-verified-tint)] text-[var(--op-verified-ink)] border border-[var(--op-verified-border)]">
+                      <SealCheck weight="fill" className="w-4 h-4 text-[var(--op-verified-ink)]" />
+                      <span>PASAPORTE DE CONFIANZA</span>
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md font-bold bg-[var(--op-canvas)] text-[var(--op-ink-secondary)] border border-[var(--op-border-hairline)]">
+                      <span>PASAPORTE SIN EVIDENCIA SUFICIENTE</span>
+                    </span>
+                  )}
                   {business.claimed && (
                     <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md font-semibold bg-[var(--op-canvas)] text-[var(--op-ink-secondary)] border border-[var(--op-border-hairline)]">
                       <CheckCircle weight="bold" className="w-3.5 h-3.5 text-[var(--op-verified-ink)]" />
