@@ -11,6 +11,7 @@ import { pool } from '@/lib/db';
 import { authorizeCaseSession } from '@/lib/authz';
 import { caseSessionCookieName } from '@/lib/authz/policy';
 import { servedOverHttps } from '@/lib/authz/https';
+import { buyerProofEnabled } from '@/lib/auth/spike';
 
 /** True when the request carries a live buyer session for this exact case (B06). Never throws. */
 async function hasCaseProof(caseId: number): Promise<boolean> {
@@ -42,6 +43,8 @@ export default async function CasoDetailPage({ params }: PageProps) {
   // Query case by numeric id or by case_number. Public projection only: this
   // page is served without authentication, so no buyer contact fields.
   const isNumeric = /^\d+$/.test(id);
+  // Beyond INTEGER range cannot exist: a plain 404, not a database error.
+  if (isNumeric && Number(id) > 2_147_483_647) notFound();
   const caseQuery = isNumeric
     ? `SELECT ${publicCaseColumnsSql('c')}, b.brand_name, b.slug as business_slug
        FROM resolution_cases c
@@ -110,6 +113,7 @@ export default async function CasoDetailPage({ params }: PageProps) {
             initialCase={caseData}
             initialMessages={messages}
             canViewThread={verified}
+            accessLinkAvailable={buyerProofEnabled()}
           />
         </div>
       </main>

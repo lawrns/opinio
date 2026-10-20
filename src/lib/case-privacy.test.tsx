@@ -70,6 +70,7 @@ beforeEach(() => {
   ctl.cookie = undefined;
   ctl.userId = null;
   ctl.memberOf = 1;
+  vi.unstubAllEnvs();
 });
 
 describe('/caso/[id] page', () => {
@@ -82,6 +83,18 @@ describe('/caso/[id] page', () => {
     for (const secret of ['SENTINEL_THREAD_TEXT', 'SENTINEL_REMEDY_TEXT', 'SENTINEL_SUMMARY_TEXT']) expect(html).not.toContain(secret);
     expect(html).not.toContain('case-message');
     expect(ctl.calls.some((c) => /FROM case_messages/i.test(c.sql))).toBe(false);
+  });
+
+  it('answers a plain 404 (not a database error) for an id beyond INTEGER', async () => {
+    await expect(CasoDetailPage({ params: Promise.resolve({ id: '99999999999' }) })).rejects.toThrow(/NEXT_HTTP_ERROR_FALLBACK;404|NEXT_NOT_FOUND/);
+    expect(ctl.calls).toEqual([]);
+  });
+
+  it('locked notice links to the access page only when buyer proof is on', async () => {
+    expect(await render()).not.toContain('/caso/acceso/reenviar');
+    vi.stubEnv('OPINIO_BUYER_PROOF', '1');
+    expect(await render()).toContain('/caso/acceso/reenviar');
+    vi.unstubAllEnvs();
   });
 
   it('with a wrong session behaves like no session', async () => {
@@ -116,7 +129,6 @@ describe('GET /api/v1/invitations', () => {
 
   it('returns 401 when signed out, with no invitation query', async () => {
     expect((await list('?business_id=1')).status).toBe(401);
-    expect((await list('')).status).toBe(401);
     expect(ctl.calls).toEqual([]);
   });
 
@@ -127,11 +139,11 @@ describe('GET /api/v1/invitations', () => {
     expect(ctl.calls).toEqual([]);
   });
 
-  it('requires business_id from a signed-in user, never listing across tenants', async () => {
+  it.each(['', '?business_id=', '?business_id=0', '?business_id=-3', '?business_id=abc', '?business_id=2147483648'])('answers 400 for business_id %j, never listing across tenants', async (qs) => {
     ctl.userId = 9;
     ctl.memberOf = 1;
-    const res = await list('');
-    expect(res.status).toBeGreaterThanOrEqual(400);
+    expect((await list(qs)).status).toBe(400);
+    expect((await list(qs)).headers.get('cache-control')).toBe('private, no-store');
     expect(ctl.calls).toEqual([]);
   });
 

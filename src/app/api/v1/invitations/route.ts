@@ -193,9 +193,7 @@ export async function GET(request: NextRequest) {
     // sees that business's invitations. No anonymous or cross-tenant listing.
     // Authorization runs before any invitation query.
     const businessIdRequested = Number(businessIdParam);
-    if (!Number.isSafeInteger(businessIdRequested) || businessIdRequested <= 0) {
-      // Still unauthenticated callers learn nothing: 401 first when signed out.
-      await authorizeMerchant(pool, { userId: await currentMerchantUserId(), resource: { kind: 'business', id: 0 }, permission: 'read_operational' });
+    if (!businessIdParam || !Number.isSafeInteger(businessIdRequested) || businessIdRequested <= 0 || businessIdRequested > 2_147_483_647) {
       return NextResponse.json({ success: false, error: 'business_id es requerido' }, { status: 400, headers: PRIVATE_HEADERS });
     }
     await authorizeMerchant(pool, {
