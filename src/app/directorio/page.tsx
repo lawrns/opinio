@@ -20,7 +20,6 @@ import {
   selectDirectoryPage,
 } from '@/lib/directory-pagination';
 import { sharePreview } from '@/lib/share-preview';
-import { meetsEvidenceThreshold } from '@/lib/evidence-threshold';
 
 interface PageProps {
   searchParams: Promise<{ page?: string | string[] }>;
@@ -237,7 +236,6 @@ export default async function DirectorioPage({ searchParams }: PageProps) {
 
                 <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                   {items.map((b) => {
-                    const hasScore = b.trust_score !== null && Number(b.trust_score) > 0 && meetsEvidenceThreshold(b.verified_reviews_count);
                     return (
                       <Link
                         key={b.id}
@@ -262,20 +260,9 @@ export default async function DirectorioPage({ searchParams }: PageProps) {
                           </div>
                         </div>
 
-                        <div className="mt-4 flex items-center justify-between border-t border-op-border-hairline pt-3 text-xs">
-                          <span className="font-mono text-op-secondary">
-                            {hasScore ? (
-                              <span className="inline-flex items-center rounded-md bg-op-green-soft px-2 py-0.5 font-bold text-op-green-dark">
-                                {Number(b.trust_score).toFixed(1)}
-                                <span className="ml-0.5 text-[10px] font-normal text-op-secondary">/100</span>
-                              </span>
-                            ) : (
-                              <span className="text-[11px] text-op-muted">En auditoría</span>
-                            )}
-                          </span>
-
+                        <div className="mt-4 flex items-center justify-end border-t border-op-border-hairline pt-3 text-xs">
                           <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-op-green-dark transition-transform group-hover:translate-x-0.5">
-                            Ver pasaporte <ArrowRight size={12} />
+                            Ver opiniones <ArrowRight size={12} />
                           </span>
                         </div>
                       </Link>

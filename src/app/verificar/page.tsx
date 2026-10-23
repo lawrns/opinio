@@ -1,5 +1,4 @@
 'use client';
-import { PublicScore } from '@/components/PublicScore';
 
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -47,12 +46,6 @@ const CATEGORIES = [
 ];
 const RATINGS = [0, 1, 2, 3, 4, 4.5, 5];
 const numberFormat = new Intl.NumberFormat('es-MX', { maximumFractionDigits: 1 });
-
-function evidenceLabel(business: BusinessItem) {
-  if (business.claimed && business.verified_level === 'transparent_coverage' && business.observed_orders_count > 0) return 'Cobertura de pedidos registrada';
-  if (business.observed_orders_count > 0) return 'Con datos de pedidos';
-  return business.claimed ? 'Perfil reclamado' : 'Información pública';
-}
 
 function VerificarContent() {
   const searchParams = useSearchParams();
@@ -367,27 +360,10 @@ function VerificarContent() {
                       {publishedCount === 1 ? 'opinión publicada' : 'opiniones publicadas'}
                     </Link>
                   </div>
-                  <div className="mt-4 grid grid-cols-2 gap-3 rounded-xl bg-op-canvas p-4 text-sm">
-                    <div>
-                      <p className="text-xs text-op-muted">Puntaje Opinio</p>
-                      <p className="mt-1 font-data font-bold text-op-ink">
-                        <PublicScore score={business.trust_score} verifiedCount={business.verified_reviews_count} />
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-op-muted">Pedidos con invitación</p>
-                      <p className="mt-1 font-data font-bold text-op-ink">
-                        {business.observed_orders_count > 0 && business.coverage_percentage !== null
-                          ? `${numberFormat.format(Number(business.coverage_percentage))}%`
-                          : 'Sin datos'}
-                      </p>
-                    </div>
-                  </div>
-                  <p className="mb-5 mt-3 text-xs font-semibold text-op-green-dark">{evidenceLabel(business)}</p>
                   <Link
                     href={writeReview ? `/escribir-opinion/${encodeURIComponent(business.slug)}` : profileUrl}
                     data-cta={writeReview ? 'search_write_review' : 'search_open_passport'}
-                    className="mt-auto flex min-h-12 items-center justify-between gap-3 rounded-full bg-op-ink px-5 py-3 text-sm font-semibold text-white transition-all hover:bg-op-green-dark"
+                    className="mt-5 flex min-h-12 items-center justify-between gap-3 rounded-full bg-op-ink px-5 py-3 text-sm font-semibold text-white transition-all hover:bg-op-green-dark"
                   >
                     <span>{writeReview ? `Opinar sobre ${business.brand_name}` : 'Ver opiniones y perfil'}</span>
                     <ArrowRight className="shrink-0" size={17} aria-hidden="true" />
