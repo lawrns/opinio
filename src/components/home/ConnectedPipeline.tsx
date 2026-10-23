@@ -69,71 +69,73 @@ export function ConnectedPipeline() {
           ))}
         </div>
 
-        {/* Calm Editorial Score Reading Card */}
+        {/* Trustpilot-inspired Mint Green Banner (#b2f8cc) + Dark Forest Report Box (#0a2e1d) */}
         <div
           id="independencia"
-          className="rounded-3xl border border-op-border bg-[#fcfbf3] p-6 shadow-flat sm:p-10 lg:p-12"
+          className="relative overflow-hidden rounded-[24px] bg-[#b2f8cc] p-6 text-[#1b1a1b] shadow-flat sm:p-10 lg:p-12"
         >
-          <div className="grid gap-10 lg:grid-cols-[1.05fr_1.15fr] lg:items-center">
+          <div className="relative z-10 grid gap-10 lg:grid-cols-[1.05fr_1.15fr] lg:items-center">
             <div>
-              <span className="inline-flex items-center gap-2 rounded-full border border-op-border bg-white px-3.5 py-1 font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-op-secondary">
+              <span className="inline-flex items-center gap-2 rounded-full bg-[#0a2e1d] px-3.5 py-1 font-mono text-[11px] font-bold uppercase tracking-[0.08em] text-[#b2f8cc]">
                 Escala de 0 a 100 · Metodología abierta
               </span>
-              <h3 className="mt-4 text-3xl font-extrabold leading-[1.08] tracking-[-0.03em] text-op-ink sm:text-4xl">
+              <h3 className="mt-4 text-3xl font-extrabold leading-[1.08] tracking-[-0.03em] text-[#1b1a1b] sm:text-4xl">
                 Somos Opinio México.
               </h3>
-              <p className="mt-4 text-base leading-relaxed text-op-secondary">
+              <p className="mt-4 text-base leading-relaxed text-[#1b1a1b]/85">
                 La cobertura mide cuántas compras registradas tienen invitación para opinar. El puntaje va de 0 a 100 y suma tres factores: datos de identidad, opiniones con comprobante y casos resueltos. Cuando un comercio aún reúne pocos datos, el perfil aparece en observación.
               </p>
               <div className="mt-7 flex flex-wrap items-center gap-4">
                 <Link
                   href="/resenas-y-reputacion"
-                  className="inline-flex min-h-11 items-center gap-2 rounded-full bg-[#1b1a1b] px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-op-green-dark"
+                  className="inline-flex min-h-11 items-center gap-2 rounded-full bg-[#1b1a1b] px-6 py-3 text-sm font-bold text-white transition-all hover:bg-[#0a2e1d]"
                 >
                   Consultar estándar de reputación
                   <ArrowUpRight aria-hidden="true" className="size-4" />
                 </Link>
                 <Link
                   href="/directorio"
-                  className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-op-border bg-white px-5 py-3 text-sm font-semibold text-op-ink transition-colors hover:border-op-strong hover:bg-op-shaded"
+                  className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-[#1b1a1b]/25 bg-white/80 px-5 py-3 text-sm font-bold text-[#1b1a1b] transition-all hover:bg-white"
                 >
                   Ver directorio público
                 </Link>
               </div>
             </div>
 
-            <div className="rounded-2xl border border-op-border bg-white p-6 shadow-flat sm:p-7">
-              <div className="flex items-center gap-2.5 border-b border-op-border pb-4">
-                <span className="flex size-9 items-center justify-center rounded-xl border border-op-border bg-[#fcfbf3] text-op-green-dark">
-                  <ShieldCheck aria-hidden="true" className="size-5" weight="fill" />
-                </span>
-                <div>
-                  <p className="font-mono text-[11px] font-semibold uppercase tracking-wider text-op-muted">
-                    Lectura del puntaje
-                  </p>
-                  <h4 className="text-base font-bold text-op-ink">Cómo leer cada rango en el pasaporte</h4>
+            <div className="relative overflow-hidden rounded-[22px] bg-[#0a2e1d] p-6 text-white shadow-hero sm:p-8">
+              <div className="relative z-10 flex items-center justify-between gap-3 border-b border-white/15 pb-4">
+                <div className="flex items-center gap-2.5">
+                  <span className="flex size-9 items-center justify-center rounded-xl bg-[#00b67a] text-[#0a2e1d]">
+                    <ShieldCheck aria-hidden="true" className="size-5" weight="fill" />
+                  </span>
+                  <div>
+                    <p className="font-mono text-[11px] font-bold uppercase tracking-wider text-[#b2f8cc]">
+                      Lectura del puntaje
+                    </p>
+                    <h4 className="text-base font-bold text-white">Cómo leer cada rango en el pasaporte</h4>
+                  </div>
                 </div>
               </div>
 
-              <div className="mt-5 grid gap-3.5 sm:grid-cols-3">
-                <div className="rounded-xl border border-op-border bg-[#fcfbf3] p-4">
-                  <span className="font-mono text-xl font-bold tracking-tight text-op-ink">80 a 100</span>
-                  <h5 className="mt-1.5 text-sm font-bold text-op-ink">Evidencia amplia</h5>
-                  <p className="mt-1 text-xs leading-relaxed text-op-secondary">
+              <div className="relative z-10 mt-5 grid gap-3.5 sm:grid-cols-3">
+                <div className="rounded-2xl border border-white/15 bg-white/8 p-4">
+                  <span className="font-mono text-2xl font-extrabold tracking-tight text-[#04da8d]">80 a 100</span>
+                  <h5 className="mt-1.5 text-sm font-bold text-white">Evidencia amplia</h5>
+                  <p className="mt-1 text-xs leading-relaxed text-white/75">
                     Identidad verificada, cobertura constante de pedidos y reclamos atendidos con confirmación.
                   </p>
                 </div>
-                <div className="rounded-xl border border-op-border bg-[#fcfbf3] p-4">
-                  <span className="font-mono text-xl font-bold tracking-tight text-op-ink">60 a 79</span>
-                  <h5 className="mt-1.5 text-sm font-bold text-op-ink">Evidencia parcial</h5>
-                  <p className="mt-1 text-xs leading-relaxed text-op-secondary">
+                <div className="rounded-2xl border border-white/15 bg-white/8 p-4">
+                  <span className="font-mono text-2xl font-extrabold tracking-tight text-[#ffe400]">60 a 79</span>
+                  <h5 className="mt-1.5 text-sm font-bold text-white">Evidencia parcial</h5>
+                  <p className="mt-1 text-xs leading-relaxed text-white/75">
                     Algunos pilares tienen datos verificados o hay reclamos abiertos en seguimiento.
                   </p>
                 </div>
-                <div className="rounded-xl border border-op-border bg-[#fcfbf3] p-4">
-                  <span className="font-mono text-xl font-bold tracking-tight text-op-muted">Sin dato</span>
-                  <h5 className="mt-1.5 text-sm font-bold text-op-ink">En observación</h5>
-                  <p className="mt-1 text-xs leading-relaxed text-op-secondary">
+                <div className="rounded-2xl border border-white/15 bg-white/8 p-4">
+                  <span className="font-mono text-2xl font-extrabold tracking-tight text-white/60">Sin dato</span>
+                  <h5 className="mt-1.5 text-sm font-bold text-white">En observación</h5>
+                  <p className="mt-1 text-xs leading-relaxed text-white/75">
                     Reúne menos opiniones verificadas del mínimo necesario para calcular un puntaje.
                   </p>
                 </div>

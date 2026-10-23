@@ -292,8 +292,27 @@ export default async function BusinessPassportPage({ params }: PageProps) {
         {/* ========================================================================= */}
         {/* 1. COMPANY HEADER BANNER WITH REAL REVIEW BREAKDOWN                       */}
         {/* ========================================================================= */}
-        <header className="border-b border-op-border bg-[#fcfbf3] pb-12 pt-10">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <header className="relative overflow-hidden border-b border-op-border bg-[#fcfbf3] pb-12 pt-10">
+          {/* Trustpilot-inspired geometric background shapes */}
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 600 280"
+            className="pointer-events-none absolute right-0 top-0 hidden h-full w-[520px] opacity-80 lg:block"
+          >
+            <g className="animate-op-float">
+              <circle cx="460" cy="50" r="110" fill="#fd791a" />
+              <rect x="290" y="120" width="150" height="150" rx="28" fill="#ffe400" transform="rotate(-12 365 195)" />
+              <path
+                d="M510 120 L590 255 L430 255 Z"
+                fill="#04da8d"
+                stroke="#04da8d"
+                strokeWidth="14"
+                strokeLinejoin="round"
+              />
+            </g>
+          </svg>
+
+          <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="grid items-start gap-8 lg:grid-cols-[1fr_360px] lg:gap-12">
               {/* Left Company Identity & Actions */}
               <div className="max-w-3xl space-y-5">

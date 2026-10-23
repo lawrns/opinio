@@ -88,6 +88,23 @@ export default function ResenasYReputacionPage() {
       <Navbar />
       <main id="contenido" tabIndex={-1} className="flex-1 overflow-hidden rounded-b-[32px] bg-op-canvas pb-16">
         <section className="relative overflow-hidden border-b border-op-border bg-[#fcfbf3]">
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 600 280"
+            className="pointer-events-none absolute right-0 top-0 hidden h-full w-[520px] opacity-85 lg:block"
+          >
+            <g className="animate-op-float">
+              <circle cx="460" cy="50" r="110" fill="#fd791a" />
+              <rect x="290" y="120" width="150" height="150" rx="28" fill="#ffe400" transform="rotate(-12 365 195)" />
+              <path
+                d="M510 120 L590 255 L430 255 Z"
+                fill="#04da8d"
+                stroke="#04da8d"
+                strokeWidth="14"
+                strokeLinejoin="round"
+              />
+            </g>
+          </svg>
           <div className="relative z-10 mx-auto max-w-7xl px-4 pb-12 pt-12 sm:px-6 sm:pt-14 lg:px-8">
             <Breadcrumbs
               siteUrl={SITE_URL}

@@ -42,6 +42,23 @@ export default function BlogIndexPage() {
       <Navbar />
       <main id="contenido" tabIndex={-1} className="flex-1 overflow-hidden rounded-b-[32px] bg-op-canvas pb-16">
         <section className="relative overflow-hidden border-b border-op-border bg-[#fcfbf3]">
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 600 260"
+            className="pointer-events-none absolute right-0 top-0 hidden h-full w-[520px] opacity-85 lg:block"
+          >
+            <g className="animate-op-float">
+              <circle cx="460" cy="40" r="110" fill="#fd791a" />
+              <rect x="290" y="110" width="150" height="150" rx="28" fill="#ffe400" transform="rotate(-12 365 185)" />
+              <path
+                d="M510 110 L590 245 L430 245 Z"
+                fill="#04da8d"
+                stroke="#04da8d"
+                strokeWidth="14"
+                strokeLinejoin="round"
+              />
+            </g>
+          </svg>
           <div className="relative z-10 mx-auto max-w-7xl px-4 pb-12 pt-12 sm:px-6 sm:pt-14 lg:px-8">
             <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-op-ink/15 bg-white px-3.5 py-1.5 font-mono text-xs font-bold uppercase tracking-widest text-op-ink shadow-2xs">
               <BookOpen className="size-3.5 text-[#008b5d]" aria-hidden="true" />

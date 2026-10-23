@@ -238,38 +238,57 @@ export function ProofBentoGrid() {
       </section>
 
       {/* ========================================================================= */}
-      {/* SECTION 2: CALM DENOMINATOR COMPARATOR                                    */}
+      {/* SECTION 2: PEACH BANNER (#ffeed7) · DENOMINATOR COMPARATOR                */}
       {/* ========================================================================= */}
       <section className="op-container" aria-labelledby="denominator-heading">
-        <div className="rounded-3xl border border-op-border bg-[#fcfbf3] p-6 shadow-flat sm:p-10 lg:p-12">
-          <div className="grid items-center gap-10 lg:grid-cols-[0.95fr_1.05fr] lg:gap-14">
+        <div className="relative overflow-hidden rounded-[24px] bg-[#ffeed7] p-6 shadow-flat sm:p-10 lg:p-12">
+          {/* Decorative geometric background shapes */}
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 420 420"
+            className="pointer-events-none absolute -right-20 -top-24 size-96 opacity-45"
+          >
+            <g className="animate-op-float">
+              <circle cx="280" cy="140" r="110" fill="#fd791a" />
+              <rect x="110" y="180" width="140" height="140" rx="28" fill="#ffe400" transform="rotate(-12 180 250)" />
+              <path
+                d="M270 210 L350 350 L190 350 Z"
+                fill="#04da8d"
+                stroke="#04da8d"
+                strokeWidth="14"
+                strokeLinejoin="round"
+              />
+            </g>
+          </svg>
+
+          <div className="relative z-10 grid items-center gap-10 lg:grid-cols-[0.95fr_1.05fr] lg:gap-14">
             <div>
-              <span className="inline-flex items-center gap-2 rounded-full border border-op-border bg-white px-3.5 py-1 font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-op-secondary">
+              <span className="inline-flex items-center gap-2 rounded-full bg-[#1b1a1b] px-3.5 py-1 font-mono text-[11px] font-bold uppercase tracking-[0.08em] text-[#ffeed7]">
                 Pilar 02 · El denominador de pedidos
               </span>
               <h2
                 id="denominator-heading"
-                className="mt-4 text-3xl font-extrabold leading-[1.08] tracking-[-0.03em] text-op-ink sm:text-4xl"
+                className="mt-4 text-3xl font-extrabold leading-[1.08] tracking-[-0.03em] text-[#1b1a1b] sm:text-4xl"
               >
                 Una calificación sin denominador se distorsiona fácil.
               </h2>
-              <p className="mt-4 text-base leading-relaxed text-op-secondary">
+              <p className="mt-4 text-base leading-relaxed text-[#1b1a1b]/85">
                 Si una tienda elige a qué clientes pedirles reseña, su promedio sube aunque la mitad de los envíos se atrase. En Opinio la cobertura compara las invitaciones registradas contra el total de pedidos registrados.
               </p>
-              <ul className="mt-6 space-y-3 text-sm text-op-secondary">
+              <ul className="mt-6 space-y-3 text-sm text-[#1b1a1b]/90">
                 <li className="flex items-start gap-2.5">
-                  <CheckCircle weight="fill" className="mt-0.5 size-4.5 shrink-0 text-op-green-dark" />
+                  <CheckCircle weight="fill" className="mt-0.5 size-4.5 shrink-0 text-[#006845]" />
                   <span>Ves cuántas opiniones hay y de cuántos pedidos registrados salen.</span>
                 </li>
                 <li className="flex items-start gap-2.5">
-                  <CheckCircle weight="fill" className="mt-0.5 size-4.5 shrink-0 text-op-green-dark" />
+                  <CheckCircle weight="fill" className="mt-0.5 size-4.5 shrink-0 text-[#006845]" />
                   <span>Cada reseña indica si tiene comprobante de compra o si se escribió de forma abierta.</span>
                 </li>
               </ul>
             </div>
 
             {/* Interactive Comparison Card */}
-            <div className="rounded-2xl border border-op-border bg-white p-5 shadow-flat sm:p-7">
+            <div className="rounded-2xl border border-[#1b1a1b]/15 bg-white p-5 shadow-elevated sm:p-7">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-op-border pb-4">
                 <div>
                   <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-op-muted">
@@ -355,22 +374,41 @@ export function ProofBentoGrid() {
       </section>
 
       {/* ========================================================================= */}
-      {/* SECTION 3: CALM BILATERAL MEDIATION                                       */}
+      {/* SECTION 3: PINK BANNER (#ffdde8) · BILATERAL MEDIATION                    */}
       {/* ========================================================================= */}
       <section className="op-container" aria-labelledby="mediation-heading">
-        <div className="rounded-3xl border border-op-border bg-white p-6 shadow-flat sm:p-10 lg:p-12">
-          <div className="grid items-center gap-10 lg:grid-cols-[0.95fr_1.05fr] lg:gap-16">
+        <div className="relative overflow-hidden rounded-[24px] bg-[#ffdde8] p-6 shadow-flat sm:p-10 lg:p-12">
+          {/* Decorative geometric background shapes */}
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 420 420"
+            className="pointer-events-none absolute -bottom-24 -left-20 size-96 opacity-45"
+          >
+            <g className="animate-op-float">
+              <rect x="60" y="90" width="180" height="180" rx="34" fill="#ffe400" transform="rotate(-14 150 180)" />
+              <circle cx="270" cy="240" r="88" fill="#04da8d" />
+              <path
+                d="M195 60 L275 195 L115 195 Z"
+                fill="#fd791a"
+                stroke="#fd791a"
+                strokeWidth="16"
+                strokeLinejoin="round"
+              />
+            </g>
+          </svg>
+
+          <div className="relative z-10 grid items-center gap-10 lg:grid-cols-[0.95fr_1.05fr] lg:gap-16">
             <div>
-              <span className="inline-flex items-center gap-2 rounded-full border border-op-border bg-[#fcfbf3] px-3.5 py-1 font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-op-secondary">
+              <span className="inline-flex items-center gap-2 rounded-full bg-[#1b1a1b] px-3.5 py-1 font-mono text-[11px] font-bold uppercase tracking-[0.08em] text-[#ffdde8]">
                 Pilar 03 · Mediación bilateral
               </span>
               <h2
                 id="mediation-heading"
-                className="mt-4 text-3xl font-extrabold leading-[1.08] tracking-[-0.03em] text-op-ink sm:text-4xl"
+                className="mt-4 text-3xl font-extrabold leading-[1.08] tracking-[-0.03em] text-[#1b1a1b] sm:text-4xl"
               >
                 Ningún reclamo se cierra sin tu confirmación.
               </h2>
-              <p className="mt-4 text-base leading-relaxed text-op-secondary">
+              <p className="mt-4 text-base leading-relaxed text-[#1b1a1b]/85">
                 Si tu pedido llega incompleto o se retrasa, abrir un caso en Opinio deja registro del problema, de la propuesta de la tienda y de tu confirmación cuando cumplen.
               </p>
               <div className="mt-7 flex flex-wrap items-center gap-3">
@@ -382,7 +420,7 @@ export function ProofBentoGrid() {
                 </Link>
                 <Link
                   href="/verificar"
-                  className="inline-flex min-h-11 items-center gap-2 rounded-full border border-op-border bg-[#fcfbf3] px-5 py-3 text-sm font-semibold text-op-ink transition-colors hover:border-op-strong hover:bg-op-shaded"
+                  className="inline-flex min-h-11 items-center gap-2 rounded-full border border-[#1b1a1b]/20 bg-white/85 px-5 py-3 text-sm font-semibold text-[#1b1a1b] transition-colors hover:bg-white"
                 >
                   Buscar un comercio
                 </Link>
@@ -390,7 +428,7 @@ export function ProofBentoGrid() {
             </div>
 
             {/* Calm Case #2841 Timeline Card */}
-            <div className="rounded-2xl border border-op-border bg-[#fcfbf3] p-5 sm:p-6">
+            <div className="rounded-2xl border border-[#1b1a1b]/15 bg-white p-5 shadow-elevated sm:p-6">
               <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-op-border pb-3">
                 <div>
                   <span className="font-mono text-xs font-bold text-op-ink">

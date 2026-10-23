@@ -43,13 +43,55 @@ export function TrustGraphHero({ business }: { business?: Business }) {
 
   return (
     <div>
-      <section className="border-b border-op-border bg-[#fcfbf3]">
-        <div className="op-container grid items-center gap-10 py-12 md:py-16 lg:grid-cols-[1.08fr_0.92fr] lg:gap-14 lg:py-20">
-          {/* Left Column: Clear Headline + Search */}
-          <div>
-            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-op-border bg-white px-3.5 py-1.5 shadow-2xs">
+      <section className="relative min-h-[491px] overflow-hidden border-b border-op-border bg-[#fcfbf3]">
+        {/* Trustpilot-inspired 1280x491 Geometric Background Layer */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 z-0 h-full w-full overflow-hidden"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 1280 491"
+            preserveAspectRatio="xMidYMid slice"
+            className="h-full w-full"
+          >
+            <defs>
+              <clipPath id="tp-hero-clip">
+                <rect width="1280" height="491" x="0" y="0" />
+              </clipPath>
+            </defs>
+            <g clipPath="url(#tp-hero-clip)">
+              {/* Layer 1: Yellow Rounded Square (rgb(255,228,0)) */}
+              <g className="animate-tp-rect">
+                <path
+                  fill="rgb(255,228,0)"
+                  d="M500.79,50.45 C500.79,50.45 500.79,450.34 500.79,450.34 C500.79,478.19 478.19,500.79 450.34,500.79 C450.34,500.79 50.45,500.79 50.45,500.79 C22.60,500.79 0,478.19 0,450.34 C0,450.34 0,50.45 0,50.45 C0,22.60 22.60,0 50.45,0 C50.45,0 450.34,0 450.34,0 C478.19,0 500.79,22.60 500.79,50.45z"
+                />
+              </g>
+              {/* Layer 2: Emerald Rounded Triangle (rgb(4,218,141)) */}
+              <g className="animate-tp-triangle">
+                <path
+                  fill="rgb(4,218,141)"
+                  d="M350.86,87.17 C373.23,48.43 429.14,48.43 451.51,87.17 C451.51,87.17 698.29,514.61 698.29,514.61 C720.66,553.35 692.69,601.77 647.96,601.77 C647.96,601.77 154.40,601.77 154.40,601.77 C109.67,601.77 81.70,553.35 104.07,514.61 C104.07,514.61 350.86,87.17 350.86,87.17z"
+                />
+              </g>
+              {/* Layer 3: Orange Circle (rgb(253,121,26)) */}
+              <g className="animate-tp-circle">
+                <path
+                  fill="rgb(253,121,26)"
+                  d="M303.91,607.14 C471.75,607.14 607.82,471.23 607.82,303.57 C607.82,135.91 471.75,0 303.91,0 C136.06,0 0,135.91 0,303.57 C0,471.23 136.06,607.14 303.91,607.14z"
+                />
+              </g>
+            </g>
+          </svg>
+        </div>
+
+        <div className="op-container relative z-10 grid items-center gap-10 py-12 md:py-16 lg:grid-cols-[1.08fr_0.92fr] lg:gap-14 lg:py-20">
+          {/* Left Column: Clear Headline + Search (solid rendering, no opacity:0 or backdrop-blur) */}
+          <div className="relative z-10">
+            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-op-ink/15 bg-white px-3.5 py-1.5 shadow-2xs">
               <span className="size-2 rounded-full bg-[#00b67a]" aria-hidden="true" />
-              <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-op-secondary">
+              <span className="font-mono text-[11px] font-bold uppercase tracking-[0.08em] text-[#1b1a1b]">
                 Directorio de confianza · México
               </span>
             </div>
@@ -59,7 +101,7 @@ export function TrustGraphHero({ business }: { business?: Business }) {
               <span className="text-op-green-dark">le compras.</span>
             </h1>
 
-            <p className="mb-8 mt-4 max-w-[520px] text-base leading-relaxed text-op-secondary sm:text-[17px]">
+            <p className="mb-8 mt-4 max-w-[520px] rounded-xl bg-[#fcfbf3] px-3 py-1.5 -mx-3 text-base font-medium leading-relaxed text-[#1b1a1b]/90 sm:text-[17px]">
               Lee opiniones de compradores en México, revisa cuántos pedidos registra la tienda y mira si resuelve los reclamos.
             </p>
 
@@ -67,7 +109,7 @@ export function TrustGraphHero({ business }: { business?: Business }) {
           </div>
 
           {/* Right Column: Calm, Focused Pasaporte Opinio Card */}
-          <div className="min-w-0">
+          <div className="relative z-10 min-w-0">
             <div className="overflow-hidden rounded-2xl border border-op-border bg-white shadow-elevated">
               {/* Calm Neutral Header Bar */}
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-op-border bg-[#fcfbf3] px-5 py-3">
