@@ -71,28 +71,60 @@ export function defaultDeps(): Deps {
   return { query, send: sendGa4Event, now: () => new Date(), randomUUID: () => globalThis.crypto.randomUUID(), log: (m) => console.warn(m) };
 }
 
+/**
+ * Persists an explicit activation watermark for `milestone_review_published`
+ * so reconciliation can recover lost initial live writes even before any
+ * `source = 'live'` stage row succeeds. Never moves an existing watermark
+ * forward.
+ */
+export async function activateConversionLedger(
+  activatedAt?: Date,
+  deps: Pick<Deps, 'query' | 'now'> = defaultDeps(),
+): Promise<string> {
+  const since = (activatedAt ?? deps.now()).toISOString();
+  const res = await deps.query<{ since: string }>(
+    `INSERT INTO conversion_watermarks (stage, activated_at)
+     VALUES ('milestone_review_published', $1)
+     ON CONFLICT (stage) DO UPDATE SET activated_at = LEAST(conversion_watermarks.activated_at, EXCLUDED.activated_at)
+     RETURNING activated_at::text AS since`,
+    [since],
+  );
+  return res.rows[0]?.since ?? since;
+}
+
 /** Records a milestone once and attempts delivery. Never throws. */
 export async function recordMilestone(input: RecordInput, deps: Deps = defaultDeps()): Promise<RecordResult> {
   try {
     const milestone = pick(CONVERSION_MILESTONES, input.milestone);
     if (!milestone || !/^[0-9]{1,18}$/.test(input.entityId)) return { status: 'invalid' };
     const stage = `milestone_${milestone}`;
+    const occurredAt = input.occurredAt ?? deps.now();
+    const source = input.source ?? 'live';
     const granted = input.context.consent === 'granted';
+    const requestedJourneyId = granted ? input.context.journeyId : null;
     const touch = granted ? input.context.attribution : null;
 
     // An identity per entity; a consented browser journey links to the visitor's analytics ID.
     let analyticsId = newOpaqueId('acct', deps.randomUUID);
-    if (granted && input.context.journeyId) {
+    if (granted && requestedJourneyId) {
       const prior = await deps.query<{ analytics_id: string }>(
-        'SELECT analytics_id FROM conversion_identities WHERE journey_id = $1 ORDER BY created_at ASC LIMIT 1',
-        [input.context.journeyId],
+        `SELECT analytics_id FROM conversion_identities
+          WHERE journey_id = $1
+            AND NOT EXISTS (SELECT 1 FROM conversion_withdrawn_journeys w WHERE w.journey_id = $1)
+          ORDER BY created_at ASC LIMIT 1`,
+        [requestedJourneyId],
       );
       if (prior.rows[0]) analyticsId = prior.rows[0].analytics_id;
     }
     await deps.query(
       `INSERT INTO conversion_identities (entity_type, entity_id, analytics_id, journey_id, consent_state, first_touch, last_touch)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (entity_type, entity_id) DO NOTHING`,
-      [input.entityType, input.entityId, analyticsId, granted ? input.context.journeyId : null, granted ? 'granted' : 'denied',
+       SELECT $1, $2, $3,
+              CASE WHEN $4::varchar IS NOT NULL AND EXISTS (SELECT 1 FROM conversion_withdrawn_journeys w WHERE w.journey_id = $4) THEN NULL ELSE $4 END,
+              CASE WHEN $5 = 'granted' AND ($4::varchar IS NULL OR NOT EXISTS (SELECT 1 FROM conversion_withdrawn_journeys w WHERE w.journey_id = $4)) THEN 'granted' ELSE 'denied' END,
+              CASE WHEN $5 = 'granted' AND ($4::varchar IS NULL OR NOT EXISTS (SELECT 1 FROM conversion_withdrawn_journeys w WHERE w.journey_id = $4)) THEN $6::jsonb ELSE NULL END,
+              CASE WHEN $5 = 'granted' AND ($4::varchar IS NULL OR NOT EXISTS (SELECT 1 FROM conversion_withdrawn_journeys w WHERE w.journey_id = $4)) THEN $7::jsonb ELSE NULL END
+       ON CONFLICT (entity_type, entity_id) DO NOTHING`,
+      [input.entityType, input.entityId, analyticsId, requestedJourneyId, granted ? 'granted' : 'denied',
         touch?.firstTouch ? JSON.stringify(touch.firstTouch) : null, touch?.lastTouch ? JSON.stringify(touch.lastTouch) : null],
     );
     const identity = (await deps.query<IdentityRow>(
@@ -101,27 +133,59 @@ export async function recordMilestone(input: RecordInput, deps: Deps = defaultDe
     )).rows[0];
     if (!identity) return { status: 'error' };
 
+    if (source === 'live') {
+      await deps.query(
+        `INSERT INTO conversion_watermarks (stage, activated_at)
+         VALUES ($1, $2)
+         ON CONFLICT (stage) DO UPDATE SET activated_at = LEAST(conversion_watermarks.activated_at, EXCLUDED.activated_at)`,
+        [stage, occurredAt.toISOString()],
+      );
+    }
+
     const inserted = await deps.query<StageRow>(
       `INSERT INTO conversion_stage_events (event_id, dedupe_key, entity_type, entity_id, analytics_id, stage, journey, occurred_at, consent_state, source)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       SELECT $1, $2, i.entity_type, i.entity_id,
+              CASE WHEN $8 = 'live'
+                    AND i.consent_state = 'granted'
+                    AND (i.journey_id IS NULL OR NOT EXISTS (SELECT 1 FROM conversion_withdrawn_journeys w WHERE w.journey_id = i.journey_id))
+                    AND ($9::varchar IS NULL OR NOT EXISTS (SELECT 1 FROM conversion_withdrawn_journeys w WHERE w.journey_id = $9))
+                   THEN i.analytics_id ELSE NULL END,
+              $5, $6, $7,
+              CASE WHEN $8 = 'live'
+                    AND i.consent_state = 'granted'
+                    AND (i.journey_id IS NULL OR NOT EXISTS (SELECT 1 FROM conversion_withdrawn_journeys w WHERE w.journey_id = i.journey_id))
+                    AND ($9::varchar IS NULL OR NOT EXISTS (SELECT 1 FROM conversion_withdrawn_journeys w WHERE w.journey_id = $9))
+                   THEN 'granted' ELSE 'denied' END,
+              $8
+         FROM conversion_identities i
+        WHERE i.entity_type = $3 AND i.entity_id = $4
        ON CONFLICT (dedupe_key) DO NOTHING
        RETURNING event_id, analytics_id, stage, journey, occurred_at, consent_state, delivery_attempts`,
       [newOpaqueId('evt', deps.randomUUID), `${input.entityType}:${input.entityId}:${stage}`, input.entityType, input.entityId,
-        identity.consent_state === 'granted' ? identity.analytics_id : null, stage, input.journey,
-        (input.occurredAt ?? deps.now()).toISOString(), identity.consent_state, input.source ?? 'live'],
+        stage, input.journey, occurredAt.toISOString(), source, requestedJourneyId],
     );
     const row = inserted.rows[0];
     if (!row) return { status: 'duplicate' };
-    return { status: 'recorded', delivery: await deliver(row, identity, deps) };
+    if (row.consent_state !== 'granted' && identity.consent_state === 'granted') {
+      await deps.query(
+        `UPDATE conversion_identities SET consent_state = 'denied', journey_id = NULL, first_touch = NULL, last_touch = NULL WHERE entity_type = $1 AND entity_id = $2`,
+        [input.entityType, input.entityId],
+      );
+      identity.consent_state = 'denied';
+      identity.journey_id = null;
+      identity.first_touch = null;
+      identity.last_touch = null;
+    }
+    return { status: 'recorded', delivery: await deliver(row, identity, deps, requestedJourneyId) };
   } catch (error) {
     deps.log(`[conversion] milestone not recorded: error=${error instanceof Error ? error.name : 'error'}`);
     return { status: 'error' };
   }
 }
 
-async function deliver(row: StageRow, identity: IdentityRow, deps: Deps): Promise<string> {
-  if (row.consent_state !== 'granted' || !row.analytics_id) {
-    await deps.query(`UPDATE conversion_stage_events SET delivery_state = 'skipped_consent' WHERE event_id = $1`, [row.event_id]);
+async function deliver(row: StageRow, identity: IdentityRow, deps: Deps, requestedJourneyId: string | null = identity.journey_id): Promise<string> {
+  if (row.consent_state !== 'granted' || !row.analytics_id || identity.consent_state !== 'granted') {
+    await deps.query(`UPDATE conversion_stage_events SET delivery_state = 'skipped_consent', analytics_id = NULL, consent_state = 'denied' WHERE event_id = $1`, [row.event_id]);
     return 'skipped_consent';
   }
   const occurredAt = new Date(row.occurred_at);
@@ -142,11 +206,41 @@ async function deliver(row: StageRow, identity: IdentityRow, deps: Deps): Promis
   });
   if (!event) return 'pending';
   const claimed = await deps.query(
-    `UPDATE conversion_stage_events SET delivery_state = 'sending', delivery_attempts = delivery_attempts + 1, last_attempt_at = NOW()
-     WHERE event_id = $1 AND delivery_state IN ('pending', 'failed') RETURNING event_id`,
-    [row.event_id],
+    `UPDATE conversion_stage_events e
+        SET delivery_state = 'sending', delivery_attempts = delivery_attempts + 1, last_attempt_at = NOW()
+       FROM conversion_identities i
+      WHERE e.event_id = $1
+        AND e.delivery_state IN ('pending', 'failed')
+        AND e.consent_state = 'granted'
+        AND e.analytics_id IS NOT NULL
+        AND i.entity_type = e.entity_type
+        AND i.entity_id = e.entity_id
+        AND i.consent_state = 'granted'
+        AND (i.journey_id IS NULL OR NOT EXISTS (SELECT 1 FROM conversion_withdrawn_journeys w WHERE w.journey_id = i.journey_id))
+        AND ($2::varchar IS NULL OR NOT EXISTS (SELECT 1 FROM conversion_withdrawn_journeys w WHERE w.journey_id = $2))
+     RETURNING e.event_id`,
+    [row.event_id, requestedJourneyId],
   );
-  if (claimed.rows.length === 0) return 'sending';
+  if (claimed.rows.length === 0) {
+    const stopped = await deps.query<{ event_id: string }>(
+      `UPDATE conversion_stage_events e
+          SET delivery_state = 'skipped_consent', analytics_id = NULL, consent_state = 'denied'
+         FROM conversion_identities i
+        WHERE e.event_id = $1
+          AND i.entity_type = e.entity_type
+          AND i.entity_id = e.entity_id
+          AND (
+            e.consent_state <> 'granted'
+            OR i.consent_state <> 'granted'
+            OR (i.journey_id IS NOT NULL AND EXISTS (SELECT 1 FROM conversion_withdrawn_journeys w WHERE w.journey_id = i.journey_id))
+            OR ($2::varchar IS NOT NULL AND EXISTS (SELECT 1 FROM conversion_withdrawn_journeys w WHERE w.journey_id = $2))
+          )
+       RETURNING e.event_id`,
+      [row.event_id, requestedJourneyId],
+    );
+    if (stopped.rows.length > 0) return 'skipped_consent';
+    return 'sending';
+  }
   const outcome = await deps.send(event as { name: string; params: Record<string, string> }, row.analytics_id, occurredAt);
   if (outcome === 'unconfigured') {
     await deps.query(`UPDATE conversion_stage_events SET delivery_state = 'pending', delivery_attempts = delivery_attempts - 1 WHERE event_id = $1`, [row.event_id]);
@@ -157,19 +251,40 @@ async function deliver(row: StageRow, identity: IdentityRow, deps: Deps): Promis
   return state;
 }
 
+export type MaintainResult = {
+  recovered: number;
+  attempted: number;
+  coverage: 'anchored' | 'unknown';
+  since: string | null;
+};
+
 /**
  * Retry and reconciliation (scripts/conversion-maintenance.ts): releases
  * stale claims, retries pending/failed rows (bounded), and recovers
  * review_published rows whose live write was lost, from the reviews table
- * (published reviews created after the ledger's first live row; no
- * attribution is invented, so recovered rows are not consented and not sent).
+ * (published reviews created at or after the persisted activation watermark;
+ * no attribution is invented, so recovered rows are not consented and not
+ * sent). When neither an activation watermark nor a live row exists yet,
+ * coverage is reported as `unknown`.
  */
-export async function maintainLedger(deps: Deps = defaultDeps()): Promise<{ recovered: number; attempted: number }> {
+export async function maintainLedger(deps: Deps = defaultDeps()): Promise<MaintainResult> {
   await deps.query(`UPDATE conversion_stage_events SET delivery_state = 'failed' WHERE delivery_state = 'sending' AND last_attempt_at < NOW() - INTERVAL '10 minutes'`);
-  const live = await deps.query<{ since: string | null }>(`SELECT MIN(created_at)::text AS since FROM conversion_stage_events WHERE source = 'live'`);
+  const watermark = await deps.query<{ since: string | null }>(
+    `SELECT COALESCE(
+       (SELECT MIN(activated_at) FROM conversion_watermarks WHERE stage = 'milestone_review_published'),
+       (SELECT MIN(LEAST(occurred_at, created_at)) FROM conversion_stage_events WHERE source = 'live')
+     )::text AS since`,
+  );
   let recovered = 0;
-  const since = live.rows[0]?.since;
+  const since = watermark.rows[0]?.since ?? null;
+  const coverage: 'anchored' | 'unknown' = since ? 'anchored' : 'unknown';
   if (since) {
+    await deps.query(
+      `INSERT INTO conversion_watermarks (stage, activated_at)
+       VALUES ('milestone_review_published', $1)
+       ON CONFLICT (stage) DO UPDATE SET activated_at = LEAST(conversion_watermarks.activated_at, EXCLUDED.activated_at)`,
+      [since],
+    );
     const missing = await deps.query<{ id: number; created_at: string }>(
       `SELECT r.id, r.created_at FROM reviews r
         WHERE r.status = 'published' AND r.created_at >= $1
@@ -195,22 +310,30 @@ export async function maintainLedger(deps: Deps = defaultDeps()): Promise<{ reco
   // Consent is re-checked at every attempt: a row queued while granted is
   // never sent once its identity is no longer granted (withdrawal).
   for (const row of pending.rows) {
-    await deliver(row.identity_consent === 'granted' ? row : { ...row, consent_state: 'denied' }, row, deps);
+    await deliver(row.identity_consent === 'granted' ? row : { ...row, consent_state: 'denied' }, row, deps, row.journey_id);
   }
-  return { recovered, attempted: pending.rows.length };
+  return { recovered, attempted: pending.rows.length, coverage, since };
 }
 
 /**
- * Consent withdrawn for a browser journey: every undelivered row of its
- * identities is stopped (`skipped_consent`, analytics ID removed), then the
- * identities are unlinked (journey and touches erased). A row being sent right
- * now keeps its `sending` state so its real outcome is recorded (GA4 may
- * already have it); it loses its analytics ID and consent, so if that send
- * fails it is never retried. Returns the number of rows stopped. Never sends
- * anything.
+ * Consent withdrawn for a browser journey: records a durable revoked-journey
+ * tombstone (`conversion_withdrawn_journeys`) so delayed or in-flight
+ * milestone writes cannot create a granted identity after withdrawal, stops
+ * every undelivered row of its identities (`skipped_consent`, analytics ID
+ * removed), and unlinks the identities (journey and touches erased). A row
+ * being sent right now keeps its `sending` state so its real outcome is
+ * recorded (GA4 may already have it); it loses its analytics ID and consent,
+ * so if that send fails it is never retried. Returns the number of rows
+ * stopped. Never sends anything.
  */
 export async function withdrawJourney(journeyId: string, deps: Pick<Deps, 'query'> = defaultDeps()): Promise<number> {
   if (!isOpaqueId('journey', journeyId)) return 0;
+  await deps.query(
+    `INSERT INTO conversion_withdrawn_journeys (journey_id)
+     VALUES ($1)
+     ON CONFLICT (journey_id) DO UPDATE SET withdrawn_at = NOW()`,
+    [journeyId],
+  );
   const stopped = await deps.query<{ event_id: string }>(
     `UPDATE conversion_stage_events e SET delivery_state = 'skipped_consent', analytics_id = NULL, consent_state = 'denied'
        FROM conversion_identities i
@@ -232,3 +355,4 @@ export async function withdrawJourney(journeyId: string, deps: Pick<Deps, 'query
   );
   return stopped.rows.length;
 }
+

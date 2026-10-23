@@ -79,6 +79,19 @@ describe.skipIf(!url)('withdrawal stops queued deliveries (real Postgres)', () =
     });
   });
 
+  it('withdrawal before first identity creation saves a durable tombstone so delayed milestone creates a denied identity', async () => {
+    await withDb(async (deps, db, sent) => {
+      expect(await withdrawJourney(JOURNEY, deps)).toBe(0);
+      const res = await recordMilestone({ entityType: 'review', entityId: '904', milestone: 'review_published', journey: 'consumer_review', context: granted(JOURNEY) }, deps);
+      expect(res).toEqual({ status: 'recorded', delivery: 'skipped_consent' });
+      expect(sent).toHaveLength(0);
+      const identity = (await db.query(`SELECT journey_id, consent_state, first_touch, last_touch FROM conversion_identities WHERE entity_id = '904'`)).rows[0];
+      expect(identity).toEqual({ journey_id: null, consent_state: 'denied', first_touch: null, last_touch: null });
+      const stage = (await db.query(`SELECT delivery_state, analytics_id, consent_state FROM conversion_stage_events WHERE entity_id = '904'`)).rows[0];
+      expect(stage).toEqual({ delivery_state: 'skipped_consent', analytics_id: null, consent_state: 'denied' });
+    });
+  });
+
   it('ignores anything that is not an opaque journey ID', async () => {
     await withDb(async (deps) => {
       expect(await withdrawJourney("x' OR '1'='1", deps)).toBe(0);

@@ -12,9 +12,9 @@ import { classifyTouch } from './attribution';
 import { conversionContextForServer, recordLanding, trackIntent, type BrowserEnv } from './browser';
 import { CONSENT_STORAGE_KEY, CONVERSION_STORAGE_KEY, resolveConsent } from './consent';
 import { parseConversionContext } from './context';
-import { STAGE_COVERAGE } from './coverage';
+import { STAGE_COVERAGE, reconciliationCoverage } from './coverage';
 import { ctaIdFor, journeyForCta } from './cta';
-import { maintainLedger, recordMilestone, type Deps } from './ledger';
+import { activateConversionLedger, maintainLedger, recordMilestone, withdrawJourney, type Deps } from './ledger';
 import { allPageIds, pageForPath } from './pages';
 import { PAYLOAD_KEYS, buildConversionEvent, type ConversionEvent } from './payload';
 import { isPublicAnalyticsPath } from '../analytics';
@@ -47,37 +47,184 @@ function browser(consent: string | null) {
   return { env, emitted, store };
 }
 
-// In-memory stand-in for the two ledger tables, answering the ledger's SQL.
-function fakePg(options: { sendOutcomes?: Array<'sent' | 'failed' | 'unconfigured'>; reviews?: Array<{ id: number; created_at: string; status: string }> } = {}) {
+// In-memory stand-in for the ledger tables, answering the ledger's SQL.
+function fakePg(
+  options: {
+    sendOutcomes?: Array<'sent' | 'failed' | 'unconfigured'>;
+    reviews?: Array<{ id: number; created_at: string; status: string }>;
+    watermark?: string | null;
+    failNextStageInserts?: number;
+    onQuery?: (sql: string, params: unknown[]) => Promise<void> | void;
+  } = {},
+) {
   const identities = new Map<string, Record<string, unknown>>();
   const stages = new Map<string, Record<string, unknown>>();
+  const watermarks = new Map<string, string>();
+  if (options.watermark) watermarks.set('milestone_review_published', options.watermark);
+  const withdrawn = new Set<string>();
   const sent: Array<{ event: { name: string; params: Record<string, string> }; clientId: string }> = [];
   const outcomes = [...(options.sendOutcomes ?? [])];
+  let failStageInserts = options.failNextStageInserts ?? 0;
   const now = new Date('2026-10-01T12:00:00Z');
   const byEvent = (id: unknown) => [...stages.values()].find((s) => s.event_id === id);
   const q = async (text: string, params: unknown[] = []) => {
     const sql = text.replace(/\s+/g, ' ').trim();
+    if (options.onQuery) await options.onQuery(sql, params);
+    if (sql.startsWith('INSERT INTO conversion_watermarks')) {
+      const stage = sql.includes("VALUES ('milestone_review_published'") ? 'milestone_review_published' : String(params[0]);
+      const ts = sql.includes("VALUES ('milestone_review_published'") ? String(params[0]) : String(params[1]);
+      const prev = watermarks.get(stage);
+      const next = !prev || ts < prev ? ts : prev;
+      watermarks.set(stage, next);
+      return { rows: [{ since: next }] };
+    }
+    if (sql.startsWith('SELECT journey_id FROM conversion_withdrawn_journeys')) {
+      return { rows: withdrawn.has(String(params[0])) ? [{ journey_id: String(params[0]) }] : [] };
+    }
+    if (sql.startsWith('INSERT INTO conversion_withdrawn_journeys')) {
+      withdrawn.add(String(params[0]));
+      return { rows: [] };
+    }
     if (sql.startsWith('SELECT analytics_id FROM conversion_identities WHERE journey_id')) {
+      if (withdrawn.has(String(params[0]))) return { rows: [] };
       return { rows: [...identities.values()].filter((i) => i.journey_id === params[0]).slice(0, 1) };
     }
     if (sql.startsWith('INSERT INTO conversion_identities')) {
       const key = `${params[0]}:${params[1]}`;
-      if (!identities.has(key)) identities.set(key, { entity_type: params[0], entity_id: params[1], analytics_id: params[2], journey_id: params[3], consent_state: params[4], first_touch: params[5] ? JSON.parse(String(params[5])) : null, last_touch: params[6] ? JSON.parse(String(params[6])) : null, created_at: now.toISOString() });
+      if (!identities.has(key)) {
+        const jId = params[3] ? String(params[3]) : null;
+        const isRevoked = jId !== null && withdrawn.has(jId);
+        const isGranted = params[4] === 'granted' && !isRevoked;
+        identities.set(key, {
+          entity_type: params[0],
+          entity_id: params[1],
+          analytics_id: params[2],
+          journey_id: isGranted ? jId : null,
+          consent_state: isGranted ? 'granted' : 'denied',
+          first_touch: isGranted && params[5] ? JSON.parse(String(params[5])) : null,
+          last_touch: isGranted && params[6] ? JSON.parse(String(params[6])) : null,
+          created_at: now.toISOString(),
+        });
+      }
       return { rows: [] };
     }
     if (sql.startsWith('SELECT analytics_id, journey_id, consent_state')) return { rows: [identities.get(`${params[0]}:${params[1]}`)].filter(Boolean) };
     if (sql.startsWith('INSERT INTO conversion_stage_events')) {
+      if (failStageInserts > 0) {
+        failStageInserts--;
+        throw new Error('simulated stage insert failure');
+      }
       if (stages.has(String(params[1]))) return { rows: [] };
-      const row = { event_id: params[0], dedupe_key: params[1], entity_type: params[2], entity_id: params[3], analytics_id: params[4], stage: params[5], journey: params[6], occurred_at: params[7], consent_state: params[8], source: params[9], delivery_state: 'pending', delivery_attempts: 0, created_at: now.toISOString() };
+      const idRow = identities.get(`${params[2]}:${params[3]}`);
+      if (!idRow) return { rows: [] };
+      const reqJourney = params[8] ? String(params[8]) : null;
+      const idJourney = idRow.journey_id ? String(idRow.journey_id) : null;
+      const effectiveGranted =
+        params[7] === 'live' &&
+        idRow.consent_state === 'granted' &&
+        (!idJourney || !withdrawn.has(idJourney)) &&
+        (!reqJourney || !withdrawn.has(reqJourney));
+      const row = {
+        event_id: params[0],
+        dedupe_key: params[1],
+        entity_type: params[2],
+        entity_id: params[3],
+        analytics_id: effectiveGranted ? idRow.analytics_id : null,
+        stage: params[4],
+        journey: params[5],
+        occurred_at: params[6],
+        consent_state: effectiveGranted ? 'granted' : 'denied',
+        source: params[7],
+        delivery_state: 'pending',
+        delivery_attempts: 0,
+        created_at: now.toISOString(),
+      };
       stages.set(String(params[1]), row);
       return { rows: [{ ...row }] };
+    }
+    if (sql.startsWith("UPDATE conversion_identities SET consent_state = 'denied', journey_id = NULL, first_touch = NULL, last_touch = NULL WHERE entity_type = $1")) {
+      const idRow = identities.get(`${params[0]}:${params[1]}`);
+      if (idRow) {
+        idRow.consent_state = 'denied';
+        idRow.journey_id = null;
+        idRow.first_touch = null;
+        idRow.last_touch = null;
+      }
+      return { rows: [] };
     }
     if (sql.includes("SET delivery_state = 'sending'")) {
       const row = byEvent(params[0]);
       if (!row || !['pending', 'failed'].includes(String(row.delivery_state))) return { rows: [] };
+      const idRow = identities.get(`${row.entity_type}:${row.entity_id}`);
+      const reqJourney = params[1] ? String(params[1]) : null;
+      const idJourney = idRow?.journey_id ? String(idRow.journey_id) : null;
+      if (
+        row.consent_state !== 'granted' ||
+        !row.analytics_id ||
+        !idRow ||
+        idRow.consent_state !== 'granted' ||
+        (idJourney && withdrawn.has(idJourney)) ||
+        (reqJourney && withdrawn.has(reqJourney))
+      ) {
+        return { rows: [] };
+      }
       row.delivery_state = 'sending';
       row.delivery_attempts = Number(row.delivery_attempts) + 1;
       return { rows: [{ event_id: row.event_id }] };
+    }
+    if (sql.includes("SET delivery_state = 'skipped_consent', analytics_id = NULL, consent_state = 'denied' FROM conversion_identities i WHERE e.event_id = $1")) {
+      const row = byEvent(params[0]);
+      if (!row) return { rows: [] };
+      const idRow = identities.get(`${row.entity_type}:${row.entity_id}`);
+      const reqJourney = params[1] ? String(params[1]) : null;
+      const idJourney = idRow?.journey_id ? String(idRow.journey_id) : null;
+      if (
+        row.consent_state !== 'granted' ||
+        !idRow ||
+        idRow.consent_state !== 'granted' ||
+        (idJourney && withdrawn.has(idJourney)) ||
+        (reqJourney && withdrawn.has(reqJourney))
+      ) {
+        row.delivery_state = 'skipped_consent';
+        row.analytics_id = null;
+        row.consent_state = 'denied';
+        return { rows: [{ event_id: row.event_id }] };
+      }
+      return { rows: [] };
+    }
+    if (sql.includes("SET delivery_state = 'skipped_consent', analytics_id = NULL, consent_state = 'denied' FROM conversion_identities i WHERE i.entity_type = e.entity_type")) {
+      const stopped: Array<{ event_id: unknown }> = [];
+      for (const s of stages.values()) {
+        const idRow = identities.get(`${s.entity_type}:${s.entity_id}`);
+        if (idRow?.journey_id === params[0] && ['pending', 'failed'].includes(String(s.delivery_state))) {
+          s.delivery_state = 'skipped_consent';
+          s.analytics_id = null;
+          s.consent_state = 'denied';
+          stopped.push({ event_id: s.event_id });
+        }
+      }
+      return { rows: stopped };
+    }
+    if (sql.includes("SET analytics_id = NULL, consent_state = 'denied' FROM conversion_identities i")) {
+      for (const s of stages.values()) {
+        const idRow = identities.get(`${s.entity_type}:${s.entity_id}`);
+        if (idRow?.journey_id === params[0] && s.delivery_state === 'sending') {
+          s.analytics_id = null;
+          s.consent_state = 'denied';
+        }
+      }
+      return { rows: [] };
+    }
+    if (sql.startsWith("UPDATE conversion_identities SET consent_state = 'denied', journey_id = NULL, first_touch = NULL, last_touch = NULL WHERE journey_id = $1")) {
+      for (const idRow of identities.values()) {
+        if (idRow.journey_id === params[0]) {
+          idRow.consent_state = 'denied';
+          idRow.journey_id = null;
+          idRow.first_touch = null;
+          idRow.last_touch = null;
+        }
+      }
+      return { rows: [] };
     }
     if (sql.includes("SET delivery_state = 'pending', delivery_attempts = delivery_attempts - 1")) {
       const row = byEvent(params[0])!;
@@ -90,15 +237,30 @@ function fakePg(options: { sendOutcomes?: Array<'sent' | 'failed' | 'unconfigure
       if (row.delivery_state === 'sending') row.delivery_state = params[1];
       return { rows: [] };
     }
+    if (sql.includes("SET delivery_state = 'skipped_consent', analytics_id = NULL, consent_state = 'denied' WHERE event_id = $1")) {
+      const row = byEvent(params[0])!;
+      row.delivery_state = 'skipped_consent';
+      row.analytics_id = null;
+      row.consent_state = 'denied';
+      return { rows: [] };
+    }
     const fixed = /SET delivery_state = '(\w+)' WHERE event_id = \$1/.exec(sql);
     if (fixed) {
       byEvent(params[0])!.delivery_state = fixed[1];
       return { rows: [] };
     }
     if (sql.includes("WHERE delivery_state = 'sending' AND last_attempt_at")) return { rows: [] };
-    if (sql.startsWith('SELECT MIN(created_at)::text AS since')) {
-      const live = [...stages.values()].filter((s) => s.source === 'live').map((s) => String(s.created_at)).sort();
-      return { rows: [{ since: live[0] ?? null }] };
+    if (sql.startsWith('SELECT COALESCE(')) {
+      const wm = watermarks.get('milestone_review_published');
+      const live = [...stages.values()]
+        .filter((s) => s.source === 'live')
+        .map((s) => {
+          const occ = String(s.occurred_at);
+          const cre = String(s.created_at);
+          return occ < cre ? occ : cre;
+        })
+        .sort();
+      return { rows: [{ since: wm ?? live[0] ?? null }] };
     }
     if (sql.startsWith('SELECT r.id, r.created_at FROM reviews r')) {
       return { rows: (options.reviews ?? []).filter((r) => r.status === 'published' && r.created_at >= String(params[0]) && !stages.has(`review:${r.id}:milestone_review_published`)) };
@@ -118,7 +280,7 @@ function fakePg(options: { sendOutcomes?: Array<'sent' | 'failed' | 'unconfigure
     randomUUID: uuid,
     log: () => undefined,
   };
-  return { deps, identities, stages, sent };
+  return { deps, identities, stages, watermarks, withdrawn, sent };
 }
 
 const granted = (extra: Record<string, unknown> = {}) =>
@@ -228,6 +390,7 @@ describe('ledger: review_published after commit', () => {
     expect(r).toEqual({ status: 'recorded', delivery: 'failed' });
     const m = await maintainLedger(f.deps);
     expect(m.recovered).toBe(1);
+    expect(m.coverage).toBe('anchored');
     expect(f.stages.get('review:9:milestone_review_published')!.delivery_state).toBe('sent');
     const recovered = f.stages.get('review:20:milestone_review_published')!;
     expect(recovered.source).toBe('reconciled');
@@ -236,12 +399,156 @@ describe('ledger: review_published after commit', () => {
     expect((await maintainLedger(f.deps)).recovered).toBe(0);
   });
 
+  it('exposes unknown coverage when unanchored, and recovers lost initial live milestones from explicit watermark or failed first write (OPN-CONVERSION-BOOTSTRAP-RECOVERY)', async () => {
+    // 1. Completely unanchored ledger: no watermark and no live rows -> coverage is explicitly 'unknown'
+    const unanchored = fakePg({
+      reviews: [{ id: 30, created_at: '2026-10-01T11:55:00.000Z', status: 'published' }],
+    });
+    const m0 = await maintainLedger(unanchored.deps);
+    expect(m0).toEqual({ recovered: 0, attempted: 0, coverage: 'unknown', since: null });
+    expect(reconciliationCoverage(m0.since)).toMatchObject({ status: 'unknown', since: null });
+
+    // 2. Explicit activation watermark persisted before first live write fails completely (empty stage table)
+    const f1 = fakePg({
+      reviews: [
+        { id: 31, created_at: '2026-10-01T11:50:00.000Z', status: 'published' }, // pre-activation seed review
+        { id: 32, created_at: '2026-10-01T11:58:00.000Z', status: 'published' }, // lost first live review
+      ],
+    });
+    const watermarkSince = await activateConversionLedger(new Date('2026-10-01T11:55:00.000Z'), f1.deps);
+    expect(reconciliationCoverage(watermarkSince)).toMatchObject({ status: 'anchored', since: '2026-10-01T11:55:00.000Z' });
+    const m1 = await maintainLedger(f1.deps);
+    expect(m1).toEqual({ recovered: 1, attempted: 0, coverage: 'anchored', since: '2026-10-01T11:55:00.000Z' });
+    expect(f1.stages.has('review:31:milestone_review_published')).toBe(false);
+    expect(f1.stages.get('review:32:milestone_review_published')).toMatchObject({
+      source: 'reconciled',
+      consent_state: 'denied',
+      analytics_id: null,
+    });
+
+    // 3. First live write fails on stage insert at T1 (11:58Z), second live write succeeds at T2 (12:00Z):
+    // earlier lost review at T1 is still recovered because the watermark was anchored at T1.
+    const f2 = fakePg({
+      failNextStageInserts: 1,
+      reviews: [
+        { id: 41, created_at: '2026-10-01T11:58:00.000Z', status: 'published' },
+        { id: 42, created_at: '2026-10-01T12:00:00.000Z', status: 'published' },
+      ],
+    });
+    const firstAttempt = await recordMilestone(
+      {
+        entityType: 'review',
+        entityId: '41',
+        milestone: 'review_published',
+        journey: 'consumer_review',
+        context: granted(),
+        occurredAt: new Date('2026-10-01T11:58:00.000Z'),
+      },
+      f2.deps,
+    );
+    expect(firstAttempt.status).toBe('error');
+    expect(f2.stages.size).toBe(0);
+
+    const secondAttempt = await recordMilestone(
+      {
+        entityType: 'review',
+        entityId: '42',
+        milestone: 'review_published',
+        journey: 'consumer_review',
+        context: granted(),
+        occurredAt: new Date('2026-10-01T12:00:00.000Z'),
+      },
+      f2.deps,
+    );
+    expect(secondAttempt.status).toBe('recorded');
+
+    const m2 = await maintainLedger(f2.deps);
+    expect(m2.coverage).toBe('anchored');
+    expect(m2.since).toBe('2026-10-01T11:58:00.000Z');
+    expect(m2.recovered).toBe(1);
+    expect(f2.stages.get('review:41:milestone_review_published')).toMatchObject({
+      source: 'reconciled',
+      consent_state: 'denied',
+      analytics_id: null,
+    });
+  });
+
+  it('withdrawal before first identity creation and between milestone writes prevents granted identity and delivery (OPN-CONVERSION-WITHDRAWAL-RACE)', async () => {
+    const journeyA = 'jrn_' + 'e'.repeat(32);
+    const journeyB = 'jrn_' + 'f'.repeat(32);
+
+    // 1. Withdrawal finishes BEFORE deferred milestone creates its first identity
+    const f1 = fakePg();
+    expect(await withdrawJourney(journeyA, f1.deps)).toBe(0);
+    expect(f1.withdrawn.has(journeyA)).toBe(true);
+
+    const res1 = await recordMilestone(
+      {
+        entityType: 'review',
+        entityId: '51',
+        milestone: 'review_published',
+        journey: 'consumer_review',
+        context: granted({ journeyId: journeyA }),
+      },
+      f1.deps,
+    );
+    expect(res1).toEqual({ status: 'recorded', delivery: 'skipped_consent' });
+    expect(f1.sent).toHaveLength(0);
+    expect(f1.identities.get('review:51')).toMatchObject({
+      consent_state: 'denied',
+      journey_id: null,
+      first_touch: null,
+      last_touch: null,
+    });
+    expect(f1.stages.get('review:51:milestone_review_published')).toMatchObject({
+      consent_state: 'denied',
+      analytics_id: null,
+      delivery_state: 'skipped_consent',
+    });
+
+    // 2. Withdrawal happens BETWEEN identity read and stage event insert
+    let f2!: ReturnType<typeof fakePg>;
+    f2 = fakePg({
+      onQuery: async (sql) => {
+        if (sql.startsWith('SELECT analytics_id, journey_id, consent_state')) {
+          // Simulate concurrent withdrawal right after identity is created/selected
+          f2.withdrawn.add(journeyB);
+          const idRow = f2.identities.get('review:52');
+          if (idRow) {
+            idRow.consent_state = 'denied';
+            idRow.journey_id = null;
+            idRow.first_touch = null;
+            idRow.last_touch = null;
+          }
+        }
+      },
+    });
+    const res2 = await recordMilestone(
+      {
+        entityType: 'review',
+        entityId: '52',
+        milestone: 'review_published',
+        journey: 'consumer_review',
+        context: granted({ journeyId: journeyB }),
+      },
+      f2.deps,
+    );
+    expect(res2).toEqual({ status: 'recorded', delivery: 'skipped_consent' });
+    expect(f2.sent).toHaveLength(0);
+    expect(f2.stages.get('review:52:milestone_review_published')).toMatchObject({
+      consent_state: 'denied',
+      analytics_id: null,
+      delivery_state: 'skipped_consent',
+    });
+  });
+
   it('GA4 not configured: rows stay pending with no attempt counted', async () => {
     const f = fakePg({ sendOutcomes: ['unconfigured'] });
     expect((await recordMilestone({ entityType: 'review', entityId: '9', milestone: 'review_published', journey: 'consumer_review', context: granted() }, f.deps)).delivery).toBe('pending');
     expect(f.stages.get('review:9:milestone_review_published')!.delivery_attempts).toBe(0);
   });
 });
+
 
 describe('unavailable stages are explicit, never zero', () => {
   it('qualified, activated, paid and business week two are unavailable with reasons', () => {

@@ -2,9 +2,11 @@ import { describe, it, expect } from 'vitest';
 import {
   MIN_EVIDENCE_SAMPLE,
   countVerifiedReviews,
+  displayablePassport,
   displayableScore,
   meetsEvidenceThreshold,
 } from './evidence-threshold';
+import { calculateOpinioScore, type ResolutionMetricsInput } from './scoring';
 
 const unverified = { verification_level: 'unverified_experience' };
 const verified = { verification_level: 'confirmed_store_order' };
@@ -46,4 +48,42 @@ describe('evidence threshold', () => {
     expect(meetsEvidenceThreshold('x')).toBe(false);
     expect(meetsEvidenceThreshold('')).toBe(false);
   });
+
+  it('displayablePassport gates opinioScore, experienceScore and resolutionScore below the threshold', () => {
+    const fiveCases: ResolutionMetricsInput = {
+      casesCount: 5,
+      consumerConfirmedCount: 5,
+      merchantRespondedCount: 5,
+      medianResponseHours: 2,
+      reopenedCount: 0,
+    };
+    const raw = calculateOpinioScore([], fiveCases, 100, 80);
+    expect(raw.experienceScore).toBe(75);
+    expect(raw.resolutionScore).toBeGreaterThan(0);
+
+    // Below default threshold (0 verified reviews): all score components are null
+    const gatedZero = displayablePassport(raw, 0);
+    expect(gatedZero.opinioScore).toBeNull();
+    expect(gatedZero.experienceScore).toBeNull();
+    expect(gatedZero.resolutionScore).toBeNull();
+    expect(gatedZero.coveragePercentage).toBe(80);
+
+    // Under a 5-review threshold: 0 and 4 verified reviews withhold all score components; 5 reveals them
+    expect(displayablePassport(raw, 0, 5)).toMatchObject({
+      opinioScore: null,
+      experienceScore: null,
+      resolutionScore: null,
+    });
+    expect(displayablePassport(raw, 4, 5)).toMatchObject({
+      opinioScore: null,
+      experienceScore: null,
+      resolutionScore: null,
+    });
+    expect(displayablePassport(raw, 5, 5)).toMatchObject({
+      opinioScore: raw.opinioScore,
+      experienceScore: raw.experienceScore,
+      resolutionScore: raw.resolutionScore,
+    });
+  });
 });
+
