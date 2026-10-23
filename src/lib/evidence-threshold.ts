@@ -24,14 +24,19 @@ export function countVerifiedReviews(reviews: Array<{ verification_level?: strin
   return reviews.filter((r) => r.verification_level && r.verification_level !== 'unverified_experience').length;
 }
 
+import type { CalculatedTrustPassport } from './scoring';
+
 /**
  * True when the verified-review count is large enough to publish a score or
  * badge. Fails closed when the count is absent.
  */
-export function meetsEvidenceThreshold(verifiedCount: number | string | null | undefined): boolean {
+export function meetsEvidenceThreshold(
+  verifiedCount: number | string | null | undefined,
+  minSample: number = MIN_EVIDENCE_SAMPLE
+): boolean {
   if (verifiedCount === null || verifiedCount === undefined || verifiedCount === '') return false;
   const n = Number(verifiedCount);
-  return Number.isFinite(n) && n >= MIN_EVIDENCE_SAMPLE;
+  return Number.isFinite(n) && n >= minSample;
 }
 
 /**
@@ -40,9 +45,38 @@ export function meetsEvidenceThreshold(verifiedCount: number | string | null | u
  */
 export function displayableScore(
   score: number | string | null | undefined,
-  verifiedCount: number | string | null | undefined
+  verifiedCount: number | string | null | undefined,
+  minSample: number = MIN_EVIDENCE_SAMPLE
 ): number | null {
   if (score === null || score === undefined || score === '') return null;
   const value = Number(score);
-  return Number.isFinite(value) && meetsEvidenceThreshold(verifiedCount) ? value : null;
+  return Number.isFinite(value) && meetsEvidenceThreshold(verifiedCount, minSample) ? value : null;
 }
+
+export type PublicTrustPassport = Omit<
+  CalculatedTrustPassport,
+  'opinioScore' | 'experienceScore' | 'resolutionScore'
+> & {
+  opinioScore: number | null;
+  experienceScore: number | null;
+  resolutionScore: number | null;
+};
+
+/**
+ * Gates every score-bearing component of a calculated passport (`opinioScore`,
+ * `experienceScore`, `resolutionScore`) behind the verified-review threshold so
+ * withheld composite scores cannot leak via component fields.
+ */
+export function displayablePassport(
+  passport: CalculatedTrustPassport,
+  verifiedCount: number | string | null | undefined,
+  minSample: number = MIN_EVIDENCE_SAMPLE
+): PublicTrustPassport {
+  return {
+    ...passport,
+    opinioScore: displayableScore(passport.opinioScore, verifiedCount, minSample),
+    experienceScore: displayableScore(passport.experienceScore, verifiedCount, minSample),
+    resolutionScore: displayableScore(passport.resolutionScore, verifiedCount, minSample),
+  };
+}
+

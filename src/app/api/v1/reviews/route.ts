@@ -320,6 +320,7 @@ export async function POST(request: NextRequest) {
         milestone: 'review_published',
         journey: 'consumer_review',
         context,
+        occurredAt: createdReview.created_at ? new Date(createdReview.created_at) : undefined,
       }),
     );
 

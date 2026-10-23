@@ -184,6 +184,16 @@ CREATE INDEX IF NOT EXISTS idx_widgets_token ON widgets(token);
 -- and stage names only (no contact data, review text, business data or
 -- payloads). One row per entity + stage (dedupe_key). Delivery to GA4 is
 -- optional, consent-gated and claimed ('sending') so it happens once.
+CREATE TABLE IF NOT EXISTS conversion_watermarks (
+  stage VARCHAR(40) PRIMARY KEY CHECK (stage IN ('milestone_review_published')),
+  activated_at TIMESTAMP WITH TIME ZONE NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS conversion_withdrawn_journeys (
+  journey_id VARCHAR(40) PRIMARY KEY CHECK (journey_id ~ '^jrn_[0-9a-f]{32}$'),
+  withdrawn_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS conversion_identities (
   entity_type VARCHAR(20) NOT NULL CHECK (entity_type IN ('review')),
   entity_id VARCHAR(64) NOT NULL,
@@ -215,3 +225,4 @@ CREATE TABLE IF NOT EXISTS conversion_stage_events (
 );
 
 CREATE INDEX IF NOT EXISTS idx_conversion_stage_delivery ON conversion_stage_events(delivery_state, occurred_at);
+

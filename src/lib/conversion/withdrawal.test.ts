@@ -1,27 +1,42 @@
 /**
- * CONVERSION-001 consent withdrawal and fire-and-forget delivery (Dot's two
- * checks on #44). The ledger SQL runs against real Postgres when
- * CONVERSION_TEST_DATABASE_URL points at a throwaway database loaded with
- * src/lib/schema.sql; those tests are skipped otherwise. Each runs in a
- * rolled-back transaction.
+ * CONVERSION-001 consent withdrawal, watermark bootstrap recovery, and
+ * fire-and-forget delivery against real PostgreSQL (CONVERSION_TEST_DATABASE_URL
+ * or local throwaway embedded-postgres loaded with src/lib/schema.sql).
+ * Each database test runs in a rolled-back transaction or isolated connection.
  */
 import { readFileSync } from 'node:fs';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import pg from 'pg';
+import { startDatabase, type TestDatabase } from '@/test/e2e/harness';
 
 vi.mock('@/lib/db', () => ({ query: vi.fn(), withTransaction: vi.fn() }));
 
 import { parseConversionContext } from './context';
-import { maintainLedger, recordMilestone, withdrawJourney, type Deps } from './ledger';
+import { reconciliationCoverage } from './coverage';
+import { activateConversionLedger, maintainLedger, recordMilestone, withdrawJourney, type Deps } from './ledger';
 
-const url = process.env.CONVERSION_TEST_DATABASE_URL;
+const envUrl = process.env.CONVERSION_TEST_DATABASE_URL;
+let embeddedDb: TestDatabase | null = null;
+let dbUrl = envUrl ?? '';
+
 const JOURNEY = 'jrn_' + 'a'.repeat(32);
 const OTHER = 'jrn_' + 'b'.repeat(32);
 let n = 0;
 const uuid = () => `00000000-0000-4000-8000-${(++n).toString(16).padStart(12, '0')}`;
 
+beforeAll(async () => {
+  if (!dbUrl) {
+    embeddedDb = await startDatabase(['src/lib/schema.sql']);
+    dbUrl = embeddedDb.url;
+  }
+}, 120_000);
+
+afterAll(async () => {
+  await embeddedDb?.stop();
+});
+
 async function withDb(fn: (deps: Deps, db: pg.Client, sent: string[]) => Promise<void>) {
-  const db = new pg.Client({ connectionString: url });
+  const db = new pg.Client({ connectionString: dbUrl });
   await db.connect();
   const sent: string[] = [];
   const outcomes: Array<'sent' | 'failed'> = ['failed', 'failed'];
@@ -45,9 +60,14 @@ async function withDb(fn: (deps: Deps, db: pg.Client, sent: string[]) => Promise
 }
 
 const granted = (journeyId: string) =>
-  parseConversionContext({ consent: 'granted', journeyId, firstTouch: { category: 'tagged', source: 'google', medium: 'cpc', campaign: 'unknown', landingPage: 'blog_post' } });
+  parseConversionContext({
+    consent: 'granted',
+    journeyId,
+    firstTouch: { category: 'tagged', source: 'google', medium: 'cpc', campaign: 'unknown', landingPage: 'blog_post' },
+    lastTouch: { category: 'referral', source: 'blog', medium: 'referral', campaign: 'unknown', landingPage: 'passport' },
+  });
 
-describe.skipIf(!url)('withdrawal stops queued deliveries (real Postgres)', () => {
+describe('withdrawal stops queued deliveries and interleavings (real Postgres)', () => {
   it('a failed send queued before the opt-out is never retried after it', async () => {
     await withDb(async (deps, db, sent) => {
       await recordMilestone({ entityType: 'review', entityId: '901', milestone: 'review_published', journey: 'consumer_review', context: granted(JOURNEY) }, deps);
@@ -62,8 +82,8 @@ describe.skipIf(!url)('withdrawal stops queued deliveries (real Postgres)', () =
       const rows = (await db.query(`SELECT entity_id, delivery_state, analytics_id, consent_state FROM conversion_stage_events ORDER BY entity_id`)).rows;
       expect(rows[0]).toMatchObject({ entity_id: '901', delivery_state: 'skipped_consent', analytics_id: null, consent_state: 'denied' });
       expect(rows[1]).toMatchObject({ entity_id: '902', delivery_state: 'sent' });
-      const identity = (await db.query(`SELECT journey_id, consent_state, first_touch FROM conversion_identities WHERE entity_id = '901'`)).rows[0];
-      expect(identity).toEqual({ journey_id: null, consent_state: 'denied', first_touch: null });
+      const identity = (await db.query(`SELECT journey_id, consent_state, first_touch, last_touch FROM conversion_identities WHERE entity_id = '901'`)).rows[0];
+      expect(identity).toEqual({ journey_id: null, consent_state: 'denied', first_touch: null, last_touch: null });
     });
   });
 
@@ -76,6 +96,208 @@ describe.skipIf(!url)('withdrawal stops queued deliveries (real Postgres)', () =
       await maintainLedger(deps);
       expect(sent.length).toBe(before);
       expect((await db.query(`SELECT delivery_state FROM conversion_stage_events WHERE entity_id = '903'`)).rows[0].delivery_state).toBe('skipped_consent');
+    });
+  });
+
+  it('absent identity: withdrawal before first identity creation saves a durable tombstone so delayed milestone creates a denied identity', async () => {
+    await withDb(async (deps, db, sent) => {
+      expect(await withdrawJourney(JOURNEY, deps)).toBe(0);
+      const res = await recordMilestone({ entityType: 'review', entityId: '904', milestone: 'review_published', journey: 'consumer_review', context: granted(JOURNEY) }, deps);
+      expect(res).toEqual({ status: 'recorded', delivery: 'skipped_consent' });
+      expect(sent).toHaveLength(0);
+      const identity = (await db.query(`SELECT journey_id, consent_state, first_touch, last_touch FROM conversion_identities WHERE entity_id = '904'`)).rows[0];
+      expect(identity).toEqual({ journey_id: null, consent_state: 'denied', first_touch: null, last_touch: null });
+      const stage = (await db.query(`SELECT delivery_state, analytics_id, consent_state FROM conversion_stage_events WHERE entity_id = '904'`)).rows[0];
+      expect(stage).toEqual({ delivery_state: 'skipped_consent', analytics_id: null, consent_state: 'denied' });
+    });
+  });
+
+  it('delayed write & interleaving: withdrawal between identity read/insert and stage insert or claim scrubs attribution and prevents delivery (OPN-CONVERSION-WITHDRAWAL-RACE)', async () => {
+    await withDb(async (baseDeps, db, sent) => {
+      const journeyInterleave1 = 'jrn_' + 'c'.repeat(32);
+      const journeyInterleave2 = 'jrn_' + 'd'.repeat(32);
+
+      // Interleaving 1: withdrawJourney runs right after identity is selected in recordMilestone, before stage insert
+      const deps1: Deps = {
+        ...baseDeps,
+        query: (async (text: string, params?: unknown[]) => {
+          const res = await db.query(text, params);
+          if (text.includes('SELECT analytics_id, journey_id, consent_state, first_touch, last_touch FROM conversion_identities')) {
+            await withdrawJourney(journeyInterleave1, { query: ((t: string, p?: unknown[]) => db.query(t, p)) as unknown as Deps['query'] });
+          }
+          return res;
+        }) as unknown as Deps['query'],
+      };
+
+      const res1 = await recordMilestone(
+        { entityType: 'review', entityId: '905', milestone: 'review_published', journey: 'consumer_review', context: granted(journeyInterleave1) },
+        deps1,
+      );
+      expect(res1).toEqual({ status: 'recorded', delivery: 'skipped_consent' });
+      expect(sent).toHaveLength(0);
+      expect((await db.query(`SELECT journey_id, consent_state, first_touch, last_touch FROM conversion_identities WHERE entity_id = '905'`)).rows[0]).toEqual({
+        journey_id: null,
+        consent_state: 'denied',
+        first_touch: null,
+        last_touch: null,
+      });
+      expect((await db.query(`SELECT delivery_state, analytics_id, consent_state FROM conversion_stage_events WHERE entity_id = '905'`)).rows[0]).toEqual({
+        delivery_state: 'skipped_consent',
+        analytics_id: null,
+        consent_state: 'denied',
+      });
+
+      // Interleaving 2: withdrawJourney runs right after conversion_stage_events is inserted ('pending'), before deliver() claims ('sending')
+      const deps2: Deps = {
+        ...baseDeps,
+        query: (async (text: string, params?: unknown[]) => {
+          const res = await db.query(text, params);
+          if (text.includes('INSERT INTO conversion_stage_events')) {
+            await withdrawJourney(journeyInterleave2, { query: ((t: string, p?: unknown[]) => db.query(t, p)) as unknown as Deps['query'] });
+          }
+          return res;
+        }) as unknown as Deps['query'],
+      };
+
+      const res2 = await recordMilestone(
+        { entityType: 'review', entityId: '906', milestone: 'review_published', journey: 'consumer_review', context: granted(journeyInterleave2) },
+        deps2,
+      );
+      expect(res2).toEqual({ status: 'recorded', delivery: 'skipped_consent' });
+      expect(sent).toHaveLength(0);
+      expect((await db.query(`SELECT journey_id, consent_state, first_touch, last_touch FROM conversion_identities WHERE entity_id = '906'`)).rows[0]).toEqual({
+        journey_id: null,
+        consent_state: 'denied',
+        first_touch: null,
+        last_touch: null,
+      });
+      expect((await db.query(`SELECT delivery_state, analytics_id, consent_state FROM conversion_stage_events WHERE entity_id = '906'`)).rows[0]).toEqual({
+        delivery_state: 'skipped_consent',
+        analytics_id: null,
+        consent_state: 'denied',
+      });
+
+      // Guarantee erased attribution stays erased on replay/duplicate or subsequent review with the same withdrawn journey
+      const replay = await recordMilestone(
+        { entityType: 'review', entityId: '905', milestone: 'review_published', journey: 'consumer_review', context: granted(journeyInterleave1) },
+        baseDeps,
+      );
+      expect(replay).toEqual({ status: 'duplicate' });
+      const subsequent = await recordMilestone(
+        { entityType: 'review', entityId: '907', milestone: 'review_published', journey: 'consumer_review', context: granted(journeyInterleave1) },
+        baseDeps,
+      );
+      expect(subsequent).toEqual({ status: 'recorded', delivery: 'skipped_consent' });
+      expect(sent).toHaveLength(0);
+      for (const entityId of ['905', '906', '907']) {
+        expect((await db.query(`SELECT journey_id, consent_state, first_touch, last_touch FROM conversion_identities WHERE entity_id = $1`, [entityId])).rows[0]).toEqual({
+          journey_id: null,
+          consent_state: 'denied',
+          first_touch: null,
+          last_touch: null,
+        });
+      }
+    });
+  });
+
+  it('bootstrap watermark recovery on real Postgres: unknown without anchor, recovers first lost write and earlier-than-first-success (OPN-CONVERSION-BOOTSTRAP-RECOVERY)', async () => {
+    await withDb(async (baseDeps, db, sent) => {
+      // Seed a business and two published reviews (one pre-activation at 11:50Z, one post-activation at 11:58Z)
+      const biz = await db.query<{ id: number }>(`INSERT INTO businesses (slug, brand_name) VALUES ('wm-biz', 'WM Biz') RETURNING id`);
+      const bizId = biz.rows[0].id;
+      const revSeed = await db.query<{ id: number }>(
+        `INSERT INTO reviews (business_id, rating, body, author_name, status, created_at)
+         VALUES ($1, 5, 'Seed review', 'Autor 1', 'published', '2026-10-01T11:50:00.000Z') RETURNING id`,
+        [bizId],
+      );
+      const revLostFirst = await db.query<{ id: number }>(
+        `INSERT INTO reviews (business_id, rating, body, author_name, status, created_at)
+         VALUES ($1, 5, 'Lost first live review', 'Autor 2', 'published', '2026-10-01T11:58:00.000Z') RETURNING id`,
+        [bizId],
+      );
+
+      // 1. Fresh schema.sql has NO seeded NOW() row in conversion_watermarks -> coverage stays 'unknown' (not silently complete)
+      const unanchored = await maintainLedger(baseDeps);
+      expect(unanchored).toEqual({ recovered: 0, attempted: 0, coverage: 'unknown', since: null });
+      expect(reconciliationCoverage(unanchored.since)).toMatchObject({ status: 'unknown', since: null });
+
+      // 2. Explicit activation anchor at 11:55Z recovers the lost first live review (11:58Z) from an empty stage table while excluding pre-activation history (11:50Z)
+      const anchoredSince = await activateConversionLedger(new Date('2026-10-01T11:55:00.000Z'), baseDeps);
+      expect(new Date(anchoredSince).toISOString()).toBe('2026-10-01T11:55:00.000Z');
+      const afterAnchor = await maintainLedger(baseDeps);
+      expect(afterAnchor.coverage).toBe('anchored');
+      expect(afterAnchor.recovered).toBe(1);
+      expect(sent).toHaveLength(0);
+      const stageRows1 = (await db.query(`SELECT entity_id, source, consent_state, analytics_id FROM conversion_stage_events`)).rows;
+      expect(stageRows1).toEqual([
+        {
+          entity_id: String(revLostFirst.rows[0].id),
+          source: 'reconciled',
+          consent_state: 'denied',
+          analytics_id: null,
+        },
+      ]);
+      expect((await db.query(`SELECT 1 FROM conversion_stage_events WHERE entity_id = $1`, [String(revSeed.rows[0].id)])).rows).toHaveLength(0);
+
+      // 3. Earlier-than-first-success: clear watermarks & stage events, then fail first live write on stage insert at 11:56Z and succeed second live write at 12:00Z
+      await db.query(`DELETE FROM conversion_stage_events`);
+      await db.query(`DELETE FROM conversion_identities`);
+      await db.query(`DELETE FROM conversion_watermarks`);
+
+      const revEarlier = await db.query<{ id: number }>(
+        `INSERT INTO reviews (business_id, rating, body, author_name, status, created_at)
+         VALUES ($1, 4, 'Earlier lost review', 'Autor 3', 'published', '2026-10-01T11:56:00.000Z') RETURNING id`,
+        [bizId],
+      );
+      const revLater = await db.query<{ id: number }>(
+        `INSERT INTO reviews (business_id, rating, body, author_name, status, created_at)
+         VALUES ($1, 5, 'Later live review', 'Autor 4', 'published', '2026-10-01T12:00:00.000Z') RETURNING id`,
+        [bizId],
+      );
+
+      let failStageOnce = true;
+      const depsFailFirst: Deps = {
+        ...baseDeps,
+        query: (async (text: string, params?: unknown[]) => {
+          if (failStageOnce && text.includes('INSERT INTO conversion_stage_events')) {
+            failStageOnce = false;
+            throw new Error('simulated stage event outage on first write');
+          }
+          return db.query(text, params);
+        }) as unknown as Deps['query'],
+      };
+
+      const firstLive = await recordMilestone(
+        {
+          entityType: 'review',
+          entityId: String(revEarlier.rows[0].id),
+          milestone: 'review_published',
+          journey: 'consumer_review',
+          context: granted(OTHER),
+          occurredAt: new Date('2026-10-01T11:56:00.000Z'),
+        },
+        depsFailFirst,
+      );
+      expect(firstLive.status).toBe('error');
+
+      const secondLive = await recordMilestone(
+        {
+          entityType: 'review',
+          entityId: String(revLater.rows[0].id),
+          milestone: 'review_published',
+          journey: 'consumer_review',
+          context: granted(OTHER),
+          occurredAt: new Date('2026-10-01T12:00:00.000Z'),
+        },
+        baseDeps,
+      );
+      expect(secondLive.status).toBe('recorded');
+
+      const reconciled = await maintainLedger(baseDeps);
+      expect(reconciled.coverage).toBe('anchored');
+      expect(new Date(reconciled.since!).toISOString()).toBe('2026-10-01T11:56:00.000Z');
+      // Both revEarlier (11:56Z) and revLostFirst (11:58Z) precede revLater (12:00Z) and are recovered
+      expect(reconciled.recovered).toBe(2);
     });
   });
 
