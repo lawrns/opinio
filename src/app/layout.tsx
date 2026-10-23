@@ -44,9 +44,10 @@ export default function RootLayout({
   return (
     <html
       lang="es-MX"
+      suppressHydrationWarning
       className={`${brandSans.variable} ${dataMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
+      <body suppressHydrationWarning className="min-h-full flex flex-col">
         <a href="#contenido" className="skip-link">Saltar al contenido</a>
         {process.env.OPINIO_QA_FIXTURES === '1' && <aside aria-label="Entorno de prueba" className="border-b border-op-border bg-op-warning-soft px-4 py-2 text-center text-xs font-medium text-op-warning">Vista previa con datos de prueba. Las opiniones y los comercios son ejemplos del entorno de desarrollo.</aside>}
         {children}

@@ -2,7 +2,7 @@
 
 import { useRef, useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, ArrowRight, Check, CircleNotch, Star, WarningCircle } from '@phosphor-icons/react';
+import { ArrowLeft, ArrowRight, Check, CircleNotch, Star, WarningCircle } from '@phosphor-icons/react/dist/ssr';
 import { conversionContext, trackStepStarted } from '@/lib/conversion/client';
 
 interface Props {
@@ -14,9 +14,8 @@ interface Props {
 }
 
 const RATING_LABELS = ['Muy mala', 'Mala', 'Regular', 'Buena', 'Excelente'];
-const RATING_TILE_COLORS = ['#ff3722', '#ff8622', '#ffce00', '#73cf11', '#00b67a'];
 const inputClass =
-  'w-full rounded-xl border border-op-strong bg-[#fcfbf3] px-4 py-3 text-base text-op-ink transition-colors focus:border-[#00b67a] focus:bg-white focus:outline-none';
+  'w-full rounded-xl border border-op-strong bg-[#fcfbf3] px-4 py-3 text-base text-op-ink transition-colors focus:border-[#008b5d] focus:bg-white focus:outline-none';
 const primaryClass =
   'inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#1b1a1b] px-6 py-3 text-sm font-bold text-white shadow-flat transition-all hover:bg-op-green-dark disabled:cursor-not-allowed disabled:opacity-50';
 
@@ -84,7 +83,7 @@ export function ReviewFormWizard({ businessId, slug, brandName, legalName, categ
   };
 
   return (
-    <div className="rounded-[24px] border border-op-border border-t-4 border-t-[#00b67a] bg-white p-6 text-op-ink shadow-elevated sm:p-9">
+    <div className="rounded-[24px] border border-op-border bg-white p-6 text-op-ink shadow-elevated sm:p-9">
       <Link
         href={`/b/${slug}`}
         className="mb-4 inline-flex min-h-10 items-center gap-2 text-xs font-bold text-op-secondary hover:text-op-green-dark"
@@ -118,7 +117,7 @@ export function ReviewFormWizard({ businessId, slug, brandName, legalName, categ
             >
               <span
                 className={`flex size-7 shrink-0 items-center justify-center rounded-full font-mono text-xs font-bold ${
-                  step === index + 1 ? 'bg-[#00b67a] text-[#1b1a1b]' : 'bg-op-shaded text-op-muted'
+                  step === index + 1 ? 'bg-[#1b1a1b] text-white' : 'bg-op-shaded text-op-muted'
                 }`}
               >
                 {index + 1}
@@ -163,7 +162,6 @@ export function ReviewFormWizard({ businessId, slug, brandName, legalName, categ
               {RATING_LABELS.map((label, index) => {
                 const selected = rating === index + 1;
                 const filled = rating >= index + 1;
-                const activeColor = rating > 0 ? RATING_TILE_COLORS[rating - 1] : '#00b67a';
                 return (
                   <label key={label} className="cursor-pointer">
                     <input
@@ -176,7 +174,7 @@ export function ReviewFormWizard({ businessId, slug, brandName, legalName, categ
                       className="peer sr-only"
                     />
                     <span
-                      className={`flex min-h-16 min-w-14 flex-col items-center justify-center rounded-2xl border px-3 py-2.5 transition-all peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[#00b67a] ${
+                      className={`flex min-h-16 min-w-14 flex-col items-center justify-center rounded-2xl border px-3 py-2.5 transition-all peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[#008b5d] ${
                         selected
                           ? 'border-[#1b1a1b] bg-[#fcfbf3] text-op-ink shadow-flat'
                           : 'border-op-border bg-white text-op-secondary hover:border-op-strong'
@@ -184,7 +182,7 @@ export function ReviewFormWizard({ businessId, slug, brandName, legalName, categ
                     >
                       <span
                         className="flex size-8 items-center justify-center rounded-[5px] text-white transition-colors"
-                        style={{ backgroundColor: filled ? activeColor : '#dcdce6' }}
+                        style={{ backgroundColor: filled ? '#008b5d' : '#dcdce6' }}
                       >
                         <Star size={18} weight="fill" aria-hidden="true" />
                       </span>
@@ -288,7 +286,7 @@ export function ReviewFormWizard({ businessId, slug, brandName, legalName, categ
             </p>
           </div>
 
-          <div className="rounded-2xl border border-op-border bg-[#ffeed7]/60 p-4 text-sm leading-relaxed text-op-secondary">
+          <div className="rounded-2xl border border-op-border bg-[#fcfbf3] p-4 text-sm leading-relaxed text-op-secondary">
             <p className="font-bold text-op-ink">Opinión sin comprobante verificado</p>
             <p className="mt-1">
               Este formulario no valida pagos ni adjunta documentos. Tu opinión se publicará con esa etiqueta para que otros lectores conozcan su alcance.

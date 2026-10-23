@@ -8,7 +8,6 @@ import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { BrandLogo } from '@/components/BrandLogo';
 import { StarRating, ratingSentimentLabel } from '@/components/StarRating';
-import { categoryStyle } from '@/lib/category-style';
 
 interface BusinessItem {
   id: number;
@@ -45,7 +44,14 @@ const CATEGORIES = [
   'Muebles',
 ];
 const RATINGS = [0, 1, 2, 3, 4, 4.5, 5];
-const numberFormat = new Intl.NumberFormat('es-MX', { maximumFractionDigits: 1 });
+
+function formatInt(n: number): string {
+  return Math.trunc(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+function formatRatingOption(rating: number): string {
+  return Number.isInteger(rating) ? String(rating) : rating.toFixed(1);
+}
 
 function VerificarContent() {
   const searchParams = useSearchParams();
@@ -111,34 +117,12 @@ function VerificarContent() {
   const clearFilters = () => updateFilters({ query: '', category: 'Todos', rating: 0, connected: false, sort: 'score' });
   const selectClass = 'min-h-12 w-full rounded-xl border border-op-strong bg-white px-3 text-base text-op-ink transition-colors focus:border-[#00b67a]';
   const resultSummary = businesses.length < totalResults
-    ? `Mostrando ${businesses.length.toLocaleString('es-MX')} de ${totalResults.toLocaleString('es-MX')} negocios encontrados`
-    : `${totalResults.toLocaleString('es-MX')} ${totalResults === 1 ? 'negocio encontrado' : 'negocios encontrados'}`;
+    ? `Mostrando ${formatInt(businesses.length)} de ${formatInt(totalResults)} negocios encontrados`
+    : `${formatInt(totalResults)} ${totalResults === 1 ? 'negocio encontrado' : 'negocios encontrados'}`;
 
   return (
     <div>
       <section className="relative overflow-hidden border-b border-op-border bg-[#fcfbf3] py-12 sm:py-16">
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -right-12 -top-10 hidden select-none lg:block"
-        >
-          <svg width="260" height="220" viewBox="0 0 260 220" fill="none">
-            <circle cx="190" cy="64" r="46" fill="#fd791a" className="animate-op-float" />
-            <rect
-              x="76"
-              y="72"
-              width="78"
-              height="78"
-              rx="18"
-              transform="rotate(-10 76 72)"
-              fill="#ffe400"
-              className="animate-op-float-delayed"
-            />
-            <path
-              d="M172 120C176 112 188 112 192 120L226 182C230 190 224 200 215 200H149C140 200 134 190 138 182L172 120Z"
-              fill="#04da8d"
-            />
-          </svg>
-        </div>
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="max-w-2xl">
             <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-op-green-border bg-white px-3.5 py-1.5 text-xs font-bold uppercase tracking-widest text-op-green-dark shadow-2xs">
@@ -217,7 +201,7 @@ function VerificarContent() {
                 .sort((a, b) => a - b)
                 .map((rating) => (
                   <option key={rating} value={rating}>
-                    {rating === 0 ? 'Todas las calificaciones' : rating === 5 ? '5 estrellas' : `${numberFormat.format(rating)} estrellas o más`}
+                    {rating === 0 ? 'Todas las calificaciones' : rating === 5 ? '5 estrellas' : `${formatRatingOption(rating)} estrellas o más`}
                   </option>
                 ))}
             </select>
@@ -308,12 +292,11 @@ function VerificarContent() {
               const publishedCount = Number(business.review_count) || 0;
               const averageRating = Number(business.average_rating);
               const hasRating = publishedCount > 0 && business.average_rating !== null && Number.isFinite(averageRating);
-              const category = categoryStyle(business.category);
               const profileUrl = `/b/${encodeURIComponent(business.slug)}`;
               return (
                 <article
                   key={business.id}
-                  className={`flex flex-col rounded-2xl border border-t-4 border-op-border bg-white p-5 shadow-flat transition-all hover:shadow-elevated sm:p-6 ${category.edge}`}
+                  className="flex flex-col rounded-2xl border border-op-border bg-white p-5 shadow-flat transition-all hover:shadow-elevated sm:p-6"
                 >
                   <div className="flex items-start gap-3.5">
                     <BrandLogo name={business.brand_name} src={business.logo_url} category={business.category} />
@@ -338,7 +321,7 @@ function VerificarContent() {
                         rating={hasRating ? averageRating : 0}
                         label={
                           hasRating
-                            ? `${numberFormat.format(averageRating)} de 5 estrellas, promedio de opiniones publicadas`
+                            ? `${averageRating.toFixed(1)} de 5 estrellas, promedio de opiniones publicadas`
                             : 'Sin calificación de clientes todavía'
                         }
                       />
@@ -348,7 +331,7 @@ function VerificarContent() {
                         </span>
                       )}
                       <p className="font-data text-2xl font-bold text-op-ink">
-                        {hasRating ? numberFormat.format(averageRating) : '—'}
+                        {hasRating ? averageRating.toFixed(1) : '—'}
                         <span className="ml-1 text-sm font-normal text-op-muted">/ 5</span>
                       </p>
                     </div>
@@ -356,7 +339,7 @@ function VerificarContent() {
                       href={`${profileUrl}#opiniones`}
                       className="mt-1.5 inline-flex min-h-9 items-center text-xs font-semibold text-op-green-dark underline decoration-op-green-border underline-offset-4 hover:decoration-current"
                     >
-                      {publishedCount.toLocaleString('es-MX')}{' '}
+                      {formatInt(publishedCount)}{' '}
                       {publishedCount === 1 ? 'opinión publicada' : 'opiniones publicadas'}
                     </Link>
                   </div>

@@ -38,14 +38,12 @@ const steps = [
   {
     Icon: ShieldCheck,
     number: '01 · EXISTE',
-    accent: 'border-t-[#1b1a1b]',
-    iconBg: 'bg-op-blue-soft text-op-blue-dark border-op-blue-border',
     title: 'Identidad verificable',
     body: (
       <>
         <Link
           href="/blog/demostrar-confiabilidad-negocio-mas-alla-estrellas"
-          className="font-semibold text-op-green-dark underline decoration-[#00b67a] underline-offset-4 hover:text-op-ink"
+          className="font-semibold text-op-green-dark underline decoration-[#008b5d] underline-offset-4 hover:text-op-ink"
         >
           Tu perfil reúne los datos registrados del negocio
         </Link>
@@ -56,22 +54,18 @@ const steps = [
   {
     Icon: Star,
     number: '02 · CUMPLE',
-    accent: 'border-t-[#00b67a]',
-    iconBg: 'bg-op-green-soft text-op-green-dark border-op-green-border',
     title: 'Opiniones con evidencia',
     body: 'Cada opinión indica su tipo de evidencia y la cobertura compara las invitaciones registradas con los pedidos registrados.',
   },
   {
     Icon: MessageSquare,
     number: '03 · RESUELVE',
-    accent: 'border-t-[#fd791a]',
-    iconBg: 'bg-op-peach-soft text-op-peach border-op-peach-border',
     title: 'Respuestas y casos',
     body: (
       <>
         <Link
           href="/blog/responder-resena-negativa-mostrar-resolucion"
-          className="font-semibold text-op-green-dark underline decoration-[#00b67a] underline-offset-4 hover:text-op-ink"
+          className="font-semibold text-op-green-dark underline decoration-[#008b5d] underline-offset-4 hover:text-op-ink"
         >
           Tu comercio puede responder opiniones
         </Link>{' '}
@@ -94,25 +88,6 @@ export default function ResenasYReputacionPage() {
       <Navbar />
       <main id="contenido" tabIndex={-1} className="flex-1 overflow-hidden rounded-b-[32px] bg-op-canvas pb-16">
         <section className="relative overflow-hidden border-b border-op-border bg-[#fcfbf3]">
-          {/* Trustpilot-inspired animated geometric background shapes */}
-          <svg
-            aria-hidden="true"
-            viewBox="0 0 600 280"
-            className="pointer-events-none absolute right-0 top-0 hidden h-full w-[520px] opacity-85 lg:block"
-          >
-            <g className="animate-op-float">
-              <circle cx="460" cy="50" r="110" fill="#fd791a" />
-              <rect x="290" y="120" width="150" height="150" rx="28" fill="#ffe400" transform="rotate(-12 365 195)" />
-              <path
-                d="M510 120 L590 255 L430 255 Z"
-                fill="#04da8d"
-                stroke="#04da8d"
-                strokeWidth="14"
-                strokeLinejoin="round"
-              />
-            </g>
-          </svg>
-
           <div className="relative z-10 mx-auto max-w-7xl px-4 pb-12 pt-12 sm:px-6 sm:pt-14 lg:px-8">
             <Breadcrumbs
               siteUrl={SITE_URL}
@@ -122,7 +97,7 @@ export default function ResenasYReputacionPage() {
               ]}
             />
             <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-op-ink/15 bg-white px-3.5 py-1.5 font-mono text-xs font-bold uppercase tracking-widest text-op-ink shadow-2xs">
-              <span className="size-2 rounded-full bg-[#00b67a]" aria-hidden="true" />
+              <span className="size-2 rounded-full bg-[#008b5d]" aria-hidden="true" />
               Para comercios · México
             </div>
             <h1 className="mt-4 max-w-4xl text-3xl font-extrabold tracking-[-0.03em] text-[#1b1a1b] sm:text-4xl lg:text-5xl">
@@ -136,6 +111,7 @@ export default function ResenasYReputacionPage() {
             <div className="mt-7 flex flex-wrap items-center gap-3">
               <Link
                 href="/merchant"
+                prefetch={false}
                 data-cta="reputation_merchant_panel"
                 className="inline-flex min-h-11 items-center gap-2 rounded-full bg-[#1b1a1b] px-6 py-3 text-sm font-bold text-white shadow-flat transition-all hover:bg-op-green-dark"
               >
@@ -155,16 +131,16 @@ export default function ResenasYReputacionPage() {
 
         <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
           <div className="grid gap-6 md:grid-cols-3">
-            {steps.map(({ Icon, number, accent, iconBg, title, body }) => (
+            {steps.map(({ Icon, number, title, body }) => (
               <div
                 key={title}
-                className={`rounded-[22px] border border-op-border border-t-4 ${accent} bg-white p-6 shadow-flat transition-all duration-200 hover:-translate-y-1 hover:shadow-elevated sm:p-7`}
+                className="rounded-2xl border border-op-border bg-white p-6 shadow-flat sm:p-7"
               >
                 <div className="flex items-center justify-between">
                   <span className="font-mono text-xs font-bold uppercase tracking-wider text-op-muted">
                     {number}
                   </span>
-                  <span className={`flex size-10 items-center justify-center rounded-xl border ${iconBg}`}>
+                  <span className="flex size-10 items-center justify-center rounded-xl border border-op-border bg-[#fcfbf3] text-op-ink">
                     <Icon aria-hidden="true" className="size-5" />
                   </span>
                 </div>
@@ -177,7 +153,7 @@ export default function ResenasYReputacionPage() {
 
         <section className="mx-auto max-w-4xl px-4 pb-8 sm:px-6 lg:px-8">
           <div className="rounded-[24px] border border-op-border bg-white p-6 shadow-elevated sm:p-10">
-            <span className="inline-flex items-center gap-2 rounded-full bg-[#b2f8cc] px-3.5 py-1 font-mono text-xs font-bold uppercase tracking-wider text-[#0a2e1d]">
+            <span className="inline-flex items-center gap-2 rounded-full border border-op-border bg-[#fcfbf3] px-3.5 py-1 font-mono text-xs font-bold uppercase tracking-wider text-op-ink">
               12 preguntas frecuentes · Guía práctica
             </span>
             <h2 className="mt-3 text-2xl font-extrabold tracking-[-0.025em] text-op-ink sm:text-3xl">

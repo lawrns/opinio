@@ -15,7 +15,6 @@ import {
   ArrowLeft,
   ArrowUpRight,
 } from '@phosphor-icons/react/dist/ssr';
-import { categoryStyle } from '@/lib/category-style';
 
 export interface CategoryCount {
   category: string;
@@ -32,6 +31,12 @@ const categories = [
   { name: 'Joyería', subtitle: 'Relojes, plata y diseño', icon: Diamond, query: 'Joyería' },
   { name: 'Muebles', subtitle: 'Salas, comedores y estudio', icon: Armchair, query: 'Muebles' },
 ];
+
+function formatInt(value: number): string {
+  return Math.round(value)
+    .toString()
+    .replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
 
 export function CategoryBar({ counts }: { counts?: CategoryCount[] }) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -66,7 +71,6 @@ export function CategoryBar({ counts }: { counts?: CategoryCount[] }) {
 
   return (
     <section className="op-container pb-10 pt-10" aria-labelledby="categories-title">
-      {/* Reverse-engineered Trustpilot HeaderBar with Scroll Back / Scroll Forward Circular Controls */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h2 id="categories-title" className="text-2xl font-extrabold tracking-tight text-op-ink sm:text-[28px]">
@@ -81,9 +85,9 @@ export function CategoryBar({ counts }: { counts?: CategoryCount[] }) {
             disabled={atStart}
             aria-label="Desplazar categorías hacia atrás"
             data-scroll-back-button="true"
-            className="inline-flex size-10 items-center justify-center rounded-full border border-op-strong bg-white text-op-ink transition-all hover:border-[#1b1a1b] hover:bg-op-shaded disabled:opacity-35 lg:hidden"
+            className="inline-flex size-10 items-center justify-center rounded-full border border-op-border bg-white text-op-ink transition-colors hover:border-op-strong hover:bg-op-shaded disabled:opacity-35 lg:hidden"
           >
-            <ArrowLeft aria-hidden="true" className="size-4.5" weight="bold" />
+            <ArrowLeft aria-hidden="true" className="size-4.5" />
           </button>
           <button
             type="button"
@@ -91,66 +95,54 @@ export function CategoryBar({ counts }: { counts?: CategoryCount[] }) {
             disabled={atEnd}
             aria-label="Desplazar categorías hacia adelante"
             data-scroll-forward-button="true"
-            className="inline-flex size-10 items-center justify-center rounded-full border border-op-strong bg-white text-op-ink transition-all hover:border-[#1b1a1b] hover:bg-op-shaded disabled:opacity-35 lg:hidden"
+            className="inline-flex size-10 items-center justify-center rounded-full border border-op-border bg-white text-op-ink transition-colors hover:border-op-strong hover:bg-op-shaded disabled:opacity-35 lg:hidden"
           >
-            <ArrowRight aria-hidden="true" className="size-4.5" weight="bold" />
+            <ArrowRight aria-hidden="true" className="size-4.5" />
           </button>
           <Link
             href="/verificar"
             data-view-all-categories-button="true"
-            className="ml-1 inline-flex min-h-10 items-center gap-1.5 rounded-full border border-op-strong bg-white px-4 py-2 text-sm font-bold text-op-ink transition-all hover:border-[#1b1a1b] hover:bg-op-shaded"
+            className="ml-1 inline-flex min-h-10 items-center gap-1.5 rounded-full border border-op-border bg-white px-4 py-2 text-sm font-semibold text-op-ink transition-colors hover:border-op-strong hover:bg-op-shaded"
           >
             Ver todas
           </Link>
         </div>
       </div>
 
-      {/* Horizontal Carousel with Left/Right Shadow Panels (Trustpilot styles_carouselContainer__U8y2A) */}
       <div className="relative">
-        <div
-          aria-hidden="true"
-          className={`pointer-events-none absolute inset-y-0 left-0 z-10 w-10 bg-linear-to-r from-op-canvas to-transparent transition-opacity duration-200 lg:hidden ${
-            atStart ? 'opacity-0' : 'opacity-100'
-          }`}
-        />
-        <div
-          aria-hidden="true"
-          className={`pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-linear-to-l from-op-canvas to-transparent transition-opacity duration-200 lg:hidden ${
-            atEnd ? 'opacity-0' : 'opacity-100'
-          }`}
-        />
-
         <div
           ref={scrollRef}
           className="no-scrollbar flex snap-x snap-mandatory gap-3.5 overflow-x-auto pb-2 lg:grid lg:grid-cols-8 lg:overflow-visible"
         >
           {categories.map(({ name, subtitle, icon: Icon, query }) => {
             const count = counts
-              ?.filter((row) => row.category.toLocaleLowerCase('es-MX').includes(query.toLocaleLowerCase('es-MX')))
+              ?.filter((row) => row.category.toLowerCase().includes(query.toLowerCase()))
               .reduce((total, row) => total + Number(row.businesses_count), 0);
 
             return (
               <Link
                 key={name}
                 href={`/verificar?categoria=${encodeURIComponent(query)}`}
-                className="group relative flex min-h-36 w-40 shrink-0 snap-start flex-col justify-between rounded-2xl border border-op-border bg-white p-4 shadow-flat transition-all duration-150 ease-out hover:-translate-y-1 hover:scale-[1.02] hover:border-[#00b67a] hover:shadow-elevated lg:w-auto"
+                className="group relative flex min-h-36 w-40 shrink-0 snap-start flex-col justify-between rounded-2xl border border-op-border bg-white p-4 shadow-flat transition-all duration-150 hover:-translate-y-0.5 hover:border-op-strong hover:shadow-elevated lg:w-auto"
               >
                 <div className="flex items-start justify-between gap-2">
-                  <span className={`flex size-11 items-center justify-center rounded-xl border ${categoryStyle(query).tile}`}>
-                    <Icon aria-hidden="true" className="size-5.5" weight="duotone" />
+                  <span className="flex size-10 items-center justify-center rounded-xl border border-op-border bg-[#fcfbf3] text-op-ink transition-colors group-hover:border-op-green-border group-hover:bg-op-green-soft group-hover:text-op-green-dark">
+                    <Icon aria-hidden="true" className="size-5" />
                   </span>
-                  <span className="flex size-6 items-center justify-center rounded-full bg-op-shaded text-op-muted transition-colors group-hover:bg-op-green-soft group-hover:text-op-green-dark">
+                  <span className="flex size-6 items-center justify-center rounded-full bg-[#f4f6f4] text-op-muted transition-colors group-hover:text-op-ink">
                     <ArrowUpRight aria-hidden="true" className="size-3.5" />
                   </span>
                 </div>
                 <div className="mt-3">
-                  <span className="block text-sm font-bold text-op-ink group-hover:text-op-green-dark">{name}</span>
+                  <span className="block text-sm font-bold text-op-ink">{name}</span>
                   {count !== undefined ? (
                     <span className="mt-0.5 block font-mono text-[11px] text-op-muted">
-                      {count.toLocaleString('es-MX')} {count === 1 ? 'comercio' : 'comercios'}
+                      {formatInt(count)} {count === 1 ? 'comercio' : 'comercios'}
                     </span>
                   ) : (
-                    <span className="mt-0.5 line-clamp-1 block text-[11px] text-op-muted">{subtitle}</span>
+                    <span className="mt-0.5 line-clamp-2 block text-[11px] leading-snug text-op-muted">
+                      {subtitle}
+                    </span>
                   )}
                 </div>
               </Link>

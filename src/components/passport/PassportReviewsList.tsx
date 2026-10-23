@@ -26,29 +26,28 @@ const VERIFICATION_LABELS: Record<string, string> = {
   reviewed_proof: 'Comprobante revisado',
   unverified_experience: 'Sin comprobante verificado',
 };
-const RATING_COLORS: Record<number, string> = {
-  5: '#00b67a',
-  4: '#73cf11',
-  3: '#ffce00',
-  2: '#ff8622',
-  1: '#ff3722',
-};
+
+const MONTHS_ES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+
 const normalize = (value: string) =>
   value
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
-    .toLocaleLowerCase('es-MX');
+    .toLowerCase();
+
+const formatInt = (value: number) =>
+  Math.round(value)
+    .toString()
+    .replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
 const formatDate = (dateString: string) => {
   const date = new Date(dateString);
-  return Number.isNaN(date.getTime())
-    ? 'Fecha no disponible'
-    : date.toLocaleDateString('es-MX', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        timeZone: 'America/Mexico_City',
-      });
+  if (Number.isNaN(date.getTime())) return 'Fecha no disponible';
+  // Deterministic UTC-6 (America/Mexico_City) formatting so SSR and client hydration always match across all browsers
+  const mx = new Date(date.getTime() - 6 * 3600_000);
+  return `${mx.getUTCDate()} ${MONTHS_ES[mx.getUTCMonth()]} ${mx.getUTCFullYear()}`;
 };
+
 const selectClass =
   'min-h-12 w-full rounded-xl border border-[var(--op-border-strong)] bg-[var(--op-sheet)] px-3 text-base';
 
@@ -98,14 +97,14 @@ export function PassportReviewsList({ reviews, brandName }: { reviews: ReviewIte
         <div className="flex items-center justify-between gap-2">
           <h3 className="text-base font-bold text-op-ink">Lo que opinan sus clientes</h3>
           {average !== null && (
-            <span className="rounded-full bg-op-green-soft px-2.5 py-0.5 text-xs font-bold text-op-green-dark">
+            <span className="rounded-full border border-op-border bg-[#fcfbf3] px-2.5 py-0.5 text-xs font-semibold text-op-ink">
               {ratingSentimentLabel(average)}
             </span>
           )}
         </div>
         <div className="mt-4 flex items-baseline gap-2">
           <span className="font-data text-5xl font-extrabold tracking-tight text-op-ink">
-            {average === null ? '—' : average.toLocaleString('es-MX', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+            {average === null ? '—' : average.toFixed(1)}
           </span>
           <span className="text-sm text-[var(--op-ink-muted)]">de 5 estrellas</span>
         </div>
@@ -113,12 +112,12 @@ export function PassportReviewsList({ reviews, brandName }: { reviews: ReviewIte
           <div className="mt-3">
             <StarRating
               rating={average}
-              label={`Promedio de opiniones: ${average.toLocaleString('es-MX', { maximumFractionDigits: 1 })} de 5 estrellas`}
+              label={`Promedio de opiniones: ${average.toFixed(1).replace(/\.0$/, '')} de 5 estrellas`}
             />
           </div>
         )}
         <p className="mt-3 text-sm font-medium text-[var(--op-ink-secondary)]">
-          {reviews.length.toLocaleString('es-MX')} {reviews.length === 1 ? 'opinión publicada' : 'opiniones publicadas'}
+          {formatInt(reviews.length)} {reviews.length === 1 ? 'opinión publicada' : 'opiniones publicadas'}
         </p>
         <p className="mt-2 text-xs leading-relaxed text-[var(--op-ink-muted)]">
           Promedio de las estrellas de todas las opiniones publicadas. El puntaje Opinio de 0 a 100 también considera evidencia y resolución.
@@ -152,11 +151,11 @@ export function PassportReviewsList({ reviews, brandName }: { reviews: ReviewIte
                   </span>
                   <span
                     aria-hidden="true"
-                    className="h-2.5 min-w-0 flex-1 overflow-hidden rounded-full bg-[#dcdce6]/70"
+                    className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-op-shaded"
                   >
                     <span
-                      className="block h-full rounded-full transition-all duration-300"
-                      style={{ width: `${percent}%`, backgroundColor: RATING_COLORS[rating] }}
+                      className="block h-full rounded-full bg-[#008b5d] transition-all duration-300"
+                      style={{ width: `${percent}%` }}
                     />
                   </span>
                   <span aria-hidden="true" className="w-10 shrink-0 text-right font-data text-xs font-medium">
@@ -170,8 +169,8 @@ export function PassportReviewsList({ reviews, brandName }: { reviews: ReviewIte
             })}
           </div>
         </fieldset>
-        <div className="mt-5 flex items-start gap-2 rounded-xl border border-op-green-border bg-op-green-soft/60 p-3 text-op-green-dark">
-          <MessageSquareText className="mt-0.5 shrink-0" size={17} aria-hidden="true" />
+        <div className="mt-5 flex items-start gap-2 rounded-xl border border-op-border bg-[#fcfbf3] p-3 text-op-secondary">
+          <MessageSquareText className="mt-0.5 shrink-0 text-op-green-dark" size={17} aria-hidden="true" />
           <p className="text-xs font-medium leading-relaxed">
             {replyCount} {replyCount === 1 ? 'opinión tiene' : 'opiniones tienen'} respuesta del comercio.
           </p>
@@ -286,7 +285,7 @@ export function PassportReviewsList({ reviews, brandName }: { reviews: ReviewIte
 
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p role="status" aria-live="polite" className="text-sm font-medium text-[var(--op-ink-secondary)]">
-            {filtered.length.toLocaleString('es-MX')} de {reviews.length.toLocaleString('es-MX')}{' '}
+            {formatInt(filtered.length)} de {formatInt(reviews.length)}{' '}
             {reviews.length === 1 ? 'opinión' : 'opiniones'}
             {ratings.length > 0 ? ` · ${[...ratings].sort().join(', ')} estrellas` : ''}
           </p>
@@ -307,15 +306,15 @@ export function PassportReviewsList({ reviews, brandName }: { reviews: ReviewIte
               return (
                 <article
                   key={review.id}
-                  className="rounded-2xl border border-[var(--op-border-hairline)] bg-[var(--op-sheet)] p-5 shadow-flat transition-shadow hover:shadow-elevated sm:p-6"
+                  className="rounded-2xl border border-[var(--op-border-hairline)] bg-[var(--op-sheet)] p-5 shadow-flat sm:p-6"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3 border-b border-op-border/70 pb-4">
                     <div className="flex min-w-0 items-center gap-3">
                       <span
                         aria-hidden="true"
-                        className="flex size-10 shrink-0 items-center justify-center rounded-full bg-op-green-soft text-sm font-bold text-op-green-dark"
+                        className="flex size-10 shrink-0 items-center justify-center rounded-full border border-op-border bg-[#fcfbf3] text-sm font-bold text-op-ink"
                       >
-                        {review.author_name.trim().slice(0, 2).toLocaleUpperCase('es-MX')}
+                        {review.author_name.trim().slice(0, 2).toUpperCase()}
                       </span>
                       <div className="min-w-0">
                         <p className="flex items-center gap-2 break-words text-sm font-bold text-op-ink">
@@ -332,13 +331,13 @@ export function PassportReviewsList({ reviews, brandName }: { reviews: ReviewIte
                       </div>
                     </div>
                     <span
-                      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
+                      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${
                         withEvidence
-                          ? 'border border-op-green-border bg-[var(--op-verified-tint)] text-[var(--op-verified-ink)]'
+                          ? 'border border-op-border bg-[#fcfbf3] text-op-ink'
                           : 'bg-[var(--op-shaded)] text-[var(--op-ink-secondary)]'
                       }`}
                     >
-                      {withEvidence && <Check size={13} aria-hidden="true" />}
+                      {withEvidence && <Check size={13} className="text-op-green-dark" aria-hidden="true" />}
                       {VERIFICATION_LABELS[review.verification_level] || 'Comprobante no especificado'}
                     </span>
                   </div>
@@ -355,9 +354,9 @@ export function PassportReviewsList({ reviews, brandName }: { reviews: ReviewIte
                     </p>
                   )}
                   {review.response_text && (
-                    <div className="mt-5 rounded-xl border-l-3 border-[#00b67a] bg-[#fcfbf3] p-4">
+                    <div className="mt-5 rounded-xl border border-op-border bg-[#fcfbf3] p-4">
                       <p className="flex items-center gap-2 text-sm font-bold text-op-ink">
-                        <CornerDownRight size={16} className="text-[#00b67a]" aria-hidden="true" />
+                        <CornerDownRight size={16} className="text-op-green-dark" aria-hidden="true" />
                         Respuesta de {review.responder_name || brandName}
                       </p>
                       {review.response_created_at && (

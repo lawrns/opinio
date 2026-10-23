@@ -184,26 +184,7 @@ function NuevoCasoContent({ buyerProof }: { buyerProof: boolean }) {
 
   return (
     <div>
-      {/* Trustpilot-inspired Cream & Pink Hero Header */}
       <section className="relative overflow-hidden border-b border-op-border bg-[#fcfbf3] py-10 sm:py-14">
-        <svg
-          aria-hidden="true"
-          viewBox="0 0 600 260"
-          className="pointer-events-none absolute right-0 top-0 hidden h-full w-[520px] opacity-80 lg:block"
-        >
-          <g className="animate-op-float">
-            <circle cx="460" cy="40" r="110" fill="#fd791a" />
-            <rect x="290" y="110" width="150" height="150" rx="28" fill="#ffe400" transform="rotate(-12 365 185)" />
-            <path
-              d="M510 110 L590 245 L430 245 Z"
-              fill="#04da8d"
-              stroke="#04da8d"
-              strokeWidth="14"
-              strokeLinejoin="round"
-            />
-          </g>
-        </svg>
-
         <div className="relative z-10 mx-auto max-w-3xl px-4 sm:px-6">
           <Link
             href="/"
@@ -214,8 +195,8 @@ function NuevoCasoContent({ buyerProof }: { buyerProof: boolean }) {
           </Link>
 
           <div className="mb-3 flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#ffdde8] px-3.5 py-1 font-mono text-xs font-bold text-[#1b1a1b]">
-              <AlertTriangle className="size-3.5 text-[#c2410c]" />
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-op-border bg-white px-3.5 py-1 font-mono text-xs font-bold text-[#1b1a1b] shadow-2xs">
+              <AlertTriangle className="size-3.5 text-op-ink" />
               <span>03 · Resuelve · Seguimiento de problemas de compra</span>
             </span>
           </div>
@@ -241,7 +222,7 @@ function NuevoCasoContent({ buyerProof }: { buyerProof: boolean }) {
 
         <form
           onSubmit={handleSubmit}
-          className="space-y-6 rounded-[24px] border border-op-border border-t-4 border-t-[#fd791a] bg-white p-6 shadow-elevated sm:p-9"
+          className="space-y-6 rounded-[24px] border border-op-border bg-white p-6 shadow-elevated sm:p-9"
         >
           {/* Business select */}
           <div className="space-y-2">

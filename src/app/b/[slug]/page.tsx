@@ -292,27 +292,8 @@ export default async function BusinessPassportPage({ params }: PageProps) {
         {/* ========================================================================= */}
         {/* 1. COMPANY HEADER BANNER WITH REAL REVIEW BREAKDOWN                       */}
         {/* ========================================================================= */}
-        <header className="relative overflow-hidden border-b border-op-border bg-[#fcfbf3] pb-12 pt-10">
-          {/* Geometric background motion graphics */}
-          <svg
-            aria-hidden="true"
-            viewBox="0 0 640 320"
-            className="pointer-events-none absolute -right-12 -top-8 hidden h-full w-[560px] opacity-85 lg:block"
-          >
-            <g className="animate-op-float">
-              <circle cx="480" cy="60" r="120" fill="#fd791a" />
-              <rect x="280" y="130" width="160" height="160" rx="32" fill="#ffe400" transform="rotate(-14 360 210)" />
-              <path
-                d="M520 130 L610 285 L430 285 Z"
-                fill="#04da8d"
-                stroke="#04da8d"
-                strokeWidth="14"
-                strokeLinejoin="round"
-              />
-            </g>
-          </svg>
-
-          <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <header className="border-b border-op-border bg-[#fcfbf3] pb-12 pt-10">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="grid items-start gap-8 lg:grid-cols-[1fr_360px] lg:gap-12">
               {/* Left Company Identity & Actions */}
               <div className="max-w-3xl space-y-5">
@@ -331,7 +312,7 @@ export default async function BusinessPassportPage({ params }: PageProps) {
                       </span>
                       {business.domain && (
                         <span className="inline-flex items-center gap-1 rounded-full border border-op-border bg-white px-3 py-0.5 font-mono text-xs text-op-secondary">
-                          <Globe className="size-3.5 text-[#00b67a]" weight="duotone" />
+                          <Globe className="size-3.5 text-op-green-dark" />
                           {business.domain}
                         </span>
                       )}
@@ -346,19 +327,19 @@ export default async function BusinessPassportPage({ params }: PageProps) {
                 <div>
                   <a
                     href="#opiniones"
-                    className="inline-flex min-h-13 flex-wrap items-center gap-x-3.5 gap-y-2 rounded-2xl border border-op-strong bg-white px-5 py-3 text-sm text-op-ink shadow-flat transition-all hover:border-[#00b67a] hover:shadow-elevated"
+                    className="inline-flex min-h-13 flex-wrap items-center gap-x-3.5 gap-y-2 rounded-2xl border border-op-border bg-white px-5 py-3 text-sm text-op-ink shadow-flat transition-colors hover:border-op-strong"
                   >
                     {averageRating !== null ? (
                       <>
                         <StarRating rating={averageRating} size="sm" />
-                        <span className="rounded-md bg-op-green-soft px-2.5 py-0.5 text-xs font-bold text-op-green-dark">
+                        <span className="rounded-md border border-op-border bg-[#fcfbf3] px-2.5 py-0.5 text-xs font-semibold text-op-ink">
                           {ratingSentimentLabel(averageRating)}
                         </span>
                         <span className="font-mono text-base font-extrabold text-op-ink">
                           {averageRating.toFixed(1)} de 5
                         </span>
-                        <span className="font-semibold text-op-green-dark underline decoration-[#00b67a] underline-offset-4">
-                          {reviews.length.toLocaleString('es-MX')} {reviews.length === 1 ? 'opinión' : 'opiniones'}
+                        <span className="font-semibold text-op-green-dark underline decoration-[#008b5d] underline-offset-4">
+                          {reviews.length.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')} {reviews.length === 1 ? 'opinión' : 'opiniones'}
                         </span>
                       </>
                     ) : (
@@ -380,10 +361,10 @@ export default async function BusinessPassportPage({ params }: PageProps) {
               </div>
 
               {/* Right Real Review Breakdown Card (5★ to 1★) */}
-              <div className="relative overflow-hidden rounded-[22px] border border-op-ink/15 bg-white p-6 shadow-hero">
+              <div className="overflow-hidden rounded-2xl border border-op-border bg-white p-6 shadow-flat">
                 <div className="mb-4 flex items-center justify-between border-b border-op-border pb-3">
                   <div>
-                    <p className="font-mono text-[11px] font-bold uppercase tracking-wider text-op-muted">
+                    <p className="font-mono text-[11px] font-semibold uppercase tracking-wider text-op-muted">
                       Calificación de clientes
                     </p>
                     <div className="mt-1 flex items-baseline gap-2">
@@ -395,12 +376,12 @@ export default async function BusinessPassportPage({ params }: PageProps) {
                   </div>
                   <div className="text-right">
                     {averageRating !== null && (
-                      <span className="inline-block rounded-full bg-op-green-soft px-3 py-1 text-xs font-bold text-op-green-dark">
+                      <span className="inline-block rounded-full border border-op-border bg-[#fcfbf3] px-3 py-1 text-xs font-semibold text-op-ink">
                         {ratingSentimentLabel(averageRating)}
                       </span>
                     )}
                     <p className="mt-1 font-mono text-xs text-op-muted">
-                      {reviews.length.toLocaleString('es-MX')} {reviews.length === 1 ? 'opinión' : 'opiniones'}
+                      {reviews.length.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')} {reviews.length === 1 ? 'opinión' : 'opiniones'}
                     </p>
                   </div>
                 </div>
@@ -409,24 +390,14 @@ export default async function BusinessPassportPage({ params }: PageProps) {
                   {[5, 4, 3, 2, 1].map((stars) => {
                     const count = starCounts[stars] || 0;
                     const percent = reviews.length > 0 ? Math.round((count / reviews.length) * 100) : 0;
-                    const barColor =
-                      stars === 5
-                        ? 'bg-[#00b67a]'
-                        : stars === 4
-                          ? 'bg-[#73cf11]'
-                          : stars === 3
-                            ? 'bg-[#ffce00]'
-                            : stars === 2
-                              ? 'bg-[#ff8622]'
-                              : 'bg-[#ff3722]';
                     return (
                       <div key={stars} className="flex items-center gap-3 text-xs">
                         <span className="w-16 shrink-0 font-semibold text-op-ink">
                           {stars} {stars === 1 ? 'estrella' : 'estrellas'}
                         </span>
-                        <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-op-shaded">
+                        <div className="h-2 flex-1 overflow-hidden rounded-full bg-op-shaded">
                           <div
-                            className={`h-full rounded-full ${barColor}`}
+                            className="h-full rounded-full bg-[#008b5d]"
                             style={{ width: `${percent}%` }}
                           />
                         </div>

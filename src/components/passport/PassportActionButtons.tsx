@@ -7,7 +7,6 @@ import {
   AlertTriangle,
   Share2,
   Check,
-  ShieldCheck,
 } from 'lucide-react';
 
 interface Props {
@@ -36,35 +35,32 @@ export function PassportActionButtons({ slug }: Props) {
       <span role="status" className="sr-only">
         {copied ? 'Enlace copiado' : copyFailed ? 'No se pudo copiar. Copia el enlace desde la barra de direcciones.' : ''}
       </span>
-      {/* Primary CTA: Escribir Opinión (Trustpilot Pill Style) */}
       <Link
         href={`/escribir-opinion/${slug}`}
-        className="inline-flex min-h-11 items-center gap-2 rounded-full bg-[#1b1a1b] px-5 py-2.5 text-xs font-bold text-white shadow-flat transition-all hover:bg-op-green-dark active:scale-95"
+        className="inline-flex min-h-11 items-center gap-2 rounded-full bg-[#1b1a1b] px-5 py-2.5 text-xs font-semibold text-white shadow-flat transition-colors hover:bg-op-green-dark"
       >
         <PenLine className="size-4 text-[#00b67a]" />
         <span>Escribir opinión</span>
       </Link>
 
-      {/* Secondary CTA: Abrir un Caso */}
       <Link
         href={`/caso/nuevo?b=${slug}`}
-        className="inline-flex min-h-11 items-center gap-2 rounded-full border border-op-strong bg-white px-4.5 py-2.5 text-xs font-bold text-op-ink shadow-2xs transition-all hover:border-[#1b1a1b] hover:bg-op-shaded"
+        className="inline-flex min-h-11 items-center gap-2 rounded-full border border-op-border bg-white px-4.5 py-2.5 text-xs font-semibold text-op-ink shadow-2xs transition-colors hover:border-op-strong hover:bg-op-shaded"
       >
-        <AlertTriangle className="size-3.5 text-[#c2410c]" />
+        <AlertTriangle className="size-3.5 text-op-secondary" />
         <span>Abrir un caso</span>
       </Link>
 
-      {/* Share Button */}
       <button
         type="button"
         onClick={handleCopyLink}
-        className="inline-flex min-h-11 items-center gap-2 rounded-full border border-op-strong bg-white px-4.5 py-2.5 text-xs font-bold text-op-secondary shadow-2xs transition-all hover:border-[#1b1a1b] hover:text-op-ink"
+        className="inline-flex min-h-11 items-center gap-2 rounded-full border border-op-border bg-white px-4.5 py-2.5 text-xs font-semibold text-op-secondary shadow-2xs transition-colors hover:border-op-strong hover:text-op-ink"
         title="Copiar enlace de verificación"
       >
         {copied ? (
           <>
             <Check className="size-3.5 text-[#00b67a]" />
-            <span className="font-bold text-op-green-dark">¡Enlace copiado!</span>
+            <span className="font-semibold text-op-green-dark">¡Enlace copiado!</span>
           </>
         ) : (
           <>
@@ -79,14 +75,6 @@ export function PassportActionButtons({ slug }: Props) {
           No se pudo copiar. Copia el enlace desde la barra de direcciones de tu navegador.
         </p>
       )}
-      {/* Identity section jump */}
-      <a
-        href="#existe"
-        className="inline-flex min-h-11 items-center gap-1.5 px-2 py-2 text-xs font-bold text-op-secondary transition-colors hover:text-op-green-dark"
-      >
-        <ShieldCheck className="size-4 text-[#00b67a]" />
-        <span>Consultar identidad</span>
-      </a>
     </div>
   );
 }

@@ -9,7 +9,6 @@ import { getPostBySlug, getPostSlugs } from '@/lib/blog/posts';
 import { renderMarkdown } from '@/lib/blog/markdown';
 import { buildArticleJsonLd, buildBlogFaqPageJsonLd } from '@/lib/blog/json-ld';
 import { formatBlogDate } from '@/lib/blog/format';
-import '../blog.css';
 
 // Same guarded site-URL pattern as layout.tsx, directorio, sitemap and /b/
 // profiles: a stale fertilitylistings value in the env must never leak into
@@ -80,25 +79,6 @@ export default async function BlogPostPage({ params }: PageProps) {
       <Navbar />
       <main id="contenido" tabIndex={-1} className="flex-1 overflow-hidden rounded-b-[32px] bg-op-canvas pb-16">
         <section className="relative overflow-hidden border-b border-op-border bg-[#fcfbf3]">
-          {/* Trustpilot-inspired animated geometric background shapes */}
-          <svg
-            aria-hidden="true"
-            viewBox="0 0 600 260"
-            className="pointer-events-none absolute right-0 top-0 hidden h-full w-[520px] opacity-80 lg:block"
-          >
-            <g className="animate-op-float">
-              <circle cx="460" cy="40" r="110" fill="#fd791a" />
-              <rect x="290" y="110" width="150" height="150" rx="28" fill="#ffe400" transform="rotate(-12 365 185)" />
-              <path
-                d="M510 110 L590 245 L430 245 Z"
-                fill="#04da8d"
-                stroke="#04da8d"
-                strokeWidth="14"
-                strokeLinejoin="round"
-              />
-            </g>
-          </svg>
-
           <div className="relative z-10 mx-auto max-w-7xl px-4 pb-12 pt-12 sm:px-6 sm:pt-14 lg:px-8">
             <Breadcrumbs
               siteUrl={SITE_URL}
