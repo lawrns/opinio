@@ -20,7 +20,6 @@ import {
   selectDirectoryPage,
 } from '@/lib/directory-pagination';
 import { sharePreview } from '@/lib/share-preview';
-import { meetsEvidenceThreshold } from '@/lib/evidence-threshold';
 
 interface PageProps {
   searchParams: Promise<{ page?: string | string[] }>;
@@ -141,30 +140,47 @@ export default async function DirectorioPage({ searchParams }: PageProps) {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-op-canvas text-op-ink">
+    <div className="flex min-h-screen flex-col bg-[#1b1a1b] text-op-ink">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <Navbar />
 
-      <main id="contenido" tabIndex={-1} className="flex-1">
-        <header className="border-b border-op-border bg-linear-to-b from-[#fcfbf3] via-[#f4faf6] to-white py-10 sm:py-14">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <main id="contenido" tabIndex={-1} className="flex-1 overflow-hidden rounded-b-[32px] bg-op-canvas">
+        <header className="relative overflow-hidden border-b border-op-border bg-[#fcfbf3] py-10 sm:py-14">
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 600 260"
+            className="pointer-events-none absolute right-0 top-0 hidden h-full w-[520px] opacity-85 lg:block"
+          >
+            <g className="animate-op-float">
+              <circle cx="460" cy="40" r="110" fill="#fd791a" />
+              <rect x="290" y="110" width="150" height="150" rx="28" fill="#ffe400" transform="rotate(-12 365 185)" />
+              <path
+                d="M510 110 L590 245 L430 245 Z"
+                fill="#04da8d"
+                stroke="#04da8d"
+                strokeWidth="14"
+                strokeLinejoin="round"
+              />
+            </g>
+          </svg>
+          <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="max-w-3xl">
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-op-green-border bg-white px-3.5 py-1.5 text-xs font-bold uppercase tracking-widest text-op-green-dark shadow-2xs">
-                <ShieldCheck size={15} className="text-[#00b67a]" aria-hidden="true" />
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-op-ink/15 bg-white px-3.5 py-1.5 text-xs font-bold uppercase tracking-widest text-op-ink shadow-2xs">
+                <ShieldCheck size={15} className="text-[#008b5d]" aria-hidden="true" />
                 Catálogo Nacional de Confianza Comercial
               </div>
               <h1 className="text-3xl font-extrabold tracking-[-0.03em] text-op-ink sm:text-5xl">
                 Directorio de Comercios y Tiendas en Línea en México
               </h1>
               <p className="mt-4 text-base leading-relaxed text-op-secondary">
-                Índice de <strong>{index.totalBusinesses.toLocaleString('es-MX')}</strong> comercios con pasaportes públicos. Consulta la información registrada y las fuentes y opiniones disponibles en cada perfil.
+                Índice de <strong>{index.totalBusinesses.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}</strong> comercios con pasaportes públicos. Revisa los datos registrados, las fuentes oficiales y las opiniones de compradores en cada perfil.
               </p>
               <p className="mt-3 font-mono text-xs font-medium text-op-muted">
                 {businesses.length > 0
-                  ? `Mostrando los comercios ${firstResult.toLocaleString('es-MX')}–${lastResult.toLocaleString('es-MX')} de ${index.totalBusinesses.toLocaleString('es-MX')} · Página ${page} de ${index.totalPages}`
+                  ? `Mostrando los comercios ${firstResult.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')} a ${lastResult.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')} de ${index.totalBusinesses.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')} · Página ${page} de ${index.totalPages}`
                   : `Página ${page} de ${index.totalPages}`}
               </p>
             </div>
@@ -218,7 +234,6 @@ export default async function DirectorioPage({ searchParams }: PageProps) {
 
                 <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                   {items.map((b) => {
-                    const hasScore = b.trust_score !== null && Number(b.trust_score) > 0 && meetsEvidenceThreshold(b.verified_reviews_count);
                     return (
                       <Link
                         key={b.id}
@@ -243,20 +258,9 @@ export default async function DirectorioPage({ searchParams }: PageProps) {
                           </div>
                         </div>
 
-                        <div className="mt-4 flex items-center justify-between border-t border-op-border-hairline pt-3 text-xs">
-                          <span className="font-mono text-op-secondary">
-                            {hasScore ? (
-                              <span className="inline-flex items-center rounded-md bg-op-green-soft px-2 py-0.5 font-bold text-op-green-dark">
-                                {Number(b.trust_score).toFixed(1)}
-                                <span className="ml-0.5 text-[10px] font-normal text-op-secondary">/100</span>
-                              </span>
-                            ) : (
-                              <span className="text-[11px] text-op-muted">En auditoría</span>
-                            )}
-                          </span>
-
+                        <div className="mt-4 flex items-center justify-end border-t border-op-border-hairline pt-3 text-xs">
                           <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-op-green-dark transition-transform group-hover:translate-x-0.5">
-                            Ver pasaporte <ArrowRight size={12} />
+                            Ver opiniones <ArrowRight size={12} />
                           </span>
                         </div>
                       </Link>

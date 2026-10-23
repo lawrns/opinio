@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { LinkedText } from '@/components/LinkedText';
-import { ChevronDown, MessageSquare, ShieldCheck, Star } from 'lucide-react';
+import { ChevronDown, MessageSquare, ShieldCheck, Star, ArrowUpRight } from 'lucide-react';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
@@ -37,26 +37,39 @@ export const metadata: Metadata = {
 const steps = [
   {
     Icon: ShieldCheck,
+    number: '01 · EXISTE',
     title: 'Identidad verificable',
     body: (
       <>
-        <Link href="/blog/demostrar-confiabilidad-negocio-mas-alla-estrellas">Tu perfil reúne los datos registrados del negocio</Link>
+        <Link
+          href="/blog/demostrar-confiabilidad-negocio-mas-alla-estrellas"
+          className="font-semibold text-op-green-dark underline decoration-[#008b5d] underline-offset-4 hover:text-op-ink"
+        >
+          Tu perfil reúne los datos registrados del negocio
+        </Link>
         : RFC, CLEE de INEGI, dominio y WhatsApp, con su fuente cuando existe.
       </>
     ),
   },
   {
     Icon: Star,
+    number: '02 · CUMPLE',
     title: 'Opiniones con evidencia',
     body: 'Cada opinión indica su tipo de evidencia y la cobertura compara las invitaciones registradas con los pedidos registrados.',
   },
   {
     Icon: MessageSquare,
+    number: '03 · RESUELVE',
     title: 'Respuestas y casos',
     body: (
       <>
-        <Link href="/blog/responder-resena-negativa-mostrar-resolucion">Tu comercio puede responder opiniones</Link>
-        {' '}y cada caso de atención queda con su seguimiento en el perfil.
+        <Link
+          href="/blog/responder-resena-negativa-mostrar-resolucion"
+          className="font-semibold text-op-green-dark underline decoration-[#008b5d] underline-offset-4 hover:text-op-ink"
+        >
+          Tu comercio puede responder opiniones
+        </Link>{' '}
+        y cada caso de atención queda con su seguimiento en el perfil.
       </>
     ),
   },
@@ -71,17 +84,40 @@ const steps = [
  */
 export default function ResenasYReputacionPage() {
   return (
-    <div className="flex min-h-screen flex-col bg-op-canvas text-op-ink">
+    <div className="flex min-h-screen flex-col bg-[#1b1a1b] text-op-ink">
       <Navbar />
-      <main id="contenido" tabIndex={-1} className="flex-1">
-        <section className="border-b border-op-border bg-op-shaded">
-          <div className="mx-auto max-w-7xl px-4 pb-12 pt-14 sm:px-6 lg:px-8">
-            <Breadcrumbs siteUrl={SITE_URL} items={[
-              { name: 'Inicio', href: '/' },
-              { name: RESENAS_H1, href: RESENAS_PATH },
-            ]} />
-            <p className="op-eyebrow mb-3">Para comercios</p>
-            <h1 className="max-w-4xl text-3xl font-black tracking-[-0.03em] sm:text-4xl lg:text-5xl">
+      <main id="contenido" tabIndex={-1} className="flex-1 overflow-hidden rounded-b-[32px] bg-op-canvas pb-16">
+        <section className="relative overflow-hidden border-b border-op-border bg-[#fcfbf3]">
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 600 280"
+            className="pointer-events-none absolute right-0 top-0 hidden h-full w-[520px] opacity-85 lg:block"
+          >
+            <g className="animate-op-float">
+              <circle cx="460" cy="50" r="110" fill="#fd791a" />
+              <rect x="290" y="120" width="150" height="150" rx="28" fill="#ffe400" transform="rotate(-12 365 195)" />
+              <path
+                d="M510 120 L590 255 L430 255 Z"
+                fill="#04da8d"
+                stroke="#04da8d"
+                strokeWidth="14"
+                strokeLinejoin="round"
+              />
+            </g>
+          </svg>
+          <div className="relative z-10 mx-auto max-w-7xl px-4 pb-12 pt-12 sm:px-6 sm:pt-14 lg:px-8">
+            <Breadcrumbs
+              siteUrl={SITE_URL}
+              items={[
+                { name: 'Inicio', href: '/' },
+                { name: RESENAS_H1, href: RESENAS_PATH },
+              ]}
+            />
+            <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-op-ink/15 bg-white px-3.5 py-1.5 font-mono text-xs font-bold uppercase tracking-widest text-op-ink shadow-2xs">
+              <span className="size-2 rounded-full bg-[#008b5d]" aria-hidden="true" />
+              Para comercios · México
+            </div>
+            <h1 className="mt-4 max-w-4xl text-3xl font-extrabold tracking-[-0.03em] text-[#1b1a1b] sm:text-4xl lg:text-5xl">
               {RESENAS_H1}
             </h1>
             <p className="mt-5 max-w-2xl text-base leading-relaxed text-op-secondary">
@@ -92,15 +128,17 @@ export default function ResenasYReputacionPage() {
             <div className="mt-7 flex flex-wrap items-center gap-3">
               <Link
                 href="/merchant"
+                prefetch={false}
                 data-cta="reputation_merchant_panel"
-                className="inline-flex min-h-11 items-center rounded-full bg-op-action-accent px-6 py-3 text-sm font-semibold text-op-sheet transition-colors hover:bg-op-action-ink"
+                className="inline-flex min-h-11 items-center gap-2 rounded-full bg-[#1b1a1b] px-6 py-3 text-sm font-bold text-white shadow-flat transition-all hover:bg-op-green-dark"
               >
                 Panel para comercios
+                <ArrowUpRight className="size-4" aria-hidden="true" />
               </Link>
               <Link
                 href="/directorio"
                 data-cta="reputation_directory"
-                className="inline-flex min-h-11 items-center rounded-full border border-op-border-strong px-6 py-3 text-sm font-medium"
+                className="inline-flex min-h-11 items-center rounded-full border border-op-strong bg-white px-6 py-3 text-sm font-bold text-op-ink shadow-2xs transition-all hover:border-[#1b1a1b] hover:bg-op-shaded"
               >
                 Ver el directorio
               </Link>
@@ -109,40 +147,61 @@ export default function ResenasYReputacionPage() {
         </section>
 
         <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-          <div className="grid gap-4 md:grid-cols-3">
-            {steps.map(({ Icon, title, body }) => (
-              <div key={title} className="rounded-2xl border border-op-border bg-op-sheet p-6">
-                <Icon aria-hidden="true" className="size-5 text-op-green-dark" />
-                <h2 className="mt-3 text-base font-bold">{title}</h2>
-                <p className="mt-1.5 text-sm leading-relaxed text-op-secondary">{body}</p>
+          <div className="grid gap-6 md:grid-cols-3">
+            {steps.map(({ Icon, number, title, body }) => (
+              <div
+                key={title}
+                className="rounded-2xl border border-op-border bg-white p-6 shadow-flat sm:p-7"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-xs font-bold uppercase tracking-wider text-op-muted">
+                    {number}
+                  </span>
+                  <span className="flex size-10 items-center justify-center rounded-xl border border-op-border bg-[#fcfbf3] text-op-ink">
+                    <Icon aria-hidden="true" className="size-5" />
+                  </span>
+                </div>
+                <h2 className="mt-4 text-xl font-bold tracking-tight text-op-ink">{title}</h2>
+                <p className="mt-2 text-sm leading-relaxed text-op-secondary">{body}</p>
               </div>
             ))}
           </div>
         </section>
 
-        <section className="mx-auto max-w-4xl px-4 pb-16 sm:px-6 lg:px-8">
-          <h2 className="text-2xl font-black tracking-[-0.02em] sm:text-3xl">
-            Preguntas de dueños de negocio
-          </h2>
-          <p className="mt-2 text-sm text-op-secondary">
-            <Link href="/blog" className="underline underline-offset-4 hover:text-op-green-dark">
-              Las dudas más comunes sobre reseñas y reputación en México, respondidas con cómo funciona
-              Opinio.
-            </Link>
-          </p>
-          <div className="mt-6">
-            {RESENAS_FAQ.map((item) => (
-              <details key={item.q} className="group border-b border-op-border">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-5 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-op-green [&::-webkit-details-marker]:hidden">
-                  <span>{item.q}</span>
-                  <ChevronDown
-                    aria-hidden="true"
-                    className="size-4 shrink-0 transition-transform duration-200 group-open:rotate-180 motion-reduce:transition-none"
-                  />
-                </summary>
-                <p className="pb-5 pr-8 text-sm leading-relaxed text-op-secondary"><LinkedText text={item.a} link={item.answerLink} /></p>
-              </details>
-            ))}
+        <section className="mx-auto max-w-4xl px-4 pb-8 sm:px-6 lg:px-8">
+          <div className="rounded-[24px] border border-op-border bg-white p-6 shadow-elevated sm:p-10">
+            <span className="inline-flex items-center gap-2 rounded-full border border-op-border bg-[#fcfbf3] px-3.5 py-1 font-mono text-xs font-bold uppercase tracking-wider text-op-ink">
+              12 preguntas frecuentes · Guía práctica
+            </span>
+            <h2 className="mt-3 text-2xl font-extrabold tracking-[-0.025em] text-op-ink sm:text-3xl">
+              Preguntas de dueños de negocio
+            </h2>
+            <p className="mt-2 text-sm text-op-secondary">
+              <Link
+                href="/blog"
+                className="font-semibold underline decoration-[#00b67a] decoration-2 underline-offset-4 hover:text-op-green-dark"
+              >
+                Las dudas más comunes sobre reseñas y reputación en México, respondidas con cómo funciona Opinio.
+              </Link>
+            </p>
+            <div className="mt-6 divide-y divide-op-border">
+              {RESENAS_FAQ.map((item) => (
+                <details key={item.q} className="group">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-5 text-sm font-bold text-op-ink transition-colors hover:text-op-green-dark focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-op-green [&::-webkit-details-marker]:hidden">
+                    <span>{item.q}</span>
+                    <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[#fcfbf3] text-op-ink transition-colors group-open:bg-[#00b67a] group-open:text-[#1b1a1b]">
+                      <ChevronDown
+                        aria-hidden="true"
+                        className="size-4 shrink-0 transition-transform duration-200 group-open:rotate-180 motion-reduce:transition-none"
+                      />
+                    </span>
+                  </summary>
+                  <p className="pb-5 pr-8 text-sm leading-relaxed text-op-secondary">
+                    <LinkedText text={item.a} link={item.answerLink} />
+                  </p>
+                </details>
+              ))}
+            </div>
           </div>
         </section>
       </main>

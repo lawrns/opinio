@@ -84,16 +84,23 @@ export default async function CasoDetailPage({ params }: PageProps) {
   const verified = await hasCaseProof(caseData.id);
 
   return (
-    <div className="min-h-screen bg-[var(--op-canvas)] text-[var(--op-ink-primary)] flex flex-col font-sans selection:bg-[var(--op-verified-ink)] selection:text-[var(--op-sheet)]">
+    <div className="flex min-h-screen flex-col bg-[#1b1a1b] font-sans text-op-ink selection:bg-op-green-dark selection:text-white">
       <Navbar />
-      <main id="contenido" className="flex-1 py-8 sm:py-12">
+      <main id="contenido" className="flex-1 overflow-hidden rounded-b-[32px] bg-op-canvas pb-16 pt-8 sm:pt-12">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           {verified && (
-            <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--op-border-hairline)] bg-[var(--op-sheet)] p-4 text-sm" data-testid="case-access-verified">
-              <p>Entraste a este caso con el enlace de tu correo. Confirmar una solución todavía no está disponible.</p>
+            <div
+              className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-op-green-border bg-op-green-soft p-4 text-sm text-op-green-dark shadow-2xs"
+              data-testid="case-access-verified"
+            >
+              <p className="font-medium">
+                Entraste a este caso con el enlace de tu correo. Confirmar una solución todavía no está disponible.
+              </p>
               <form method="post" action="/caso/acceso/salir">
                 <input type="hidden" name="caseId" value={caseData.id} />
-                <button type="submit" className="font-bold underline">Salir de este caso</button>
+                <button type="submit" className="font-bold underline hover:text-op-ink">
+                  Salir de este caso
+                </button>
               </form>
             </div>
           )}

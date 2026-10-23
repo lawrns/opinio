@@ -21,14 +21,16 @@ export function StarRating({ rating, size = 'md', label }: { rating: number; siz
             ? '#ff8622'
             : '#ff3722';
 
+  const formatted = Number.isInteger(value) ? String(value) : value.toFixed(1);
+
   return (
     <span
       role="img"
-      aria-label={label || `${value.toLocaleString('es-MX', { maximumFractionDigits: 1 })} de 5 estrellas`}
+      aria-label={label || `${formatted} de 5 estrellas`}
       className="inline-flex shrink-0 items-center gap-1"
     >
       {Array.from({ length: 5 }, (_, index) => {
-        const fillPct = Math.min(1, Math.max(0, value - index)) * 100;
+        const fillPct = Math.round(Math.min(1, Math.max(0, value - index)) * 100);
         return (
           <span
             key={index}
