@@ -149,20 +149,20 @@ export default async function DirectorioPage({ searchParams }: PageProps) {
       <Navbar />
 
       <main id="contenido" tabIndex={-1} className="flex-1">
-        <header className="border-b border-op-border bg-op-sheet py-10 sm:py-14">
+        <header className="border-b border-op-border bg-linear-to-b from-[#fcfbf3] via-[#f4faf6] to-white py-10 sm:py-14">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="max-w-3xl">
-              <p className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-op-green-dark">
-                <ShieldCheck size={16} aria-hidden="true" />
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-op-green-border bg-white px-3.5 py-1.5 text-xs font-bold uppercase tracking-widest text-op-green-dark shadow-2xs">
+                <ShieldCheck size={15} className="text-[#00b67a]" aria-hidden="true" />
                 Catálogo Nacional de Confianza Comercial
-              </p>
-              <h1 className="text-3xl font-semibold tracking-tight sm:text-5xl">
+              </div>
+              <h1 className="text-3xl font-extrabold tracking-[-0.03em] text-op-ink sm:text-5xl">
                 Directorio de Comercios y Tiendas en Línea en México
               </h1>
               <p className="mt-4 text-base leading-relaxed text-op-secondary">
                 Índice de <strong>{index.totalBusinesses.toLocaleString('es-MX')}</strong> comercios con pasaportes públicos. Consulta la información registrada y las fuentes y opiniones disponibles en cada perfil.
               </p>
-              <p className="mt-3 text-sm text-op-muted">
+              <p className="mt-3 font-mono text-xs font-medium text-op-muted">
                 {businesses.length > 0
                   ? `Mostrando los comercios ${firstResult.toLocaleString('es-MX')}–${lastResult.toLocaleString('es-MX')} de ${index.totalBusinesses.toLocaleString('es-MX')} · Página ${page} de ${index.totalPages}`
                   : `Página ${page} de ${index.totalPages}`}
@@ -181,10 +181,10 @@ export default async function DirectorioPage({ searchParams }: PageProps) {
                         ? `#${sectionId}`
                         : `${directoryPageHref(category.firstPage)}#${sectionId}`
                     }
-                    className="inline-flex min-h-10 items-center gap-2 rounded-full border border-op-border bg-op-canvas px-3.5 text-xs font-medium text-op-secondary hover:border-op-blue hover:text-op-blue-dark transition-colors"
+                    className="inline-flex min-h-10 items-center gap-2 rounded-full border border-op-border bg-white px-3.5 text-xs font-semibold text-op-secondary shadow-2xs transition-all hover:border-[#00b67a] hover:bg-op-green-soft hover:text-op-green-dark"
                   >
                     <span>{category.name}</span>
-                    <span className="rounded-full bg-op-shaded px-2 py-0.5 text-[11px] font-mono font-bold text-op-ink">
+                    <span className="rounded-full bg-op-shaded px-2 py-0.5 font-mono text-[11px] font-bold text-op-ink">
                       {category.count}
                     </span>
                   </a>
@@ -194,20 +194,22 @@ export default async function DirectorioPage({ searchParams }: PageProps) {
           </div>
         </header>
 
-        <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 space-y-16">
+        <div className="mx-auto max-w-7xl space-y-16 px-4 py-12 sm:px-6 lg:px-8">
           {sections.map(({ category, items }) => {
             const sectionId = categorySectionId(category.name);
             const isPartial = items.length < category.count;
             return (
               <section key={category.name} id={sectionId} className="scroll-mt-24">
-                <div className="flex items-center justify-between border-b border-op-border pb-4 mb-6">
+                <div className="mb-6 flex items-center justify-between border-b border-op-border pb-4">
                   <div className="flex items-center gap-3">
-                    <Store className="size-6 text-op-blue" aria-hidden="true" />
-                    <h2 className="text-2xl font-semibold tracking-tight">
+                    <span className="flex size-9 items-center justify-center rounded-xl bg-op-green-soft text-op-green-dark">
+                      <Store className="size-5" aria-hidden="true" />
+                    </span>
+                    <h2 className="text-2xl font-bold tracking-tight text-op-ink">
                       {category.name}
                     </h2>
                   </div>
-                  <span className="text-sm font-mono text-op-secondary">
+                  <span className="rounded-full border border-op-border bg-white px-3 py-1 font-mono text-xs font-semibold text-op-secondary">
                     {isPartial
                       ? `${items.length} de ${category.count} comercios`
                       : `${category.count} ${category.count === 1 ? 'comercio' : 'comercios'}`}
@@ -222,7 +224,7 @@ export default async function DirectorioPage({ searchParams }: PageProps) {
                         key={b.id}
                         href={`/b/${encodeURIComponent(b.slug)}`}
                         data-cta="directory_open_passport"
-                        className="group flex flex-col justify-between rounded-xl border border-op-border bg-op-sheet p-4 shadow-flat hover:border-op-blue-border hover:shadow-md transition-all"
+                        className="group flex flex-col justify-between rounded-2xl border border-op-border bg-white p-4.5 shadow-flat transition-all duration-200 hover:-translate-y-0.5 hover:border-[#00b67a] hover:shadow-elevated"
                       >
                         <div className="flex items-start gap-3">
                           <BrandLogo
@@ -232,10 +234,10 @@ export default async function DirectorioPage({ searchParams }: PageProps) {
                             sizeClass="size-10"
                           />
                           <div className="min-w-0 flex-1">
-                            <h3 className="text-sm font-bold text-op-ink group-hover:text-op-blue transition-colors truncate">
+                            <h3 className="truncate text-sm font-bold text-op-ink transition-colors group-hover:text-op-green-dark">
                               {b.brand_name}
                             </h3>
-                            <p className="text-xs text-op-muted truncate">
+                            <p className="truncate text-xs text-op-muted">
                               {b.operating_area || 'México'}
                             </p>
                           </div>
@@ -244,16 +246,16 @@ export default async function DirectorioPage({ searchParams }: PageProps) {
                         <div className="mt-4 flex items-center justify-between border-t border-op-border-hairline pt-3 text-xs">
                           <span className="font-mono text-op-secondary">
                             {hasScore ? (
-                              <span className="font-bold text-op-ink">
+                              <span className="inline-flex items-center rounded-md bg-op-green-soft px-2 py-0.5 font-bold text-op-green-dark">
                                 {Number(b.trust_score).toFixed(1)}
-                                <span className="text-[10px] font-normal text-op-muted"> / 100</span>
+                                <span className="ml-0.5 text-[10px] font-normal text-op-secondary">/100</span>
                               </span>
                             ) : (
-                              'En auditoría'
+                              <span className="text-[11px] text-op-muted">En auditoría</span>
                             )}
                           </span>
 
-                          <span className="inline-flex items-center gap-1 font-semibold text-op-blue text-[11px] group-hover:translate-x-0.5 transition-transform">
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-op-green-dark transition-transform group-hover:translate-x-0.5">
                             Ver pasaporte <ArrowRight size={12} />
                           </span>
                         </div>

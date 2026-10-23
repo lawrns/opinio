@@ -8,7 +8,7 @@ import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { BrandLogo } from '@/components/BrandLogo';
 import { PassportReviewsList, ReviewItem } from '@/components/passport/PassportReviewsList';
-import { StarRating } from '@/components/StarRating';
+import { StarRating, ratingSentimentLabel } from '@/components/StarRating';
 import { PassportActionButtons } from '@/components/passport/PassportActionButtons';
 import { TrustGauge } from '@/components/passport/TrustGauge';
 import { OfficialRecordCard } from '@/components/passport/OfficialRecordCard';
@@ -426,8 +426,23 @@ export default async function BusinessPassportPage({ params }: PageProps) {
                   </p>
                 </div>
 
-                <a href="#opiniones" className="inline-flex min-h-12 flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-[var(--op-action-border)] bg-[var(--op-action-tint)] px-4 py-3 text-sm text-[var(--op-action-ink)]">
-                  {averageRating !== null ? <><StarRating rating={averageRating} size="sm" /><span className="font-semibold">{averageRating.toLocaleString('es-MX', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} de 5</span><span className="underline underline-offset-4">{reviews.length.toLocaleString('es-MX')} {reviews.length === 1 ? 'opinión' : 'opiniones'}</span></> : <span>Este negocio todavía no tiene opiniones</span>}
+                <a href="#opiniones" className="inline-flex min-h-12 flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border border-op-green-border bg-[#fcfbf3] px-4 py-3 text-sm text-op-ink shadow-2xs transition-colors hover:border-[#00b67a]">
+                  {averageRating !== null ? (
+                    <>
+                      <StarRating rating={averageRating} size="sm" />
+                      <span className="rounded-md bg-op-green-soft px-2 py-0.5 text-xs font-bold text-op-green-dark">
+                        {ratingSentimentLabel(averageRating)}
+                      </span>
+                      <span className="font-mono font-bold">
+                        {averageRating.toLocaleString('es-MX', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} de 5
+                      </span>
+                      <span className="font-semibold text-op-green-dark underline underline-offset-4">
+                        {reviews.length.toLocaleString('es-MX')} {reviews.length === 1 ? 'opinión' : 'opiniones'}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-op-secondary">Este negocio todavía no tiene opiniones</span>
+                  )}
                 </a>
 
                 {business.description && (

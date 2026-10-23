@@ -1,52 +1,486 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowUpRight, ArrowRight, Fingerprint, Receipt, ChatsCircle } from '@phosphor-icons/react/dist/ssr';
+import { ArrowUpRight, ArrowRight, Fingerprint, Receipt, ChatsCircle, ShieldCheck, CheckCircle } from '@phosphor-icons/react/dist/ssr';
 import type { Business } from '@/lib/types';
 import { meetsEvidenceThreshold } from '@/lib/evidence-threshold';
 import { BrandLogo } from '@/components/BrandLogo';
-import { StarRating } from '@/components/StarRating';
+import { StarRating, ratingSentimentLabel } from '@/components/StarRating';
 import { HomeSearch } from './HomeSearch';
 
+interface IllustrativePassport {
+  id: string;
+  name: string;
+  domain: string;
+  category: string;
+  score: number;
+  rating: number;
+  reviewsCount: string;
+  rfc: string;
+  coveragePct: number;
+  ordersLabel: string;
+  resuelveTitle: string;
+  resuelveBadge: string;
+  resuelveTone: 'green' | 'amber';
+  quote: string;
+  quoteAuthor: string;
+  receiptCode: string;
+}
+
+const ILLUSTRATIVE_PASSPORTS: IllustrativePassport[] = [
+  {
+    id: 'nogal',
+    name: 'Casa Nogal',
+    domain: 'casanogal.mx · Muebles y diseño',
+    category: 'Muebles',
+    score: 86,
+    rating: 4.6,
+    reviewsCount: '1,248 opiniones',
+    rfc: 'CNO210415KA9 · Guadalajara, JAL',
+    coveragePct: 93.9,
+    ordersLabel: '13,911 invitados / 14,821 órdenes',
+    resuelveTitle: '18 de 19 casos confirmados',
+    resuelveBadge: '3.2 d prom.',
+    resuelveTone: 'green',
+    quote: '“Llegó con un rasguño; en 4 días repusieron la pieza y confirmé el cierre.”',
+    quoteAuthor: 'Mariana G. · Guadalajara',
+    receiptCode: 'Orden #MX-4821 · Compra verificada',
+  },
+  {
+    id: 'altura',
+    name: 'Café Altura',
+    domain: 'cafealtura.mx · Tostadores de especialidad',
+    category: 'Restaurantes',
+    score: 91,
+    rating: 4.8,
+    reviewsCount: '842 opiniones',
+    rfc: 'CAL190812P41 · Córdoba, VER',
+    coveragePct: 97.2,
+    ordersLabel: '9,140 invitados / 9,403 órdenes',
+    resuelveTitle: '7 de 7 casos confirmados',
+    resuelveBadge: '1.4 d prom.',
+    resuelveTone: 'green',
+    quote: '“Tostado fresco con lote trazable; el envío llegó al día siguiente.”',
+    quoteAuthor: 'Rodrigo V. · CDMX',
+    receiptCode: 'Orden #MX-9104 · Compra verificada',
+  },
+  {
+    id: 'lumen',
+    name: 'Óptica Lumen',
+    domain: 'opticalumen.mx · Salud visual',
+    category: 'Salud',
+    score: 74,
+    rating: 4.1,
+    reviewsCount: '319 opiniones',
+    rfc: 'OLU200304M18 · Monterrey, NL',
+    coveragePct: 68.4,
+    ordersLabel: '2,120 invitados / 3,100 órdenes',
+    resuelveTitle: '5 de 8 casos confirmados',
+    resuelveBadge: '3 abiertos',
+    resuelveTone: 'amber',
+    quote: '“Tardaron en ajustar la graduación, pero el caso quedó registrado hasta resolverse.”',
+    quoteAuthor: ' Sofía L. · Monterrey',
+    receiptCode: 'Orden #MX-3092 · Seguimiento activo',
+  },
+];
+
 export function TrustGraphHero({ business }: { business?: Business }) {
-  const score = business && meetsEvidenceThreshold(business.verified_reviews_count) ? Number(business.trust_score).toLocaleString('es-MX', { maximumFractionDigits: 1 }) : 'Sin dato';
+  const [activeIdx, setActiveIdx] = useState(0);
+  const [paused, setPaused] = useState(false);
+
+  useEffect(() => {
+    if (business || paused) return;
+    const timer = setInterval(() => {
+      setActiveIdx((prev) => (prev + 1) % ILLUSTRATIVE_PASSPORTS.length);
+    }, 4600);
+    return () => clearInterval(timer);
+  }, [business, paused]);
+
+  const sample = ILLUSTRATIVE_PASSPORTS[activeIdx];
+  const score =
+    business && meetsEvidenceThreshold(business.verified_reviews_count)
+      ? Number(business.trust_score).toLocaleString('es-MX', { maximumFractionDigits: 1 })
+      : 'Sin dato';
+
+  const gaugeValue = business
+    ? meetsEvidenceThreshold(business.verified_reviews_count)
+      ? Math.min(100, Math.max(0, Number(business.trust_score) || 0))
+      : 0
+    : sample.score;
+
+  const gaugeColor = gaugeValue >= 80 ? '#00b67a' : gaugeValue >= 60 ? '#f59e0b' : '#94a3b8';
+
   return (
-    <section className="border-b border-op-border">
-      <div className="op-container grid items-center gap-12 py-12 md:py-16 lg:grid-cols-[1.2fr_0.85fr] lg:gap-20 lg:py-20">
+    <section className="relative overflow-hidden border-b border-op-border bg-linear-to-b from-[#fcfbf3] via-[#f4faf6] to-op-canvas">
+      {/* Subtle ambient background radials */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -top-32 right-0 h-[520px] w-[520px] rounded-full bg-[#00b67a]/8 blur-3xl"
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute bottom-0 left-1/4 h-[360px] w-[360px] rounded-full bg-[#2563eb]/5 blur-3xl"
+      />
+
+      <div className="op-container relative grid items-center gap-12 py-12 md:py-16 lg:grid-cols-[1.08fr_0.92fr] lg:gap-14 lg:py-20">
+        {/* Left Column: Editorial Headline + Pill Search + Trust Strip */}
         <div>
-          <p className="op-eyebrow mb-6">Opiniones con contexto. Compras con confianza.</p>
-          <h1 className="max-w-2xl text-[clamp(2.75rem,5vw,4.5rem)] font-bold leading-[1.04] tracking-[-0.04em]">Antes de comprar,<br />conoce a quién<br /><span className="text-op-green-dark">le compras.</span></h1>
-          <p className="mb-8 mt-6 max-w-lg text-base leading-relaxed text-op-secondary">Consulta opiniones, revisa la evidencia y descubre cómo responde un comercio cuando algo sale mal.</p>
+          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-op-green-border bg-white/90 px-3.5 py-1.5 shadow-2xs">
+            <span className="size-2 rounded-full bg-[#00b67a]" aria-hidden="true" />
+            <span className="font-mono text-[11px] font-bold uppercase tracking-[0.1em] text-op-green-dark">
+              El pasaporte de confianza · México / MX
+            </span>
+          </div>
+
+          <h1 className="max-w-2xl text-[clamp(2.5rem,4.8vw,4.15rem)] font-extrabold leading-[1.04] tracking-[-0.038em] text-op-ink">
+            Antes de comprar,
+            <br />
+            conoce a quién{' '}
+            <span className="relative inline-block text-op-green-dark">
+              le compras.
+              <span
+                aria-hidden="true"
+                className="absolute inset-x-0 bottom-1 -z-10 h-2.5 rounded-xs bg-[#00b67a]/20"
+              />
+            </span>
+          </h1>
+
+          <p className="mb-8 mt-5 max-w-[540px] text-[17px] leading-[1.58] text-op-secondary">
+            Consulta opiniones reales, revisa el denominador de pedidos registrados y descubre cómo responde un comercio cuando algo sale mal.
+          </p>
+
           <HomeSearch />
-        </div>
-        <div className="relative min-w-0">
-          <div className="mb-3 flex items-center justify-between px-1 text-xs font-medium text-op-muted"><span>EL PASAPORTE DE CONFIANZA</span><span>MÉXICO / MX</span></div>
-          <div className="overflow-hidden rounded-op-card border border-op-strong bg-op-sheet shadow-elevated">
-            <div className="flex items-center justify-between border-b border-op-border bg-op-green-soft px-6 py-3 text-xs font-medium text-op-green-dark"><span>La evidencia, a la vista</span><span className="font-mono">OP / 01</span></div>
-            <div className="p-6 sm:p-8">
-              {business ? <>
-                <div className="flex items-start justify-between gap-5">
-                  <div className="flex min-w-0 items-start gap-3">
-                    <BrandLogo name={business.brand_name} src={business.logo_url} category={business.category} />
-                    <div className="min-w-0">
-                      <p className="text-xs text-op-muted">Un comercio del directorio</p>
-                      <h2 className="mt-2 text-2xl font-semibold tracking-tight">{business.brand_name}</h2>
-                      <p className="mt-1 break-words text-sm text-op-muted">{business.domain || business.category}</p>
-                    </div>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="font-mono text-4xl font-medium tracking-tight text-op-green-dark">{score}</p>
-                    <p className="mt-1 text-xs text-op-muted">Puntaje Opinio / 100</p>
-                  </div>
-                </div>
-                {Number(business.review_count) > 0 && business.average_rating != null && <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2"><StarRating rating={Number(business.average_rating)} size="sm" /><span className="text-sm font-semibold">{Number(business.average_rating).toLocaleString('es-MX', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} / 5</span><span className="text-xs text-op-secondary">{Number(business.review_count).toLocaleString('es-MX')} opiniones</span></div>}
-                <div className="my-6 h-1.5 overflow-hidden rounded-full bg-op-shaded" aria-hidden="true"><div className="h-full rounded-full bg-op-green" style={{ width: `${meetsEvidenceThreshold(business.verified_reviews_count) ? Math.min(100, Math.max(0, Number(business.trust_score) || 0)) : 0}%` }} /></div>
-              </> : <div className="mb-6"><h2 className="text-2xl font-semibold tracking-tight"><Link href="/blog" className="underline underline-offset-4 hover:text-op-green-dark">Más que una calificación.</Link></h2><p className="mt-2 text-sm leading-relaxed text-op-secondary">Tres preguntas para conocer mejor a un comercio.</p></div>}
-              <div className="divide-y divide-op-border">
-                {[{ icon: Fingerprint, name: 'Quién vende', detail: business?.legal_name || 'Identidad y datos del comercio', label: 'EXISTE' }, { icon: Receipt, name: 'Cómo cumple', detail: business && business.observed_orders_count > 0 ? `${Number(business.coverage_percentage).toLocaleString('es-MX')}% de compradores invitados a opinar` : 'Opiniones y evidencia de compra', label: 'CUMPLE' }, { icon: ChatsCircle, name: 'Cómo responde', detail: 'Casos y seguimiento de soluciones', label: 'RESUELVE' }].map(({ icon: Icon, name, detail, label }) => <div key={label} className="flex items-start gap-3 py-4"><span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-op-green-soft text-op-green-dark"><Icon aria-hidden="true" className="size-5" weight="duotone" /></span><div className="min-w-0 flex-1"><h3 className="text-sm font-semibold">{name}</h3><p className="mt-1 text-xs leading-relaxed text-op-muted">{detail}</p></div><span className="pt-1 text-xs font-medium tracking-wider text-op-muted">{label}</span></div>)}
+
+          {/* Trustpilot-style 3-pillar summary strip under search */}
+          <div className="mt-8 grid grid-cols-3 gap-3 border-t border-op-border/80 pt-6 sm:gap-5">
+            <div>
+              <div className="flex items-center gap-1.5 font-mono text-[11px] font-bold uppercase tracking-wider text-op-blue-dark">
+                <span className="size-1.5 rounded-full bg-op-blue" aria-hidden="true" />
+                01 · Existe
               </div>
-              <Link href={business ? `/b/${business.slug}` : '/verificar'} data-cta="home_explore_directory" className="mt-5 flex min-h-12 items-center justify-between rounded-op-control bg-op-ink px-4 text-sm font-medium text-op-sheet transition-colors hover:bg-op-green-dark">{business ? 'Consultar este pasaporte' : 'Explorar el directorio'}<ArrowUpRight aria-hidden="true" className="size-4" /></Link>
+              <p className="mt-1 text-xs leading-snug text-op-secondary">
+                Razón social y canales públicos o verificados.
+              </p>
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5 font-mono text-[11px] font-bold uppercase tracking-wider text-op-green-dark">
+                <span className="size-1.5 rounded-full bg-[#00b67a]" aria-hidden="true" />
+                02 · Cumple
+              </div>
+              <p className="mt-1 text-xs leading-snug text-op-secondary">
+                Cobertura sobre pedidos registrados.
+              </p>
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5 font-mono text-[11px] font-bold uppercase tracking-wider text-op-peach">
+                <span className="size-1.5 rounded-full bg-op-peach" aria-hidden="true" />
+                03 · Resuelve
+              </div>
+              <p className="mt-1 text-xs leading-snug text-op-secondary">
+                Casos cerrados con confirmación del cliente.
+              </p>
             </div>
           </div>
-          <p className="mt-4 flex items-start gap-2 px-1 text-xs leading-relaxed text-op-muted"><ArrowRight aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />Cada dato cuenta una parte. Consulta las fuentes y el alcance en el perfil.</p>
+        </div>
+
+        {/* Right Column: Interactive Passport Showcase Card with Concentric Rings */}
+        <div
+          className="relative min-w-0 lg:py-4"
+          onMouseEnter={() => setPaused(true)}
+          onMouseLeave={() => setPaused(false)}
+        >
+          {/* Concentric pulsing rings from Opinio Home v3 */}
+          <div
+            aria-hidden="true"
+            className="animate-op-ring pointer-events-none absolute -inset-4 hidden rounded-[28px] border border-[#00b67a]/25 sm:block"
+          />
+          <div
+            aria-hidden="true"
+            className="animate-op-ring-delayed pointer-events-none absolute -inset-8 hidden rounded-[34px] border border-[#00b67a]/15 lg:block"
+          />
+
+          {/* Floating Verified Purchase Badge (Top Right) */}
+          {!business && (
+            <div className="animate-op-float mb-3 flex items-center justify-between gap-2 rounded-xl border border-op-border bg-white/95 px-3.5 py-2 shadow-elevated backdrop-blur-xs sm:absolute sm:-right-3 sm:-top-3 sm:z-20 sm:mb-0">
+              <div className="flex items-center gap-2">
+                <span className="flex size-6 items-center justify-center rounded-full bg-op-green-soft text-op-green-dark">
+                  <CheckCircle aria-hidden="true" className="size-4" weight="fill" />
+                </span>
+                <div>
+                  <p className="text-[11px] font-bold text-op-ink">Evidencia de compra</p>
+                  <p className="font-mono text-[10px] text-op-muted">{sample.receiptCode}</p>
+                </div>
+              </div>
+              <span className="rounded-full bg-op-shaded px-2 py-0.5 font-mono text-[10px] font-semibold text-op-muted">
+                Ejemplo ilustrativo
+              </span>
+            </div>
+          )}
+
+          {/* Main Passport Card */}
+          <div className="relative z-10 overflow-hidden rounded-[20px] border border-op-strong bg-white shadow-hero">
+            {/* Top Passport Ribbon */}
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-op-border bg-[#0f1d1a] px-5 py-3 text-xs text-white">
+              <div className="flex items-center gap-2">
+                <span className="animate-op-blink size-2 rounded-full bg-[#00b67a]" aria-hidden="true" />
+                <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-white/90">
+                  Pasaporte Opinio · MX
+                </span>
+              </div>
+              {!business ? (
+                <div className="flex items-center gap-1" role="tablist" aria-label="Ejemplos ilustrativos de pasaporte">
+                  {ILLUSTRATIVE_PASSPORTS.map((item, idx) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={activeIdx === idx}
+                      onClick={() => setActiveIdx(idx)}
+                      className={`rounded-full px-2.5 py-0.5 font-mono text-[10px] font-medium transition-colors ${
+                        activeIdx === idx
+                          ? 'bg-[#00b67a] text-[#0f1d1a] font-bold'
+                          : 'bg-white/10 text-white/75 hover:bg-white/20'
+                      }`}
+                    >
+                      {item.name}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <span className="font-mono text-[11px] text-white/70">OP / PERFIL</span>
+              )}
+            </div>
+
+            {/* Fictional Example Disclaimer Strip when showing illustrative data */}
+            {!business && (
+              <div className="flex items-center justify-between border-b border-op-border bg-[#fcfbf3] px-5 py-2 font-mono text-[10px] tracking-wider text-op-muted">
+                <span className="font-semibold uppercase text-op-secondary">
+                  Ejemplo ilustrativo · Datos ficticios
+                </span>
+                <span>CADA PERFIL MUESTRA QUÉ EVIDENCIA ESTÁ DISPONIBLE</span>
+              </div>
+            )}
+
+            <div className="p-6 sm:p-7">
+              {business ? (
+                <>
+                  <div className="flex items-start justify-between gap-5">
+                    <div className="flex min-w-0 items-start gap-3.5">
+                      <BrandLogo name={business.brand_name} src={business.logo_url} category={business.category} priority />
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium text-op-muted">Un comercio del directorio</p>
+                        <h2 className="mt-1 text-2xl font-bold tracking-tight text-op-ink">{business.brand_name}</h2>
+                        <p className="mt-0.5 break-words text-xs text-op-muted">{business.domain || business.category}</p>
+                      </div>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <p className="font-mono text-4xl font-bold tracking-tight text-op-green-dark">{score}</p>
+                      <p className="mt-1 text-[11px] font-medium text-op-muted">Puntaje Opinio / 100</p>
+                    </div>
+                  </div>
+                  {Number(business.review_count) > 0 && business.average_rating != null && (
+                    <div className="mt-4 flex flex-wrap items-center gap-x-2.5 gap-y-1.5 rounded-xl bg-op-shaded px-3.5 py-2.5">
+                      <StarRating rating={Number(business.average_rating)} size="sm" />
+                      <span className="text-sm font-bold text-op-ink">
+                        {ratingSentimentLabel(Number(business.average_rating))}
+                      </span>
+                      <span className="font-mono text-sm font-semibold text-op-secondary">
+                        {Number(business.average_rating).toLocaleString('es-MX', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} / 5
+                      </span>
+                      <span className="text-xs text-op-muted">
+                        · {Number(business.review_count).toLocaleString('es-MX')} opiniones
+                      </span>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  {/* Illustrative Merchant Header with Conic Score Gauge */}
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex min-w-0 items-start gap-3.5">
+                      <BrandLogo name={sample.name} category={sample.category} priority />
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <h2 className="text-xl font-bold tracking-tight text-op-ink sm:text-2xl">{sample.name}</h2>
+                          <span className="inline-flex items-center gap-1 rounded-full bg-op-green-soft px-2 py-0.5 text-[11px] font-semibold text-op-green-dark">
+                            <ShieldCheck aria-hidden="true" className="size-3.5" weight="fill" />
+                            Identidad
+                          </span>
+                        </div>
+                        <p className="mt-0.5 truncate font-mono text-xs text-op-muted">{sample.domain}</p>
+                        <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                          <StarRating rating={sample.rating} size="sm" />
+                          <span className="text-xs font-bold text-op-ink">{ratingSentimentLabel(sample.rating)}</span>
+                          <span className="font-mono text-xs font-semibold text-op-secondary">{sample.rating.toFixed(1)}</span>
+                          <span className="text-xs text-op-muted">({sample.reviewsCount})</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Conic Score Gauge from Opinio Home v3 */}
+                    <div className="flex shrink-0 flex-col items-center">
+                      <div
+                        className="relative flex size-16 items-center justify-center rounded-full p-1.5"
+                        style={{
+                          background: `conic-gradient(${gaugeColor} ${gaugeValue * 3.6}deg, #e2e8e4 0deg)`,
+                        }}
+                      >
+                        <div className="flex size-full flex-col items-center justify-center rounded-full bg-white">
+                          <span className="font-mono text-xl font-extrabold leading-none tracking-tight text-op-ink">
+                            {gaugeValue}
+                          </span>
+                          <span className="font-mono text-[9px] font-semibold uppercase text-op-muted">/100</span>
+                        </div>
+                      </div>
+                      <span className="mt-1 font-mono text-[10px] font-medium text-op-muted">Puntaje</span>
+                    </div>
+                  </div>
+
+                  {/* Required SEO anchor link & context subtitle */}
+                  <div className="mt-5 flex flex-wrap items-baseline justify-between gap-2 rounded-xl border border-op-border bg-[#fcfbf3] px-4 py-2.5">
+                    <p className="text-xs font-semibold text-op-ink">
+                      <Link href="/blog" className="underline decoration-[#00b67a] decoration-2 underline-offset-4 hover:text-op-green-dark">
+                        Más que una calificación.
+                      </Link>{' '}
+                      <span className="font-normal text-op-secondary">Tres pilares para evaluar a cada comercio:</span>
+                    </p>
+                  </div>
+                </>
+              )}
+
+              {/* 3 Pillars Inside the Passport Card */}
+              <div className="mt-4 divide-y divide-op-border rounded-xl border border-op-border bg-op-canvas/60 px-4">
+                {/* 01 EXISTE */}
+                <div className="flex items-center justify-between gap-3 py-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-op-blue-soft text-op-blue-dark">
+                      <Fingerprint aria-hidden="true" className="size-4.5" weight="duotone" />
+                    </span>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-op-blue-dark">
+                          01 · Existe
+                        </span>
+                        <span className="text-xs font-semibold text-op-ink">Quién vende</span>
+                      </div>
+                      <p className="truncate font-mono text-[11px] text-op-muted">
+                        {business ? business.legal_name || 'Identidad y datos del comercio' : sample.rfc}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="shrink-0 rounded-full border border-op-blue-border bg-op-blue-soft px-2.5 py-0.5 font-mono text-[10px] font-semibold text-op-blue-dark">
+                    SAT · DENUE
+                  </span>
+                </div>
+
+                {/* 02 CUMPLE */}
+                <div className="py-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-op-green-soft text-op-green-dark">
+                        <Receipt aria-hidden="true" className="size-4.5" weight="duotone" />
+                      </span>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-op-green-dark">
+                            02 · Cumple
+                          </span>
+                          <span className="text-xs font-semibold text-op-ink">Cómo cumple</span>
+                        </div>
+                        <p className="truncate font-mono text-[11px] text-op-muted">
+                          {business && business.observed_orders_count > 0
+                            ? `${Number(business.coverage_percentage).toLocaleString('es-MX')}% de compradores invitados a opinar`
+                            : sample.ordersLabel}
+                        </p>
+                      </div>
+                    </div>
+                    <span className="shrink-0 rounded-full border border-op-green-border bg-op-green-soft px-2.5 py-0.5 font-mono text-[11px] font-bold text-op-green-dark">
+                      {business && business.observed_orders_count > 0
+                        ? `${Number(business.coverage_percentage).toLocaleString('es-MX')}%`
+                        : `${sample.coveragePct}%`}
+                    </span>
+                  </div>
+                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-op-inset" aria-hidden="true">
+                    <div
+                      className="h-full rounded-full bg-[#00b67a] transition-all duration-500"
+                      style={{
+                        width: `${
+                          business
+                            ? meetsEvidenceThreshold(business.verified_reviews_count)
+                              ? Math.min(100, Math.max(0, Number(business.coverage_percentage) || 0))
+                              : 0
+                            : sample.coveragePct
+                        }%`,
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* 03 RESUELVE */}
+                <div className="flex items-center justify-between gap-3 py-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-op-peach-soft text-op-peach">
+                      <ChatsCircle aria-hidden="true" className="size-4.5" weight="duotone" />
+                    </span>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-op-peach">
+                          03 · Resuelve
+                        </span>
+                        <span className="text-xs font-semibold text-op-ink">Cómo responde</span>
+                      </div>
+                      <p className="truncate text-[11px] text-op-muted">
+                        {business ? 'Casos y seguimiento de soluciones' : sample.resuelveTitle}
+                      </p>
+                    </div>
+                  </div>
+                  <span
+                    className={`shrink-0 rounded-full border px-2.5 py-0.5 font-mono text-[10px] font-semibold ${
+                      !business && sample.resuelveTone === 'amber'
+                        ? 'border-amber-300 bg-amber-50 text-amber-800'
+                        : 'border-op-green-border bg-op-green-soft text-op-green-dark'
+                    }`}
+                  >
+                    {business ? 'Bilateral' : sample.resuelveBadge}
+                  </span>
+                </div>
+              </div>
+
+              {/*Illustrative Customer Quote Strip */}
+              {!business && (
+                <div className="mt-4 rounded-xl border border-op-border bg-white px-4 py-3 shadow-2xs">
+                  <p className="text-xs italic leading-relaxed text-op-secondary">{sample.quote}</p>
+                  <div className="mt-1.5 flex items-center justify-between text-[11px] text-op-muted">
+                    <span className="font-semibold text-op-ink">{sample.quoteAuthor}</span>
+                    <span className="font-mono text-[10px] text-op-green-dark">Resolución confirmada</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Bottom CTA + Stamp */}
+              <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+                <span className="inline-flex items-center gap-1.5 rounded-md border-[1.5px] border-op-green-dark/80 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-op-green-dark -rotate-1">
+                  <span className="size-1.5 rounded-full bg-[#00b67a]" aria-hidden="true" />
+                  Verificado Opinio · MX
+                </span>
+
+                <Link
+                  href={business ? `/b/${business.slug}` : '/verificar'}
+                  data-cta="home_explore_directory"
+                  className="inline-flex min-h-11 flex-1 items-center justify-between gap-3 rounded-full bg-op-ink px-5 py-2.5 text-sm font-semibold text-white transition-all hover:bg-op-green-dark sm:flex-initial"
+                >
+                  <span>{business ? 'Consultar este pasaporte' : 'Explorar el directorio'}</span>
+                  <ArrowUpRight aria-hidden="true" className="size-4" />
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          <p className="mt-3.5 flex items-start gap-2 px-1 text-xs leading-relaxed text-op-muted">
+            <ArrowRight aria-hidden="true" className="mt-0.5 size-3.5 shrink-0 text-op-green-dark" />
+            Cada dato cuenta una parte. Consulta las fuentes y el alcance en el perfil real de cada comercio.
+          </p>
         </div>
       </div>
     </section>
