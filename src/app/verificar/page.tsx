@@ -375,7 +375,7 @@ function VerificarContent() {
               {searchTerm ? `No encontramos “${searchTerm}” con estos filtros` : 'No hay negocios con estos filtros'}
             </h2>
             <p className="mt-3 text-sm leading-relaxed text-op-secondary">
-              Prueba otro nombre o amplía la categoría, la calificación y el filtro de pedidos. Que un negocio no aparezca aquí no determina si es confiable.
+              Prueba otro nombre o amplía la categoría, la calificación y el filtro de pedidos. Si un negocio aún no aparece aquí, puedes buscarlo por su dominio o RFC.
             </p>
             <button type="button" onClick={clearFilters} className="op-button mt-6">
               Explorar todos los negocios
@@ -384,7 +384,7 @@ function VerificarContent() {
         )}
       </section>
       <p className="mt-8 max-w-3xl text-xs leading-relaxed text-op-muted">
-        Las estrellas muestran el promedio de las opiniones publicadas. El puntaje Opinio sobre 100 es un indicador distinto que toma en cuenta los datos disponibles del negocio. Ni una calificación ni la presencia en el directorio garantizan una compra.
+        Las estrellas muestran el promedio de las opiniones publicadas. El puntaje Opinio sobre 100 es un indicador independiente que suma los datos registrados del negocio. Revisa las fuentes de cada perfil antes de comprar.
       </p>
     </div>
   );
@@ -392,9 +392,9 @@ function VerificarContent() {
 
 export default function VerificarPage() {
   return (
-    <div className="flex min-h-screen flex-col bg-op-canvas text-op-ink">
+    <div className="flex min-h-screen flex-col bg-[#1b1a1b] text-op-ink">
       <Navbar />
-      <main id="contenido" tabIndex={-1} className="flex-1">
+      <main id="contenido" tabIndex={-1} className="flex-1 overflow-hidden rounded-b-[32px] bg-op-canvas">
         <Suspense fallback={<p role="status" className="p-12 text-center">Cargando directorio…</p>}>
           <VerificarContent />
         </Suspense>

@@ -371,14 +371,14 @@ export default async function BusinessPassportPage({ params }: PageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--op-canvas)] text-[var(--op-ink-primary)] flex flex-col font-sans selection:bg-[var(--op-verified-ink)] selection:text-[var(--op-sheet)]">
+    <div className="min-h-screen bg-[#1b1a1b] text-[var(--op-ink-primary)] flex flex-col font-sans selection:bg-[var(--op-verified-ink)] selection:text-[var(--op-sheet)]">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}
       />
       <Navbar />
 
-      <main id="contenido" tabIndex={-1} className="flex-1 pb-20">
+      <main id="contenido" tabIndex={-1} className="flex-1 overflow-hidden rounded-b-[32px] bg-[var(--op-canvas)] pb-20">
         {/* ========================================================================= */}
         {/* 1. CERTIFIED FINANCIAL CREDENTIAL HEADER (SECTION 10 COMPLIANCE)          */}
         {/* ========================================================================= */}

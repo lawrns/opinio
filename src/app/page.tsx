@@ -3,7 +3,6 @@ import { TrustGraphHero } from '@/components/home/TrustGraphHero';
 import { ProofBentoGrid } from '@/components/home/ProofBentoGrid';
 import { CategoryBar } from '@/components/home/CategoryBar';
 import { ConnectedPipeline } from '@/components/home/ConnectedPipeline';
-import { Brand } from '@/components/Brand';
 import { Footer } from '@/components/Footer';
 import { Navbar } from '@/components/Navbar';
 import { sharePreview } from '@/lib/share-preview';
@@ -15,7 +14,8 @@ import { sharePreview } from '@/lib/share-preview';
 const baseUrl = 'https://opinio.mx';
 
 const HOME_TITLE = 'Opinio México — Pasaporte de Confianza Comercial';
-const HOME_DESCRIPTION = 'Antes de comprar, conoce a quién le compras. Verifica identidad, cumplimiento y resolución de comercios en México.';
+const HOME_DESCRIPTION =
+  'Antes de comprar, conoce a quién le compras. Verifica identidad, cumplimiento y resolución de comercios en México.';
 
 export const metadata: Metadata = {
   title: HOME_TITLE,
@@ -26,9 +26,6 @@ export const metadata: Metadata = {
   ...sharePreview({ title: HOME_TITLE, description: HOME_DESCRIPTION, url: '/' }),
 };
 
-// Opinio's own identity only: name, URL and logo agree with the visible brand
-// (navbar/footer "opinio.mx", document title, /opinio.svg). No address, phone,
-// hours or merchant data — the platform has no published physical location.
 const jsonLd = {
   '@context': 'https://schema.org',
   '@graph': [
@@ -39,7 +36,8 @@ const jsonLd = {
       alternateName: 'Opinio.mx',
       url: baseUrl,
       logo: `${baseUrl}/opinio.svg`,
-      description: 'Antes de comprar, conoce a quién le compras. Verifica identidad, cumplimiento y resolución de comercios en México.',
+      description:
+        'Antes de comprar, conoce a quién le compras. Verifica identidad, cumplimiento y resolución de comercios en México.',
     },
     {
       '@type': 'WebSite',
@@ -56,19 +54,20 @@ const jsonLd = {
 
 export default function HomePage() {
   return (
-    <>
+    <div className="min-h-screen bg-[#1b1a1b]">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <Navbar />
-      <main>
+      {/* Reverse-engineered Trustpilot curvedWrapper (rounded-b-[32px] over dark footer) */}
+      <main id="contenido" className="overflow-hidden rounded-b-[32px] bg-op-canvas pb-4">
         <TrustGraphHero />
         <CategoryBar />
         <ProofBentoGrid />
         <ConnectedPipeline />
       </main>
       <Footer />
-    </>
+    </div>
   );
 }

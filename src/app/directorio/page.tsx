@@ -141,18 +141,37 @@ export default async function DirectorioPage({ searchParams }: PageProps) {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-op-canvas text-op-ink">
+    <div className="flex min-h-screen flex-col bg-[#1b1a1b] text-op-ink">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <Navbar />
 
-      <main id="contenido" tabIndex={-1} className="flex-1">
-        <header className="border-b border-op-border bg-linear-to-b from-[#fcfbf3] via-[#f4faf6] to-white py-10 sm:py-14">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <main id="contenido" tabIndex={-1} className="flex-1 overflow-hidden rounded-b-[32px] bg-op-canvas">
+        <header className="relative overflow-hidden border-b border-op-border bg-[#fcfbf3] py-10 sm:py-14">
+          {/* Trustpilot-inspired animated geometric background shapes */}
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 600 260"
+            className="pointer-events-none absolute right-0 top-0 hidden h-full w-[520px] opacity-85 lg:block"
+          >
+            <g className="animate-op-float">
+              <circle cx="460" cy="40" r="110" fill="#fd791a" />
+              <rect x="290" y="110" width="150" height="150" rx="28" fill="#ffe400" transform="rotate(-12 365 185)" />
+              <path
+                d="M510 110 L590 245 L430 245 Z"
+                fill="#04da8d"
+                stroke="#04da8d"
+                strokeWidth="14"
+                strokeLinejoin="round"
+              />
+            </g>
+          </svg>
+
+          <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="max-w-3xl">
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-op-green-border bg-white px-3.5 py-1.5 text-xs font-bold uppercase tracking-widest text-op-green-dark shadow-2xs">
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-op-ink/15 bg-white px-3.5 py-1.5 text-xs font-bold uppercase tracking-widest text-op-ink shadow-2xs">
                 <ShieldCheck size={15} className="text-[#00b67a]" aria-hidden="true" />
                 Catálogo Nacional de Confianza Comercial
               </div>
@@ -160,11 +179,11 @@ export default async function DirectorioPage({ searchParams }: PageProps) {
                 Directorio de Comercios y Tiendas en Línea en México
               </h1>
               <p className="mt-4 text-base leading-relaxed text-op-secondary">
-                Índice de <strong>{index.totalBusinesses.toLocaleString('es-MX')}</strong> comercios con pasaportes públicos. Consulta la información registrada y las fuentes y opiniones disponibles en cada perfil.
+                Índice de <strong>{index.totalBusinesses.toLocaleString('es-MX')}</strong> comercios con pasaportes públicos. Revisa los datos registrados, las fuentes oficiales y las opiniones de compradores en cada perfil.
               </p>
               <p className="mt-3 font-mono text-xs font-medium text-op-muted">
                 {businesses.length > 0
-                  ? `Mostrando los comercios ${firstResult.toLocaleString('es-MX')}–${lastResult.toLocaleString('es-MX')} de ${index.totalBusinesses.toLocaleString('es-MX')} · Página ${page} de ${index.totalPages}`
+                  ? `Mostrando los comercios ${firstResult.toLocaleString('es-MX')} a ${lastResult.toLocaleString('es-MX')} de ${index.totalBusinesses.toLocaleString('es-MX')} · Página ${page} de ${index.totalPages}`
                   : `Página ${page} de ${index.totalPages}`}
               </p>
             </div>
