@@ -178,14 +178,14 @@ export function CasePortalClient({ initialCase, initialMessages }: Props) {
       </div>
 
       {/* Main Header & Status Banner */}
-      <div className="rounded-3xl border border-[var(--op-border-hairline)] bg-[var(--op-sheet)] p-6 sm:p-8 shadow-xs space-y-6">
+      <div className="rounded-3xl border border-t-4 border-[var(--op-border-hairline)] border-t-[#fd791a] bg-[var(--op-sheet)] p-6 sm:p-8 shadow-elevated space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[var(--op-border-hairline)]">
           <div>
             <div className="flex flex-wrap items-center gap-2 mb-2">
-              <span className="font-mono text-xs font-bold text-[var(--op-ink-primary)] bg-[var(--op-canvas)] px-2.5 py-1 rounded-md border border-[var(--op-border-hairline)]">
+              <span className="font-mono text-xs font-bold text-white bg-[#1b1a1b] px-3 py-1 rounded-full">
                 {caseData.case_number}
               </span>
-              <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border ${statusInfo.badgeClass}`}>
+              <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold border ${statusInfo.badgeClass}`}>
                 {statusInfo.label}
               </span>
             </div>

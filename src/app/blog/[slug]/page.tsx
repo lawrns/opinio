@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, ArrowLeft, ShieldCheck } from 'lucide-react';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
@@ -75,54 +76,88 @@ export default async function BlogPostPage({ params }: PageProps) {
   const afterFaqHtml = renderMarkdown(post.afterFaqMarkdown);
 
   return (
-    <div className="flex min-h-screen flex-col bg-op-canvas text-op-ink">
+    <div className="flex min-h-screen flex-col bg-[#1b1a1b] text-op-ink">
       <Navbar />
-      <main id="contenido" tabIndex={-1} className="flex-1">
-        <section className="border-b border-op-border bg-op-shaded">
-          <div className="mx-auto max-w-7xl px-4 pb-12 pt-14 sm:px-6 lg:px-8">
-            <Breadcrumbs siteUrl={SITE_URL} items={[
-              { name: 'Inicio', href: '/' },
-              { name: 'Blog', href: '/blog' },
-              { name: post.title, href: `/blog/${post.slug}` },
-            ]} />
-            <h1 className="max-w-4xl text-3xl font-black tracking-[-0.03em] sm:text-4xl lg:text-5xl">
+      <main id="contenido" tabIndex={-1} className="flex-1 overflow-hidden rounded-b-[32px] bg-op-canvas pb-16">
+        <section className="relative overflow-hidden border-b border-op-border bg-[#fcfbf3]">
+          {/* Trustpilot-inspired animated geometric background shapes */}
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 600 260"
+            className="pointer-events-none absolute right-0 top-0 hidden h-full w-[520px] opacity-80 lg:block"
+          >
+            <g className="animate-op-float">
+              <circle cx="460" cy="40" r="110" fill="#fd791a" />
+              <rect x="290" y="110" width="150" height="150" rx="28" fill="#ffe400" transform="rotate(-12 365 185)" />
+              <path
+                d="M510 110 L590 245 L430 245 Z"
+                fill="#04da8d"
+                stroke="#04da8d"
+                strokeWidth="14"
+                strokeLinejoin="round"
+              />
+            </g>
+          </svg>
+
+          <div className="relative z-10 mx-auto max-w-7xl px-4 pb-12 pt-12 sm:px-6 sm:pt-14 lg:px-8">
+            <Breadcrumbs
+              siteUrl={SITE_URL}
+              items={[
+                { name: 'Inicio', href: '/' },
+                { name: 'Blog', href: '/blog' },
+                { name: post.title, href: `/blog/${post.slug}` },
+              ]}
+            />
+            <h1 className="mt-3 max-w-4xl text-3xl font-extrabold tracking-[-0.03em] text-[#1b1a1b] sm:text-4xl lg:text-5xl">
               {post.title}
             </h1>
-            <p className="font-data mt-5 text-xs font-medium uppercase tracking-[0.08em] text-op-muted">
-              {formatBlogDate(post.date)} · Opinio.mx
-            </p>
+            <div className="mt-5 flex flex-wrap items-center gap-3">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-op-border bg-white px-3.5 py-1 font-data text-xs font-semibold uppercase tracking-[0.08em] text-op-ink shadow-2xs">
+                <ShieldCheck className="size-3.5 text-[#00b67a]" aria-hidden="true" />
+                {formatBlogDate(post.date)} · Opinio.mx
+              </span>
+              <Link
+                href="/blog"
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-op-green-dark hover:underline"
+              >
+                <ArrowLeft className="size-3.5" aria-hidden="true" />
+                Todas las guías
+              </Link>
+            </div>
           </div>
         </section>
 
         <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-          {/* Repo-authored markdown; rendered at build time from content/blog. */}
-          <div className="op-article" dangerouslySetInnerHTML={{ __html: html }} />
+          <div className="rounded-[24px] border border-op-border bg-white p-6 shadow-elevated sm:p-10 lg:p-12">
+            {/* Repo-authored markdown; rendered at build time from content/blog. */}
+            <div className="op-article" dangerouslySetInnerHTML={{ __html: html }} />
 
-          {post.faqs.length > 0 && (
-            <div className="op-article mt-12">
-              <h2>Preguntas frecuentes</h2>
-              <div className="mt-2">
-                {post.faqs.map((item) => (
-                  <details key={item.q} className="group border-b border-op-border">
-                    <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-5 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-op-green [&::-webkit-details-marker]:hidden">
-                      <span>{item.q}</span>
-                      <ChevronDown
-                        aria-hidden="true"
-                        className="size-4 shrink-0 transition-transform duration-200 group-open:rotate-180 motion-reduce:transition-none"
+            {post.faqs.length > 0 && (
+              <div className="op-article mt-12 rounded-2xl border border-op-border bg-[#fcfbf3] p-6 sm:p-8">
+                <h2>Preguntas frecuentes</h2>
+                <div className="mt-2 divide-y divide-op-border">
+                  {post.faqs.map((item) => (
+                    <details key={item.q} className="group">
+                      <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-5 text-sm font-bold text-op-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-op-green [&::-webkit-details-marker]:hidden">
+                        <span>{item.q}</span>
+                        <ChevronDown
+                          aria-hidden="true"
+                          className="size-4 shrink-0 transition-transform duration-200 group-open:rotate-180 motion-reduce:transition-none"
+                        />
+                      </summary>
+                      <p
+                        className="pb-5 pr-8 text-sm leading-relaxed text-op-secondary"
+                        dangerouslySetInnerHTML={{ __html: item.aHtml }}
                       />
-                    </summary>
-                    <p
-                      className="pb-5 pr-8 text-sm leading-relaxed text-op-secondary"
-                      dangerouslySetInnerHTML={{ __html: item.aHtml }}
-                    />
-                  </details>
-                ))}
+                    </details>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
-          {afterFaqHtml && (
-            <div className="op-article mt-12" dangerouslySetInnerHTML={{ __html: afterFaqHtml }} />
-          )}
+            )}
+            {afterFaqHtml && (
+              <div className="op-article mt-12" dangerouslySetInnerHTML={{ __html: afterFaqHtml }} />
+            )}
+          </div>
         </section>
       </main>
       <Footer />

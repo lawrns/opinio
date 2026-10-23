@@ -122,20 +122,48 @@ function VerificarContent() {
     : `${totalResults.toLocaleString('es-MX')} ${totalResults === 1 ? 'negocio encontrado' : 'negocios encontrados'}`;
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
-      <div className="mb-8 max-w-2xl">
-        <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-op-green-border bg-white px-3.5 py-1.5 text-xs font-bold uppercase tracking-widest text-op-green-dark shadow-2xs">
-          <ShieldCheck size={15} className="text-[#00b67a]" aria-hidden="true" /> Directorio de negocios en México
+    <div>
+      <section className="relative overflow-hidden border-b border-op-border bg-[#fcfbf3] py-12 sm:py-16">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-12 -top-10 hidden select-none lg:block"
+        >
+          <svg width="260" height="220" viewBox="0 0 260 220" fill="none">
+            <circle cx="190" cy="64" r="46" fill="#fd791a" className="animate-op-float" />
+            <rect
+              x="76"
+              y="72"
+              width="78"
+              height="78"
+              rx="18"
+              transform="rotate(-10 76 72)"
+              fill="#ffe400"
+              className="animate-op-float-delayed"
+            />
+            <path
+              d="M172 120C176 112 188 112 192 120L226 182C230 190 224 200 215 200H149C140 200 134 190 138 182L172 120Z"
+              fill="#04da8d"
+            />
+          </svg>
         </div>
-        <h1 className="text-3xl font-extrabold tracking-[-0.03em] text-op-ink sm:text-5xl">
-          {writeReview ? 'Tu experiencia empieza con un nombre.' : 'Conoce el negocio antes de comprar.'}
-        </h1>
-        <p className="mt-4 text-base leading-relaxed text-op-secondary">
-          {writeReview
-            ? 'Encuentra el negocio correcto para compartir tu opinión. Comprueba su nombre y dominio antes de continuar.'
-            : 'Compara calificaciones, lee experiencias y conoce los datos detrás de cada negocio.'}
-        </p>
-      </div>
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="max-w-2xl">
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-op-green-border bg-white px-3.5 py-1.5 text-xs font-bold uppercase tracking-widest text-op-green-dark shadow-2xs">
+              <ShieldCheck size={15} className="text-[#00b67a]" aria-hidden="true" /> Directorio de negocios en México
+            </div>
+            <h1 className="text-3xl font-extrabold tracking-[-0.03em] text-op-ink sm:text-5xl">
+              {writeReview ? 'Tu experiencia empieza con un nombre.' : 'Conoce el negocio antes de comprar.'}
+            </h1>
+            <p className="mt-4 text-base leading-relaxed text-op-secondary">
+              {writeReview
+                ? 'Encuentra el negocio correcto para compartir tu opinión. Comprueba su nombre y dominio antes de continuar.'
+                : 'Compara calificaciones, lee experiencias y conoce los datos detrás de cada negocio.'}
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
 
       <section aria-label="Buscar y filtrar negocios" className="mb-8 rounded-3xl border border-op-border bg-white p-5 shadow-elevated sm:p-7">
         <label htmlFor="business-search" className="mb-2.5 block text-sm font-semibold text-op-ink">
@@ -386,6 +414,7 @@ function VerificarContent() {
       <p className="mt-8 max-w-3xl text-xs leading-relaxed text-op-muted">
         Las estrellas muestran el promedio de las opiniones publicadas. El puntaje Opinio sobre 100 es un indicador independiente que suma los datos registrados del negocio. Revisa las fuentes de cada perfil antes de comprar.
       </p>
+      </div>
     </div>
   );
 }

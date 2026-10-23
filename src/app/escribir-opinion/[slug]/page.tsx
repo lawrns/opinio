@@ -1,10 +1,13 @@
 import React from 'react';
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { ArrowLeft, PenLine } from 'lucide-react';
 import { query } from '@/lib/db';
 import { sharePreview } from '@/lib/share-preview';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
+import { BrandLogo } from '@/components/BrandLogo';
 import { ReviewFormWizard } from './ReviewFormWizard';
 
 interface BusinessRow {
@@ -87,10 +90,54 @@ export default async function EscribirOpinionPage({ params }: PageProps) {
   const business = res.rows[0];
 
   return (
-    <div className="min-h-screen bg-[var(--op-canvas)] text-[var(--op-ink-primary)] flex flex-col font-sans selection:bg-[var(--op-verified-ink)] selection:text-[var(--op-sheet)]">
+    <div className="flex min-h-screen flex-col bg-[#1b1a1b] font-sans text-op-ink selection:bg-op-green-dark selection:text-white">
       <Navbar />
-      <main id="contenido" className="flex-1 py-10 sm:py-16">
-        <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+      <main id="contenido" className="flex-1 overflow-hidden rounded-b-[32px] bg-op-canvas pb-16">
+        {/* Trustpilot-inspired Cream Hero Header */}
+        <section className="relative overflow-hidden border-b border-op-border bg-[#fcfbf3] py-10 sm:py-12">
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 600 260"
+            className="pointer-events-none absolute right-0 top-0 hidden h-full w-[520px] opacity-80 lg:block"
+          >
+            <g className="animate-op-float">
+              <circle cx="460" cy="40" r="110" fill="#fd791a" />
+              <rect x="290" y="110" width="150" height="150" rx="28" fill="#ffe400" transform="rotate(-12 365 185)" />
+              <path
+                d="M510 110 L590 245 L430 245 Z"
+                fill="#04da8d"
+                stroke="#04da8d"
+                strokeWidth="14"
+                strokeLinejoin="round"
+              />
+            </g>
+          </svg>
+
+          <div className="relative z-10 mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+            <Link
+              href={`/b/${business.slug}`}
+              className="mb-4 inline-flex items-center gap-1.5 text-xs font-bold text-op-secondary transition-colors hover:text-op-green-dark"
+            >
+              <ArrowLeft className="size-4" />
+              <span>Volver al pasaporte de {business.brand_name}</span>
+            </Link>
+
+            <div className="flex items-center gap-4">
+              <BrandLogo name={business.brand_name} category={business.category} sizeClass="size-14 sm:size-16" priority />
+              <div>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#b2f8cc] px-3 py-0.5 font-mono text-xs font-bold text-[#0a2e1d]">
+                  <PenLine className="size-3.5" />
+                  Comparte tu experiencia
+                </span>
+                <p className="mt-1 font-mono text-xs text-op-muted">
+                  {business.domain || business.legal_name || business.category}
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:px-8">
           <ReviewFormWizard
             businessId={business.id}
             slug={business.slug}
