@@ -83,7 +83,7 @@ export function Footer() {
           </nav>
         </div>
         <div className="mt-12 flex flex-col justify-between gap-4 border-t border-white/12 pt-6 text-xs leading-relaxed text-white/60 sm:flex-row sm:items-center">
-          <p>© {new Date().getFullYear()} Opinio.mx · Todos los derechos reservados.</p>
+          <p suppressHydrationWarning>© {new Date().getFullYear()} Opinio.mx · Todos los derechos reservados.</p>
           <p className="max-w-2xl">
             Plataforma privada e independiente de PROFECO, SAT e INEGI. Cada perfil reúne los datos registrados hasta la fecha de consulta.
           </p>

@@ -378,7 +378,7 @@ export function TrustGraphHero({ business }: { business?: Business }) {
                         <div
                           className="relative flex size-16 items-center justify-center rounded-full p-1.5"
                           style={{
-                            background: `conic-gradient(${gaugeColor} ${gaugeValue * 3.6}deg, #e2e8e4 0deg)`,
+                            background: `conic-gradient(${gaugeColor} ${Math.round(gaugeValue * 36) / 10}deg, #e2e8e4 0deg)`,
                           }}
                         >
                           <div className="flex size-full flex-col items-center justify-center rounded-full bg-white">

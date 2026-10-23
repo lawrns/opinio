@@ -52,10 +52,10 @@ export function CategoryBar({ counts }: { counts?: CategoryCount[] }) {
     const el = scrollRef.current;
     if (!el) return;
     const onScroll = () => {
+      const canScroll = el.scrollWidth > el.clientWidth + 4;
       setAtStart(el.scrollLeft <= 4);
-      setAtEnd(el.scrollLeft + el.clientWidth >= el.scrollWidth - 4);
+      setAtEnd(!canScroll || el.scrollLeft + el.clientWidth >= el.scrollWidth - 4);
     };
-    onScroll();
     el.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', onScroll);
     return () => {
@@ -81,7 +81,7 @@ export function CategoryBar({ counts }: { counts?: CategoryCount[] }) {
             disabled={atStart}
             aria-label="Desplazar categorías hacia atrás"
             data-scroll-back-button="true"
-            className="inline-flex size-10 items-center justify-center rounded-full border border-op-strong bg-white text-op-ink transition-all hover:border-[#1b1a1b] hover:bg-op-shaded disabled:opacity-35"
+            className="inline-flex size-10 items-center justify-center rounded-full border border-op-strong bg-white text-op-ink transition-all hover:border-[#1b1a1b] hover:bg-op-shaded disabled:opacity-35 lg:hidden"
           >
             <ArrowLeft aria-hidden="true" className="size-4.5" weight="bold" />
           </button>
@@ -91,7 +91,7 @@ export function CategoryBar({ counts }: { counts?: CategoryCount[] }) {
             disabled={atEnd}
             aria-label="Desplazar categorías hacia adelante"
             data-scroll-forward-button="true"
-            className="inline-flex size-10 items-center justify-center rounded-full border border-op-strong bg-white text-op-ink transition-all hover:border-[#1b1a1b] hover:bg-op-shaded disabled:opacity-35"
+            className="inline-flex size-10 items-center justify-center rounded-full border border-op-strong bg-white text-op-ink transition-all hover:border-[#1b1a1b] hover:bg-op-shaded disabled:opacity-35 lg:hidden"
           >
             <ArrowRight aria-hidden="true" className="size-4.5" weight="bold" />
           </button>
@@ -107,18 +107,18 @@ export function CategoryBar({ counts }: { counts?: CategoryCount[] }) {
 
       {/* Horizontal Carousel with Left/Right Shadow Panels (Trustpilot styles_carouselContainer__U8y2A) */}
       <div className="relative">
-        {!atStart && (
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-y-0 left-0 z-10 w-10 bg-linear-to-r from-op-canvas to-transparent"
-          />
-        )}
-        {!atEnd && (
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-linear-to-l from-op-canvas to-transparent"
-          />
-        )}
+        <div
+          aria-hidden="true"
+          className={`pointer-events-none absolute inset-y-0 left-0 z-10 w-10 bg-linear-to-r from-op-canvas to-transparent transition-opacity duration-200 lg:hidden ${
+            atStart ? 'opacity-0' : 'opacity-100'
+          }`}
+        />
+        <div
+          aria-hidden="true"
+          className={`pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-linear-to-l from-op-canvas to-transparent transition-opacity duration-200 lg:hidden ${
+            atEnd ? 'opacity-0' : 'opacity-100'
+          }`}
+        />
 
         <div
           ref={scrollRef}

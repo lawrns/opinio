@@ -548,7 +548,7 @@ export function ProofBentoGrid() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 lg:hidden">
             <button
               type="button"
               onClick={() => scrollReviews('back')}
