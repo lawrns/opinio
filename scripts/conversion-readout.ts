@@ -30,7 +30,7 @@ async function main() {
     const reconcile = await client.query(
       `SELECT (SELECT COUNT(*) FROM reviews WHERE status = 'published' AND created_at >= NOW() - ($1 || ' days')::interval)::int AS published_reviews,
               (SELECT COUNT(*) FROM conversion_stage_events WHERE stage = 'milestone_review_published' AND occurred_at >= NOW() - ($1 || ' days')::interval)::int AS ledger_rows,
-              COALESCE(
+              LEAST(
                 (SELECT MIN(activated_at) FROM conversion_watermarks WHERE stage = 'milestone_review_published'),
                 (SELECT MIN(LEAST(occurred_at, created_at)) FROM conversion_stage_events WHERE source = 'live')
               )::text AS watermark_since`,

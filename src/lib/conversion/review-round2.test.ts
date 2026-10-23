@@ -6,8 +6,9 @@
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import pg from 'pg';
+import { startDatabase, type TestDatabase } from '@/test/e2e/harness';
 
 vi.mock('@/lib/db', () => ({ query: vi.fn(), withTransaction: vi.fn() }));
 
@@ -158,11 +159,24 @@ describe('browser withdrawal queue', () => {
   });
 });
 
-const url = process.env.CONVERSION_TEST_DATABASE_URL;
+const envUrl = process.env.CONVERSION_TEST_DATABASE_URL;
+let embeddedDb: TestDatabase | null = null;
+let dbUrl = envUrl ?? '';
 
-describe.skipIf(!url)('a send in flight at withdrawal (real Postgres)', () => {
+beforeAll(async () => {
+  if (!dbUrl) {
+    embeddedDb = await startDatabase(['src/lib/schema.sql']);
+    dbUrl = embeddedDb.url;
+  }
+}, 120_000);
+
+afterAll(async () => {
+  await embeddedDb?.stop();
+});
+
+describe('a send in flight at withdrawal (real Postgres)', () => {
   it('keeps its real outcome, loses its analytics ID, and a failed attempt is never retried', async () => {
-    const db = new pg.Client({ connectionString: url });
+    const db = new pg.Client({ connectionString: dbUrl });
     await db.connect();
     let n = 0;
     let release!: (outcome: 'sent' | 'failed') => void;

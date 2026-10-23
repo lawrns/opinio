@@ -98,13 +98,39 @@ function fakePg(
         identities.set(key, {
           entity_type: params[0],
           entity_id: params[1],
-          analytics_id: params[2],
+          analytics_id: isRevoked && params[7] ? params[7] : params[2],
           journey_id: isGranted ? jId : null,
           consent_state: isGranted ? 'granted' : 'denied',
           first_touch: isGranted && params[5] ? JSON.parse(String(params[5])) : null,
           last_touch: isGranted && params[6] ? JSON.parse(String(params[6])) : null,
           created_at: now.toISOString(),
         });
+      }
+      return { rows: [] };
+    }
+    if (sql.startsWith("UPDATE conversion_identities i SET consent_state = 'denied', journey_id = NULL, first_touch = NULL, last_touch = NULL WHERE i.entity_type = $1")) {
+      const idRow = identities.get(`${params[0]}:${params[1]}`);
+      const reqJ = params[2] ? String(params[2]) : null;
+      const idJ = idRow?.journey_id ? String(idRow.journey_id) : null;
+      if (idRow && idRow.consent_state !== 'denied' && ((idJ && withdrawn.has(idJ)) || (reqJ && withdrawn.has(reqJ)))) {
+        idRow.consent_state = 'denied';
+        idRow.journey_id = null;
+        idRow.first_touch = null;
+        idRow.last_touch = null;
+        return { rows: [{ consent_state: 'denied' }] };
+      }
+      return { rows: [] };
+    }
+    if (sql.startsWith("UPDATE conversion_identities i SET consent_state = 'denied', journey_id = NULL, first_touch = NULL, last_touch = NULL FROM conversion_stage_events e")) {
+      const row = byEvent(params[0]);
+      if (row) {
+        const idRow = identities.get(`${row.entity_type}:${row.entity_id}`);
+        if (idRow) {
+          idRow.consent_state = 'denied';
+          idRow.journey_id = null;
+          idRow.first_touch = null;
+          idRow.last_touch = null;
+        }
       }
       return { rows: [] };
     }
@@ -226,10 +252,10 @@ function fakePg(
       }
       return { rows: [] };
     }
-    if (sql.includes("SET delivery_state = 'pending', delivery_attempts = delivery_attempts - 1")) {
+    if (sql.includes("SET delivery_state = CASE WHEN consent_state = 'granted' THEN 'pending' ELSE 'skipped_consent' END")) {
       const row = byEvent(params[0])!;
-      row.delivery_state = 'pending';
-      row.delivery_attempts = Number(row.delivery_attempts) - 1;
+      row.delivery_state = row.consent_state === 'granted' ? 'pending' : 'skipped_consent';
+      row.delivery_attempts = Math.max(Number(row.delivery_attempts) - 1, 0);
       return { rows: [] };
     }
     if (sql.includes('SET delivery_state = $2')) {
@@ -250,7 +276,7 @@ function fakePg(
       return { rows: [] };
     }
     if (sql.includes("WHERE delivery_state = 'sending' AND last_attempt_at")) return { rows: [] };
-    if (sql.startsWith('SELECT COALESCE(')) {
+    if (sql.startsWith('SELECT LEAST(')) {
       const wm = watermarks.get('milestone_review_published');
       const live = [...stages.values()]
         .filter((s) => s.source === 'live')
@@ -260,7 +286,8 @@ function fakePg(
           return occ < cre ? occ : cre;
         })
         .sort();
-      return { rows: [{ since: wm ?? live[0] ?? null }] };
+      const candidates = [wm, live[0]].filter((v): v is string => Boolean(v)).sort();
+      return { rows: [{ since: candidates[0] ?? null }] };
     }
     if (sql.startsWith('SELECT r.id, r.created_at FROM reviews r')) {
       return { rows: (options.reviews ?? []).filter((r) => r.status === 'published' && r.created_at >= String(params[0]) && !stages.has(`review:${r.id}:milestone_review_published`)) };

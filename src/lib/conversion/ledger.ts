@@ -74,14 +74,17 @@ export function defaultDeps(): Deps {
 /**
  * Persists an explicit activation watermark for `milestone_review_published`
  * so reconciliation can recover lost initial live writes even before any
- * `source = 'live'` stage row succeeds. Never moves an existing watermark
- * forward.
+ * `source = 'live'` stage row succeeds. Requires an explicit, evidence-backed
+ * activation timestamp and never moves an existing watermark forward.
  */
 export async function activateConversionLedger(
-  activatedAt?: Date,
-  deps: Pick<Deps, 'query' | 'now'> = defaultDeps(),
+  activatedAt: Date,
+  deps: Pick<Deps, 'query'> = defaultDeps(),
 ): Promise<string> {
-  const since = (activatedAt ?? deps.now()).toISOString();
+  if (!(activatedAt instanceof Date) || Number.isNaN(activatedAt.getTime())) {
+    throw new Error('activateConversionLedger requires a valid explicit Date');
+  }
+  const since = activatedAt.toISOString();
   const res = await deps.query<{ since: string }>(
     `INSERT INTO conversion_watermarks (stage, activated_at)
      VALUES ('milestone_review_published', $1)
@@ -105,7 +108,8 @@ export async function recordMilestone(input: RecordInput, deps: Deps = defaultDe
     const touch = granted ? input.context.attribution : null;
 
     // An identity per entity; a consented browser journey links to the visitor's analytics ID.
-    let analyticsId = newOpaqueId('acct', deps.randomUUID);
+    const freshAnalyticsId = newOpaqueId('acct', deps.randomUUID);
+    let analyticsId = freshAnalyticsId;
     if (granted && requestedJourneyId) {
       const prior = await deps.query<{ analytics_id: string }>(
         `SELECT analytics_id FROM conversion_identities
@@ -118,20 +122,42 @@ export async function recordMilestone(input: RecordInput, deps: Deps = defaultDe
     }
     await deps.query(
       `INSERT INTO conversion_identities (entity_type, entity_id, analytics_id, journey_id, consent_state, first_touch, last_touch)
-       SELECT $1, $2, $3,
+       SELECT $1, $2,
+              CASE WHEN $4::varchar IS NOT NULL AND EXISTS (SELECT 1 FROM conversion_withdrawn_journeys w WHERE w.journey_id = $4) THEN $8 ELSE $3 END,
               CASE WHEN $4::varchar IS NOT NULL AND EXISTS (SELECT 1 FROM conversion_withdrawn_journeys w WHERE w.journey_id = $4) THEN NULL ELSE $4 END,
               CASE WHEN $5 = 'granted' AND ($4::varchar IS NULL OR NOT EXISTS (SELECT 1 FROM conversion_withdrawn_journeys w WHERE w.journey_id = $4)) THEN 'granted' ELSE 'denied' END,
               CASE WHEN $5 = 'granted' AND ($4::varchar IS NULL OR NOT EXISTS (SELECT 1 FROM conversion_withdrawn_journeys w WHERE w.journey_id = $4)) THEN $6::jsonb ELSE NULL END,
               CASE WHEN $5 = 'granted' AND ($4::varchar IS NULL OR NOT EXISTS (SELECT 1 FROM conversion_withdrawn_journeys w WHERE w.journey_id = $4)) THEN $7::jsonb ELSE NULL END
        ON CONFLICT (entity_type, entity_id) DO NOTHING`,
       [input.entityType, input.entityId, analyticsId, requestedJourneyId, granted ? 'granted' : 'denied',
-        touch?.firstTouch ? JSON.stringify(touch.firstTouch) : null, touch?.lastTouch ? JSON.stringify(touch.lastTouch) : null],
+        touch?.firstTouch ? JSON.stringify(touch.firstTouch) : null, touch?.lastTouch ? JSON.stringify(touch.lastTouch) : null, freshAnalyticsId],
     );
     const identity = (await deps.query<IdentityRow>(
       'SELECT analytics_id, journey_id, consent_state, first_touch, last_touch FROM conversion_identities WHERE entity_type = $1 AND entity_id = $2',
       [input.entityType, input.entityId],
     )).rows[0];
     if (!identity) return { status: 'error' };
+
+    if (identity.consent_state !== 'denied') {
+      const scrubbed = await deps.query<{ consent_state: 'denied' }>(
+        `UPDATE conversion_identities i
+            SET consent_state = 'denied', journey_id = NULL, first_touch = NULL, last_touch = NULL
+          WHERE i.entity_type = $1 AND i.entity_id = $2
+            AND i.consent_state <> 'denied'
+            AND (
+              (i.journey_id IS NOT NULL AND EXISTS (SELECT 1 FROM conversion_withdrawn_journeys w WHERE w.journey_id = i.journey_id))
+              OR ($3::varchar IS NOT NULL AND EXISTS (SELECT 1 FROM conversion_withdrawn_journeys w WHERE w.journey_id = $3))
+            )
+         RETURNING consent_state`,
+        [input.entityType, input.entityId, requestedJourneyId],
+      );
+      if (scrubbed.rows.length > 0) {
+        identity.consent_state = 'denied';
+        identity.journey_id = null;
+        identity.first_touch = null;
+        identity.last_touch = null;
+      }
+    }
 
     if (source === 'live') {
       await deps.query(
@@ -238,12 +264,27 @@ async function deliver(row: StageRow, identity: IdentityRow, deps: Deps, request
        RETURNING e.event_id`,
       [row.event_id, requestedJourneyId],
     );
-    if (stopped.rows.length > 0) return 'skipped_consent';
+    if (stopped.rows.length > 0) {
+      await deps.query(
+        `UPDATE conversion_identities i
+            SET consent_state = 'denied', journey_id = NULL, first_touch = NULL, last_touch = NULL
+           FROM conversion_stage_events e
+          WHERE e.event_id = $1 AND i.entity_type = e.entity_type AND i.entity_id = e.entity_id`,
+        [row.event_id],
+      );
+      return 'skipped_consent';
+    }
     return 'sending';
   }
   const outcome = await deps.send(event as { name: string; params: Record<string, string> }, row.analytics_id, occurredAt);
   if (outcome === 'unconfigured') {
-    await deps.query(`UPDATE conversion_stage_events SET delivery_state = 'pending', delivery_attempts = delivery_attempts - 1 WHERE event_id = $1`, [row.event_id]);
+    await deps.query(
+      `UPDATE conversion_stage_events
+          SET delivery_state = CASE WHEN consent_state = 'granted' THEN 'pending' ELSE 'skipped_consent' END,
+              delivery_attempts = GREATEST(delivery_attempts - 1, 0)
+        WHERE event_id = $1`,
+      [row.event_id],
+    );
     return 'pending';
   }
   const state = outcome === 'sent' ? 'sent' : 'failed';
@@ -270,7 +311,7 @@ export type MaintainResult = {
 export async function maintainLedger(deps: Deps = defaultDeps()): Promise<MaintainResult> {
   await deps.query(`UPDATE conversion_stage_events SET delivery_state = 'failed' WHERE delivery_state = 'sending' AND last_attempt_at < NOW() - INTERVAL '10 minutes'`);
   const watermark = await deps.query<{ since: string | null }>(
-    `SELECT COALESCE(
+    `SELECT LEAST(
        (SELECT MIN(activated_at) FROM conversion_watermarks WHERE stage = 'milestone_review_published'),
        (SELECT MIN(LEAST(occurred_at, created_at)) FROM conversion_stage_events WHERE source = 'live')
      )::text AS since`,
