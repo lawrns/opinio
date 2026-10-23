@@ -534,8 +534,7 @@ describe('ledger: review_published after commit', () => {
     });
 
     // 2. Withdrawal happens BETWEEN identity read and stage event insert
-    let f2!: ReturnType<typeof fakePg>;
-    f2 = fakePg({
+    const f2: ReturnType<typeof fakePg> = fakePg({
       onQuery: async (sql) => {
         if (sql.startsWith('SELECT analytics_id, journey_id, consent_state')) {
           // Simulate concurrent withdrawal right after identity is created/selected
