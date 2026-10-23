@@ -72,6 +72,7 @@ export function Footer() {
               ].map(([href, label]) => (
                 <li key={label}>
                   <Link
+                    prefetch={href === '/merchant' ? false : undefined}
                     className="inline-flex min-h-10 items-center transition-colors hover:text-[#00b67a] hover:underline"
                     href={href}
                   >

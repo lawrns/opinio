@@ -67,6 +67,7 @@ export function Navbar() {
           </Link>
           <Link
             href="/merchant"
+            prefetch={false}
             data-cta="nav_merchant_panel"
             className="inline-flex min-h-10 items-center gap-1.5 rounded-full bg-[#a6c8ff] px-4.5 py-2 text-[13.5px] font-bold text-[#1b1a1b] transition-all hover:bg-[#00b67a] hover:text-[#1b1a1b]"
           >
@@ -107,6 +108,7 @@ export function Navbar() {
           )}
           <Link
             href="/merchant"
+            prefetch={false}
             data-cta="nav_merchant_panel"
             onClick={() => setOpen(false)}
             className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-[#a6c8ff] px-5 py-2.5 text-sm font-bold text-[#1b1a1b]"
