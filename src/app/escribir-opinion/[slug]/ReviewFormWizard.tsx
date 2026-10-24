@@ -11,13 +11,42 @@ interface Props {
   brandName: string;
   legalName: string | null;
   category: string;
+  turnstileSiteKey?: string;
+  captchaRequired?: boolean;
+  initialCaptchaToken?: string;
+}
+
+declare global {
+  interface Window {
+    turnstile?: {
+      render: (
+        container: HTMLElement,
+        options: {
+          sitekey: string;
+          callback?: (token: string) => void;
+          'expired-callback'?: () => void;
+          'error-callback'?: () => void;
+        },
+      ) => string;
+      remove?: (widgetId: string) => void;
+    };
+  }
 }
 
 const RATING_LABELS = ['Muy mala', 'Mala', 'Regular', 'Buena', 'Excelente'];
 const inputClass = 'w-full rounded-xl border border-[var(--op-border-strong)] bg-[var(--op-canvas)] px-4 py-3 text-base text-[var(--op-ink-primary)]';
 const primaryClass = 'inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[var(--op-ink-primary)] px-6 py-3 text-sm font-semibold text-[var(--op-sheet)] disabled:cursor-not-allowed disabled:opacity-50';
 
-export function ReviewFormWizard({ businessId, slug, brandName, legalName, category }: Props) {
+export function ReviewFormWizard({
+  businessId,
+  slug,
+  brandName,
+  legalName,
+  category,
+  turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim() || undefined,
+  captchaRequired = false,
+  initialCaptchaToken = '',
+}: Props) {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [rating, setRating] = useState(0);
   const [productName, setProductName] = useState('');
@@ -25,13 +54,55 @@ export function ReviewFormWizard({ businessId, slug, brandName, legalName, categ
   const [body, setBody] = useState('');
   const [authorName, setAuthorName] = useState('');
   const [acceptTerms, setAcceptTerms] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState(initialCaptchaToken);
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const turnstileRef = useRef<HTMLDivElement>(null);
+  const needsCaptcha = Boolean(captchaRequired || turnstileSiteKey);
+
   // CONVERSION-001 step start (intent only), consented journeys only.
   useEffect(() => {
     trackStepStarted('consumer_review', 'review_form_experience');
   }, []);
+
+  useEffect(() => {
+    if (step !== 2 || !turnstileSiteKey || !turnstileRef.current) return;
+    let widgetId: string | undefined;
+    let cancelled = false;
+    const mountWidget = () => {
+      if (cancelled || !turnstileRef.current || !window.turnstile) return;
+      widgetId = window.turnstile.render(turnstileRef.current, {
+        sitekey: turnstileSiteKey,
+        callback: (token: string) => setCaptchaToken(token),
+        'expired-callback': () => setCaptchaToken(''),
+        'error-callback': () => setCaptchaToken(''),
+      });
+    };
+    if (typeof window !== 'undefined' && window.turnstile) {
+      mountWidget();
+    } else if (typeof document !== 'undefined') {
+      const existing = document.querySelector<HTMLScriptElement>('script[data-opinio-turnstile="1"]');
+      if (existing) {
+        existing.addEventListener('load', mountWidget);
+      } else {
+        const script = document.createElement('script');
+        script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+        script.async = true;
+        script.defer = true;
+        script.dataset.opinioTurnstile = '1';
+        script.addEventListener('load', mountWidget);
+        document.head.appendChild(script);
+      }
+    }
+    return () => {
+      cancelled = true;
+      if (widgetId && typeof window !== 'undefined' && window.turnstile?.remove) {
+        window.turnstile.remove(widgetId);
+      }
+    };
+  }, [step, turnstileSiteKey]);
+
   const moveTo = (nextStep: 1 | 2 | 3) => {
     if (nextStep === 2) trackStepStarted('consumer_review', 'review_form_publish');
     setStep(nextStep);
@@ -46,6 +117,10 @@ export function ReviewFormWizard({ businessId, slug, brandName, legalName, categ
       setErrorMsg('Revisa tu calificación, escribe al menos 15 caracteres, añade tu nombre y confirma que la experiencia es real.');
       return;
     }
+    if (needsCaptcha && !captchaToken.trim()) {
+      setErrorMsg('Completa la verificación de seguridad antes de publicar tu opinión.');
+      return;
+    }
     setSubmitting(true);
     setErrorMsg(null);
     try {
@@ -54,10 +129,26 @@ export function ReviewFormWizard({ businessId, slug, brandName, legalName, categ
         headers: { 'Content-Type': 'application/json' },
         // `conversion` is the consented journey association only; the server
         // records the milestone after its own commit and ignores any stage here.
-        body: JSON.stringify({ business_id: businessId, rating, title: title.trim() || undefined, body: body.trim(), author_name: authorName.trim(), verification_level: 'unverified_experience', product_name: productName.trim() || undefined, conversion: conversionContext() }),
+        body: JSON.stringify({
+          business_id: businessId,
+          rating,
+          title: title.trim() || undefined,
+          body: body.trim(),
+          author_name: authorName.trim(),
+          verification_level: 'unverified_experience',
+          product_name: productName.trim() || undefined,
+          captcha_token: captchaToken.trim() || undefined,
+          conversion: conversionContext(),
+        }),
       });
       const data = await response.json();
-      if (!response.ok || !data.success) throw new Error(response.status === 429 || response.status === 409 ? data.error : 'No pudimos enviar tu opinión. Tu texto sigue aquí; intenta de nuevo.');
+      if (!response.ok || !data.success) {
+        throw new Error(
+          (response.status === 400 || response.status === 409 || response.status === 429 || response.status === 503) && typeof data.error === 'string'
+            ? data.error
+            : 'No pudimos enviar tu opinión. Tu texto sigue aquí; intenta de nuevo.'
+        );
+      }
       moveTo(3);
     } catch (error) {
       setErrorMsg(error instanceof Error ? error.message : 'No pudimos enviar tu opinión. Tu texto sigue aquí; intenta de nuevo.');
@@ -85,8 +176,14 @@ export function ReviewFormWizard({ businessId, slug, brandName, legalName, categ
         <div className="rounded-xl border border-[var(--op-border-hairline)] bg-[var(--op-canvas)] p-5"><h2 className="text-sm font-semibold">Así se verá tu opinión</h2><p className="mt-3 text-sm font-semibold text-[var(--op-verified-ink)]">{rating} de 5 estrellas · {RATING_LABELS[rating - 1]}</p>{title && <p className="mt-3 break-words font-semibold">{title}</p>}<p className="mt-2 whitespace-pre-wrap break-words text-sm leading-relaxed text-[var(--op-ink-secondary)]">{body}</p>{productName && <p className="mt-3 break-words text-xs text-[var(--op-ink-muted)]">Producto o servicio: {productName}</p>}</div>
         <div><label htmlFor="review-author" className="mb-2 block text-sm font-semibold">Nombre o alias público <span className="font-normal">(obligatorio)</span></label><input id="review-author" value={authorName} onChange={(event) => setAuthorName(event.target.value)} required maxLength={80} autoComplete="nickname" className={inputClass} placeholder="Cómo quieres aparecer" aria-describedby="review-author-help" /><p id="review-author-help" className="mt-2 text-xs text-[var(--op-ink-muted)]">Este nombre aparecerá junto a tu opinión.</p></div>
         <div className="rounded-xl border border-[var(--op-border-hairline)] p-4 text-sm leading-relaxed text-[var(--op-ink-secondary)]"><p className="font-semibold text-[var(--op-ink-primary)]">Opinión sin comprobante verificado</p><p className="mt-1">Este formulario no valida pagos ni adjunta documentos. Tu opinión se publicará con esa etiqueta para que otros lectores conozcan su alcance.</p></div>
+        {needsCaptcha && (
+          <div className="rounded-xl border border-[var(--op-border-hairline)] p-4">
+            <div ref={turnstileRef} data-testid="turnstile-widget" data-sitekey={turnstileSiteKey || ''} />
+            <input type="hidden" name="cf-turnstile-response" value={captchaToken} />
+          </div>
+        )}
         <label className="flex cursor-pointer items-start gap-3 text-sm leading-relaxed"><input type="checkbox" checked={acceptTerms} onChange={(event) => setAcceptTerms(event.target.checked)} required className="mt-1 size-5 shrink-0 accent-[var(--op-verified-ink)]" /><span>Confirmo que esta opinión refleja mi experiencia real con {brandName} y que quiero publicarla con el nombre indicado.</span></label>
-        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between"><button type="button" disabled={submitting} onClick={() => moveTo(1)} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-[var(--op-border-strong)] px-5 text-sm font-semibold"><ArrowLeft size={17} aria-hidden="true" /> Editar opinión</button><button type="submit" disabled={submitting} className={primaryClass}>{submitting ? <><CircleNotch className="animate-spin" size={17} /> Publicando…</> : <>Publicar opinión <ArrowRight size={17} aria-hidden="true" /></>}</button></div>
+        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between"><button type="button" disabled={submitting} onClick={() => moveTo(1)} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-[var(--op-border-strong)] px-5 text-sm font-semibold"><ArrowLeft size={17} aria-hidden="true" /> Editar opinión</button><button type="submit" disabled={submitting || (needsCaptcha && !captchaToken.trim())} className={primaryClass}>{submitting ? <><CircleNotch className="animate-spin" size={17} /> Publicando…</> : <>Publicar opinión <ArrowRight size={17} aria-hidden="true" /></>}</button></div>
       </form>}
       {step === 3 && <div className="mt-8 space-y-6"><div role="status" className="rounded-xl border border-[var(--op-verified-border)] bg-[var(--op-verified-tint)] p-5 text-[var(--op-verified-ink)]"><Check size={24} aria-hidden="true" /><h2 className="mt-3 text-lg font-semibold">Recibimos tu opinión</h2><p className="mt-2 text-sm leading-relaxed">La revisamos antes de publicarla en el pasaporte de {brandName}, con la etiqueta de opinión sin comprobante verificado.</p></div><Link href={`/b/${slug}#opiniones`} className={`${primaryClass} w-full`}>Ver el pasaporte <ArrowRight size={17} aria-hidden="true" /></Link></div>}
     </div>

@@ -8,6 +8,8 @@ import { requireAdministrator } from '@/lib/authz/owners';
 import { currentMerchantUserId } from '@/lib/authz/session';
 import { inTransaction } from '@/lib/authz/transaction';
 import { merchantAuthEnabled } from '@/lib/auth/spike';
+import { afterResponse } from '@/lib/conversion/after';
+import { discardReviewIdentity, publishReviewMilestone } from '@/lib/conversion/ledger';
 import { moderateReview, type ModerationDecision } from '@/lib/review-moderation';
 
 /** Administrator-only: publish ('approve') or remove ('reject') one pending review. */
@@ -26,7 +28,12 @@ export async function moderateReviewAction(formData: FormData): Promise<void> {
       const done = await inTransaction(pool, (client) =>
         moderateReview(client, { reviewId, decision, administratorUserId: admin.userId }),
       );
-      if (done && decision === 'approve') revalidatePath('/b/[slug]', 'page');
+      if (done && decision === 'approve') {
+        revalidatePath('/b/[slug]', 'page');
+        afterResponse(() => publishReviewMilestone(reviewId));
+      } else if (done && decision === 'reject') {
+        afterResponse(() => discardReviewIdentity(reviewId));
+      }
       outcome = done ? (decision === 'approve' ? 'aprobada' : 'rechazada') : 'not_pending';
     }
   } catch (error) {

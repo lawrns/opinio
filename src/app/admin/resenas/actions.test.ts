@@ -6,6 +6,8 @@ const m = vi.hoisted(() => ({
   requireAdministrator: vi.fn(),
   moderateReview: vi.fn(),
   revalidatePath: vi.fn(),
+  publishReviewMilestone: vi.fn(),
+  discardReviewIdentity: vi.fn(),
   authEnabled: true,
   Denied: class Denied extends Error {},
   Unauth: class Unauth extends Error {},
@@ -18,6 +20,11 @@ vi.mock('@/lib/authz/owners', () => ({ requireAdministrator: m.requireAdministra
 vi.mock('@/lib/authz/session', () => ({ currentMerchantUserId: async () => 3 }));
 vi.mock('@/lib/authz/transaction', () => ({ inTransaction: async (_db: unknown, fn: (c: object) => unknown) => fn({}) }));
 vi.mock('@/lib/auth/spike', () => ({ merchantAuthEnabled: () => m.authEnabled }));
+vi.mock('@/lib/conversion/after', () => ({ afterResponse: (fn: () => unknown) => { void fn(); } }));
+vi.mock('@/lib/conversion/ledger', () => ({
+  publishReviewMilestone: m.publishReviewMilestone,
+  discardReviewIdentity: m.discardReviewIdentity,
+}));
 vi.mock('@/lib/review-moderation', () => ({ moderateReview: m.moderateReview }));
 
 import { moderateReviewAction } from './actions';
@@ -31,6 +38,8 @@ beforeEach(() => {
   m.authEnabled = true;
   m.requireAdministrator.mockResolvedValue({ type: 'administrator', userId: 3 });
   m.moderateReview.mockResolvedValue(true);
+  m.publishReviewMilestone.mockResolvedValue({ status: 'recorded' });
+  m.discardReviewIdentity.mockResolvedValue(undefined);
 });
 
 describe('moderateReviewAction', () => {
@@ -38,29 +47,37 @@ describe('moderateReviewAction', () => {
     m.requireAdministrator.mockRejectedValue(new m.Denied());
     expect(await run({ reviewId: '9', decision: 'approve' })).toBe('/acceso');
     expect(m.moderateReview).not.toHaveBeenCalled();
+    expect(m.publishReviewMilestone).not.toHaveBeenCalled();
   });
 
   it('redirects home when merchant auth is off', async () => {
     m.authEnabled = false;
     expect(await run({ reviewId: '9', decision: 'approve' })).toBe('/');
     expect(m.moderateReview).not.toHaveBeenCalled();
+    expect(m.publishReviewMilestone).not.toHaveBeenCalled();
   });
 
-  it('approves and revalidates the business pages', async () => {
+  it('approves, revalidates the business pages, and publishes the deferred review_published milestone', async () => {
     expect(await run({ reviewId: '9', decision: 'approve' })).toBe('/admin/resenas?resultado=aprobada');
     expect(m.moderateReview).toHaveBeenCalledWith({}, { reviewId: 9, decision: 'approve', administratorUserId: 3 });
     expect(m.revalidatePath).toHaveBeenCalledWith('/b/[slug]', 'page');
+    expect(m.publishReviewMilestone).toHaveBeenCalledWith(9);
+    expect(m.discardReviewIdentity).not.toHaveBeenCalled();
   });
 
-  it('rejects without revalidating', async () => {
+  it('rejects without revalidating or publishing a milestone, and discards stored identity attribution', async () => {
     expect(await run({ reviewId: '9', decision: 'reject' })).toBe('/admin/resenas?resultado=rechazada');
     expect(m.moderateReview).toHaveBeenCalledWith({}, { reviewId: 9, decision: 'reject', administratorUserId: 3 });
     expect(m.revalidatePath).not.toHaveBeenCalled();
+    expect(m.publishReviewMilestone).not.toHaveBeenCalled();
+    expect(m.discardReviewIdentity).toHaveBeenCalledWith(9);
   });
 
-  it('reports a review that is no longer pending', async () => {
+  it('reports a review that is no longer pending without triggering conversion actions', async () => {
     m.moderateReview.mockResolvedValue(false);
     expect(await run({ reviewId: '9', decision: 'approve' })).toBe('/admin/resenas?resultado=not_pending');
+    expect(m.publishReviewMilestone).not.toHaveBeenCalled();
+    expect(m.discardReviewIdentity).not.toHaveBeenCalled();
   });
 
   it('refuses a malformed id or decision before any write', async () => {
