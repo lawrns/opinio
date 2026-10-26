@@ -301,6 +301,137 @@ describe('withdrawal stops queued deliveries and interleavings (real Postgres)',
     });
   });
 
+  it('multi-connection pg.Pool concurrency: parallel withdrawJourney + recordMilestone schedules and already-claimed in-flight sends (OPN-CONVERSION-WITHDRAWAL-RACE)', async () => {
+    const pool = new pg.Pool({ connectionString: dbUrl, max: 6 });
+    try {
+      await pool.query(`DELETE FROM conversion_stage_events`);
+      await pool.query(`DELETE FROM conversion_identities`);
+      await pool.query(`DELETE FROM conversion_withdrawn_journeys`);
+
+      // 1. Concurrent multi-connection race across 4 journeys: withdrawJourney and recordMilestone fired in parallel on separate pool connections
+      const journeys = ['1', '2', '3', '4'].map((ch) => `jrn_${ch.repeat(32)}`);
+      const deliveredClients: string[] = [];
+      const poolDeps = (sendOutcome: 'sent' | 'failed' = 'sent'): Deps => ({
+        query: ((text: string, params?: unknown[]) => pool.query(text, params)) as unknown as Deps['query'],
+        send: async (_event, clientId) => {
+          deliveredClients.push(clientId);
+          return sendOutcome;
+        },
+        now: () => new Date(),
+        randomUUID: uuid,
+        log: () => undefined,
+      });
+
+      await Promise.all(
+        journeys.flatMap((jId, idx) => {
+          const entityA = String(950 + idx * 2);
+          const entityB = String(951 + idx * 2);
+          return [
+            recordMilestone(
+              { entityType: 'review', entityId: entityA, milestone: 'review_published', journey: 'consumer_review', context: granted(jId) },
+              poolDeps('failed'),
+            ),
+            withdrawJourney(jId, { query: ((t: string, p?: unknown[]) => pool.query(t, p)) as unknown as Deps['query'] }),
+            recordMilestone(
+              { entityType: 'review', entityId: entityB, milestone: 'review_published', journey: 'consumer_review', context: granted(jId) },
+              poolDeps('sent'),
+            ),
+          ];
+        }),
+      );
+
+      // Every identity for a withdrawn journey is scrubbed to denied with null journey_id and touches
+      const idRows = (
+        await pool.query<{ entity_id: string; consent_state: string; journey_id: string | null; first_touch: unknown; last_touch: unknown }>(
+          `SELECT entity_id, consent_state, journey_id, first_touch, last_touch FROM conversion_identities WHERE entity_id::int >= 950 ORDER BY entity_id::int`,
+        )
+      ).rows;
+      expect(idRows).toHaveLength(8);
+      for (const r of idRows) {
+        expect(r).toMatchObject({
+          consent_state: 'denied',
+          journey_id: null,
+          first_touch: null,
+          last_touch: null,
+        });
+      }
+
+      // After maintainLedger runs, zero withdrawn rows are ever retried or left pending
+      const beforeMaint = deliveredClients.length;
+      await maintainLedger(poolDeps('sent'));
+      expect(deliveredClients.length).toBe(beforeMaint);
+      const stageRows = (
+        await pool.query<{ entity_id: string; delivery_state: string; consent_state: string; analytics_id: string | null }>(
+          `SELECT entity_id, delivery_state, consent_state, analytics_id FROM conversion_stage_events WHERE entity_id::int >= 950 ORDER BY entity_id::int`,
+        )
+      ).rows;
+      expect(stageRows).toHaveLength(8);
+      for (const s of stageRows) {
+        expect(s.consent_state).toBe('denied');
+        expect(s.analytics_id).toBeNull();
+        expect(['skipped_consent', 'failed']).toContain(s.delivery_state);
+      }
+
+      // 2. Already-claimed ('sending') in-flight provider send when withdrawal arrives on another connection:
+      // keeps 'sending' state so real provider outcome ('sent' or 'failed') is recorded honestly, while scrubbing analytics_id & consent so failed sends never retry
+      const inFlightJourney = 'jrn_' + '9'.repeat(32);
+      let releaseSend!: (outcome: 'sent' | 'failed') => void;
+      let notifyClaimed!: () => void;
+      const claimedReady = new Promise<void>((r) => {
+        notifyClaimed = r;
+      });
+      const inFlightDeps: Deps = {
+        ...poolDeps(),
+        send: async () => {
+          notifyClaimed();
+          return new Promise<'sent' | 'failed'>((resolve) => {
+            releaseSend = resolve;
+          });
+        },
+      };
+
+      const recordPromise = recordMilestone(
+        { entityType: 'review', entityId: '990', milestone: 'review_published', journey: 'consumer_review', context: granted(inFlightJourney) },
+        inFlightDeps,
+      );
+      await claimedReady;
+
+      // While send() is in-flight ('sending'), another connection withdraws consent
+      await withdrawJourney(inFlightJourney, { query: ((t: string, p?: unknown[]) => pool.query(t, p)) as unknown as Deps['query'] });
+      const midSend = (
+        await pool.query<{ delivery_state: string; analytics_id: string | null; consent_state: string }>(
+          `SELECT delivery_state, analytics_id, consent_state FROM conversion_stage_events WHERE entity_id = '990'`,
+        )
+      ).rows[0];
+      expect(midSend).toEqual({
+        delivery_state: 'sending',
+        analytics_id: null,
+        consent_state: 'denied',
+      });
+
+      // Provider call fails after withdrawal -> recorded as 'failed' with denied consent, and maintainLedger converts it to 'skipped_consent' without retrying
+      releaseSend('failed');
+      const finalRes = await recordPromise;
+      expect(finalRes).toEqual({ status: 'recorded', delivery: 'failed' });
+      await maintainLedger(poolDeps('sent'));
+      const afterMaint = (
+        await pool.query<{ delivery_state: string; analytics_id: string | null; consent_state: string }>(
+          `SELECT delivery_state, analytics_id, consent_state FROM conversion_stage_events WHERE entity_id = '990'`,
+        )
+      ).rows[0];
+      expect(afterMaint).toEqual({
+        delivery_state: 'skipped_consent',
+        analytics_id: null,
+        consent_state: 'denied',
+      });
+    } finally {
+      await pool.query(`DELETE FROM conversion_stage_events`);
+      await pool.query(`DELETE FROM conversion_identities`);
+      await pool.query(`DELETE FROM conversion_withdrawn_journeys`);
+      await pool.end();
+    }
+  });
+
   it('ignores anything that is not an opaque journey ID', async () => {
     await withDb(async (deps) => {
       expect(await withdrawJourney("x' OR '1'='1", deps)).toBe(0);

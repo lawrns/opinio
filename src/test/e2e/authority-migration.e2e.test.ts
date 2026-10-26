@@ -43,6 +43,7 @@ const MIGRATIONS = [
   '0004_staff_and_transfer.sql',
   '0005_buyer_case_access.sql',
   '0006_case_recovery.sql',
+  '0007_conversion_watermarks_and_tombstones.sql',
 ];
 
 /** Columns the migrations add to legacy tables; digests compare legacy columns only, and these are checked NULL separately. */
