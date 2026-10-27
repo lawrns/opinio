@@ -32,7 +32,7 @@ const SCOPE_PLACEHOLDER = /^(no proporciona|sin datos|no disponible|datos por su
  * The recorded scope as the source states it, or null when the source carries
  * no scope at all (empty value or a placeholder such as "NO PROPORCIONA").
  */
-function recordedScopeValue(operatingArea?: string | null): string | null {
+export function recordedScopeValue(operatingArea?: string | null): string | null {
   const value = (operatingArea ?? '').trim();
   return !value || SCOPE_PLACEHOLDER.test(value) ? null : value;
 }
@@ -60,7 +60,7 @@ export function passportMetadata(facts: PassportRecordFacts): PassportMetadata {
   if (recordedScope) {
     description += ` Ámbito registrado: ${recordedScope}.`;
   }
-  description += ' Consulta su identidad, registros públicos y opiniones en Opinio México.';
+  description += ' Consulta las opiniones publicadas por compradores en Opinio México.';
 
   return { title, description };
 }

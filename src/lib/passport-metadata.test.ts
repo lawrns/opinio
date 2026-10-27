@@ -1,5 +1,57 @@
-import { describe, it, expect } from 'vitest';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { describe, it, expect, vi } from 'vitest';
 import { passportMetadata, type PassportRecordFacts } from './passport-metadata';
+
+const mockBusiness = vi.hoisted(() => ({
+  row: {
+    id: 10,
+    slug: 'innovasport-mty',
+    brand_name: 'Innovasport',
+    legal_name: 'Innovasport, S.A. de C.V.',
+    category: 'Moda, Calzado y Accesorios',
+    description: 'Tienda deportiva',
+    rfc: null,
+    clee: null,
+    phone: null,
+    whatsapp: null,
+    domain: 'innovasport.com',
+    logo_url: null,
+    banner_url: null,
+    operating_area: 'Monterrey, Nuevo León',
+    claimed: false,
+    verified_level: 'unverified',
+    trust_score: '0',
+    confidence_level: 'preliminary',
+    coverage_percentage: '0',
+    observed_orders_count: 0,
+    invited_orders_count: 0,
+    issues_per_thousand: '0',
+    resolution_rate: '0',
+    median_response_hours: '0',
+    reopen_rate: '0',
+    effective_reviews_count: 0,
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+  } as Record<string, unknown>,
+}));
+
+vi.mock('next/navigation', () => ({
+  usePathname: () => '/b/innovasport-mty',
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi.fn() }),
+  notFound: () => {
+    throw new Error('not found');
+  },
+  redirect: vi.fn(),
+}));
+
+vi.mock('@/lib/db', () => ({
+  query: async (sql: string) => {
+    if (/FROM businesses/i.test(sql)) return { rows: [mockBusiness.row] };
+    return { rows: [] };
+  },
+}));
+
+import BusinessPassportPage, { generateMetadata } from '@/app/b/[slug]/page';
 
 // Record facts as observed on the live production passports during the audit
 // (razón social, categoría and ámbito are the values those pages render).
@@ -63,3 +115,52 @@ describe('no invented geographic claim', () => {
     expect(`${title} ${description}`.split(operating_area).join('')).not.toMatch(/cobertura|domicilio/i);
   });
 });
+
+describe('passport metadata and rendered page alignment (OPN-PASSPORT-IDENTITY-ANCHOR)', () => {
+  it('does not promise removed identity/public-record sections in metadata', () => {
+    for (const [first, second] of OBSERVED_PAIRS) {
+      for (const sample of [first, second]) {
+        const { title, description } = passportMetadata(sample);
+        expect(`${title} ${description}`).not.toMatch(/registros públicos|fuentes públicas/i);
+        expect(description).toContain('Consulta las opiniones publicadas por compradores en Opinio México.');
+      }
+    }
+  });
+
+  it('renders the same identity and scope facts on /b/[slug] that generateMetadata publishes, and omits placeholder scopes from both', async () => {
+    mockBusiness.row = {
+      ...mockBusiness.row,
+      brand_name: 'Innovasport',
+      legal_name: 'Innovasport, S.A. de C.V.',
+      category: 'Moda, Calzado y Accesorios',
+      operating_area: 'Monterrey, Nuevo León',
+    };
+    const meta1 = await generateMetadata({ params: Promise.resolve({ slug: 'innovasport-mty' }) });
+    const html1 = renderToStaticMarkup(await BusinessPassportPage({ params: Promise.resolve({ slug: 'innovasport-mty' }) }));
+
+    expect(String(meta1.title)).toContain('Innovasport, S.A. de C.V.');
+    expect(String(meta1.title)).toContain('ámbito registrado: Monterrey, Nuevo León');
+    expect(String(meta1.description)).toContain('razón social: Innovasport, S.A. de C.V.');
+    expect(String(meta1.description)).toContain('Ámbito registrado: Monterrey, Nuevo León.');
+    expect(String(meta1.description)).not.toMatch(/registros públicos|fuentes públicas/i);
+
+    expect(html1).toContain('Innovasport');
+    expect(html1).toContain('Moda, Calzado y Accesorios');
+    expect(html1).toContain('Razón social: Innovasport, S.A. de C.V.');
+    expect(html1).toContain('Ámbito registrado: Monterrey, Nuevo León');
+
+    // Placeholder scope and null legal_name are omitted from both metadata and rendered page
+    mockBusiness.row = {
+      ...mockBusiness.row,
+      legal_name: null,
+      operating_area: 'NO PROPORCIONA',
+    };
+    const meta2 = await generateMetadata({ params: Promise.resolve({ slug: 'innovasport-mty' }) });
+    const html2 = renderToStaticMarkup(await BusinessPassportPage({ params: Promise.resolve({ slug: 'innovasport-mty' }) }));
+
+    expect(String(meta2.title)).not.toMatch(/NO PROPORCIONA|ámbito registrado/i);
+    expect(String(meta2.description)).not.toMatch(/NO PROPORCIONA|razón social|Ámbito registrado/i);
+    expect(html2).not.toMatch(/NO PROPORCIONA|Razón social:|Ámbito registrado:/i);
+  });
+});
+

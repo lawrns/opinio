@@ -14,7 +14,7 @@ import { PassportReviewsList, ReviewItem } from '@/components/passport/PassportR
 import { StarRating, ratingSentimentLabel } from '@/components/StarRating';
 import { PassportActionButtons } from '@/components/passport/PassportActionButtons';
 import { query } from '@/lib/db';
-import { passportMetadata } from '@/lib/passport-metadata';
+import { passportMetadata, recordedScopeValue } from '@/lib/passport-metadata';
 import { toPublicReview } from '@/lib/public-reviews';
 
 interface BusinessDbRow {
@@ -187,6 +187,9 @@ export default async function BusinessPassportPage({ params }: PageProps) {
   const baseUrl = envPageUrl && !envPageUrl.includes('fertilitylistings') ? envPageUrl : 'https://opinio.mx';
   const canonicalUrl = `${baseUrl}/b/${business.slug}`;
   const logoAbsoluteUrl = business.logo_url ? `${baseUrl}${business.logo_url}` : undefined;
+  const legalName = (business.legal_name ?? '').trim() || null;
+  const recordedScope = recordedScopeValue(business.operating_area);
+  const { title: pageTitle, description: pageDescription } = passportMetadata(business);
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -195,7 +198,7 @@ export default async function BusinessPassportPage({ params }: PageProps) {
         '@type': 'Organization',
         '@id': `${canonicalUrl}#organization`,
         name: business.brand_name,
-        ...(business.legal_name ? { legalName: business.legal_name } : {}),
+        ...(legalName ? { legalName } : {}),
         url: business.domain
           ? business.domain.startsWith('http')
             ? business.domain
@@ -240,8 +243,8 @@ export default async function BusinessPassportPage({ params }: PageProps) {
         '@type': 'WebPage',
         '@id': canonicalUrl,
         url: canonicalUrl,
-        name: `Opiniones sobre ${business.brand_name} | Opinio México`,
-        description: `Consulta las opiniones publicadas por compradores sobre ${business.brand_name} en Opinio México.`,
+        name: pageTitle,
+        description: pageDescription,
         inLanguage: 'es-MX',
         isPartOf: {
           '@type': 'WebSite',
@@ -339,6 +342,13 @@ export default async function BusinessPassportPage({ params }: PageProps) {
                     <h1 className="text-3xl font-extrabold tracking-[-0.03em] text-op-ink sm:text-4xl lg:text-5xl">
                       {business.brand_name}
                     </h1>
+                    {(legalName || recordedScope) && (
+                      <p className="text-xs font-medium text-op-secondary sm:text-sm">
+                        {legalName && <span>Razón social: {legalName}</span>}
+                        {legalName && recordedScope && <span aria-hidden="true"> · </span>}
+                        {recordedScope && <span>Ámbito registrado: {recordedScope}</span>}
+                      </p>
+                    )}
                   </div>
                 </div>
 
