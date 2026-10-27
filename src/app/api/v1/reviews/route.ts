@@ -76,32 +76,54 @@ export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as ReviewInput;
 
-    if (!body.business_id || typeof body.business_id !== 'number') {
+    if (
+      !body.business_id ||
+      typeof body.business_id !== 'number' ||
+      !Number.isInteger(body.business_id) ||
+      body.business_id < 1 ||
+      body.business_id > 2147483647
+    ) {
       return NextResponse.json(
         { success: false, error: 'El campo business_id es requerido y debe ser un número' },
         { status: 400 }
       );
     }
 
-    if (!body.rating || typeof body.rating !== 'number' || body.rating < 1 || body.rating > 5) {
+    if (
+      !body.rating ||
+      typeof body.rating !== 'number' ||
+      !Number.isFinite(body.rating) ||
+      body.rating < 1 ||
+      body.rating > 5
+    ) {
       return NextResponse.json(
         { success: false, error: 'La calificación debe ser un entero entre 1 y 5' },
         { status: 400 }
       );
     }
 
-    if (!body.body || typeof body.body !== 'string' || body.body.trim().length < 5) {
+    const sanitizedBody = typeof body.body === 'string' ? body.body.replace(/\0/g, '').trim() : '';
+    if (!sanitizedBody || sanitizedBody.length < 5) {
       return NextResponse.json(
         { success: false, error: 'El texto de la opinión debe tener al menos 5 caracteres' },
         { status: 400 }
       );
     }
 
-    if (!body.author_name || typeof body.author_name !== 'string' || body.author_name.trim().length === 0) {
+    const sanitizedAuthor = typeof body.author_name === 'string' ? body.author_name.replace(/\0/g, '').trim() : '';
+    if (!sanitizedAuthor || sanitizedAuthor.length === 0) {
       return NextResponse.json(
         { success: false, error: 'El nombre del autor es requerido' },
         { status: 400 }
       );
+    }
+
+    body.body = sanitizedBody;
+    body.author_name = sanitizedAuthor;
+    if (typeof body.title === 'string') body.title = body.title.replace(/\0/g, '');
+    if (typeof body.product_name === 'string') body.product_name = body.product_name.replace(/\0/g, '');
+    if (typeof body.author_masked_contact === 'string') {
+      body.author_masked_contact = body.author_masked_contact.replace(/\0/g, '');
     }
 
     // Contained (src/lib/containment.ts): an order_id or "reviewed_proof" in

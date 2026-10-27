@@ -172,7 +172,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await embeddedDb?.stop();
-});
+}, 60_000);
 
 describe('a send in flight at withdrawal (real Postgres)', () => {
   it('keeps its real outcome, loses its analytics ID, and a failed attempt is never retried', async () => {

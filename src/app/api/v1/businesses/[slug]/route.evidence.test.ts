@@ -176,7 +176,7 @@ describe('businesses/[slug] integrated PostgreSQL public response regression (OP
   afterAll(async () => {
     db.delegate = null;
     await pgDb?.stop();
-  });
+  }, 60_000);
 
   it('asserts entire public payload for 0, 4 (unverified), 4 (qualified), and 5 (qualified) reviews against real PostgreSQL', async () => {
     const bizRes = await pgDb.client.query<{ id: number }>(

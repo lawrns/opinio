@@ -33,7 +33,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await embeddedDb?.stop();
-});
+}, 60_000);
 
 async function withDb(fn: (deps: Deps, db: pg.Client, sent: string[]) => Promise<void>) {
   const db = new pg.Client({ connectionString: dbUrl });
