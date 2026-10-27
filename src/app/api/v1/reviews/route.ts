@@ -68,32 +68,54 @@ export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as ReviewInput;
 
-    if (!body.business_id || typeof body.business_id !== 'number') {
+    if (
+      !body.business_id ||
+      typeof body.business_id !== 'number' ||
+      !Number.isInteger(body.business_id) ||
+      body.business_id < 1 ||
+      body.business_id > 2147483647
+    ) {
       return NextResponse.json(
         { success: false, error: 'El campo business_id es requerido y debe ser un número' },
         { status: 400 }
       );
     }
 
-    if (!body.rating || typeof body.rating !== 'number' || body.rating < 1 || body.rating > 5) {
+    if (
+      !body.rating ||
+      typeof body.rating !== 'number' ||
+      !Number.isFinite(body.rating) ||
+      body.rating < 1 ||
+      body.rating > 5
+    ) {
       return NextResponse.json(
         { success: false, error: 'La calificación debe ser un entero entre 1 y 5' },
         { status: 400 }
       );
     }
 
-    if (!body.body || typeof body.body !== 'string' || body.body.trim().length < 5) {
+    const sanitizedBody = typeof body.body === 'string' ? body.body.replace(/\0/g, '').trim() : '';
+    if (!sanitizedBody || sanitizedBody.length < 5) {
       return NextResponse.json(
         { success: false, error: 'El texto de la opinión debe tener al menos 5 caracteres' },
         { status: 400 }
       );
     }
 
-    if (!body.author_name || typeof body.author_name !== 'string' || body.author_name.trim().length === 0) {
+    const sanitizedAuthor = typeof body.author_name === 'string' ? body.author_name.replace(/\0/g, '').trim() : '';
+    if (!sanitizedAuthor || sanitizedAuthor.length === 0) {
       return NextResponse.json(
         { success: false, error: 'El nombre del autor es requerido' },
         { status: 400 }
       );
+    }
+
+    body.body = sanitizedBody;
+    body.author_name = sanitizedAuthor;
+    if (typeof body.title === 'string') body.title = body.title.replace(/\0/g, '');
+    if (typeof body.product_name === 'string') body.product_name = body.product_name.replace(/\0/g, '');
+    if (typeof body.author_masked_contact === 'string') {
+      body.author_masked_contact = body.author_masked_contact.replace(/\0/g, '');
     }
 
     // Contained (src/lib/containment.ts): an order_id or "reviewed_proof" in
@@ -203,7 +225,13 @@ export async function POST(request: NextRequest) {
     }
 
     const outcome = await withTransaction(async (client) => {
-      // 1. Acquire row lock on business to prevent concurrent lost updates
+      // 1. Serialize per-client hourly rate limit and cross-business body-hash duplicate checks atomically
+      await client.query(
+        "SELECT pg_advisory_xact_lock(hashtext('opinio_review_client'), hashtext($1)), pg_advisory_xact_lock(hashtext('opinio_review_body'), hashtext($2))",
+        [clientHash, bodyHash]
+      );
+
+      // 2. Acquire row lock on business to prevent concurrent lost updates
       const bizRes = await client.query<BusinessStatsRow>(
         'SELECT id, observed_orders_count, invited_orders_count, median_response_hours FROM businesses WHERE id = $1 FOR UPDATE',
         [body.business_id]
@@ -213,16 +241,25 @@ export async function POST(request: NextRequest) {
         throw new Error(`Negocio con ID ${body.business_id} no existe`);
       }
 
-      // 2. Duplicate body (any business) or repeat email (same business)
+      // 3. Re-verify per-client hourly rate limit atomically under the client_hash advisory lock
+      const recentInTx = await client.query<{ count: string }>(
+        "SELECT COUNT(*)::text AS count FROM reviews WHERE client_hash = $1 AND created_at > NOW() - INTERVAL '1 hour'",
+        [clientHash]
+      );
+      if ((parseInt(recentInTx.rows[0]?.count ?? '0', 10) || 0) >= REVIEWS_PER_CLIENT_PER_HOUR) {
+        return { rateLimited: true as const, duplicate: false as const };
+      }
+
+      // 4. Duplicate body (any business) or repeat email (same business)
       const dup = await client.query<{ id: number }>(
         `SELECT id FROM reviews
           WHERE body_hash = $1 OR ($2::text IS NOT NULL AND business_id = $3 AND author_email_hash = $2)
           LIMIT 1`,
         [bodyHash, emailHash, body.business_id]
       );
-      if (dup.rows.length > 0) return { duplicate: true as const };
+      if (dup.rows.length > 0) return { rateLimited: false as const, duplicate: true as const };
 
-      // 3. Insert Review as pending: it is not public and does not move the
+      // 5. Insert Review as pending: it is not public and does not move the
       // score until an administrator approves it (src/lib/review-moderation.ts).
       const insertRes = await client.query<ReviewRow>(
         `INSERT INTO reviews (
@@ -250,8 +287,15 @@ export async function POST(request: NextRequest) {
         ]
       );
 
-      return { duplicate: false as const, createdReview: insertRes.rows[0] };
+      return { rateLimited: false as const, duplicate: false as const, createdReview: insertRes.rows[0] };
     });
+
+    if (outcome.rateLimited) {
+      return NextResponse.json(
+        { success: false, error: 'Recibimos muchas opiniones desde tu conexión. Intenta de nuevo en una hora.' },
+        { status: 429, headers: { 'Retry-After': '3600' } }
+      );
+    }
 
     if (outcome.duplicate) {
       return NextResponse.json(
@@ -262,10 +306,9 @@ export async function POST(request: NextRequest) {
     const { createdReview } = outcome;
 
     // CONVERSION-001: the review write has committed as 'pending' (moderation,
-    // BL-04). The milestone keeps its 'review_published' name for ledger
-    // compatibility but now marks a submission, not publication. This milestone is not proof of a genuine customer or merchant activation.
-    // It runs after the response is sent (fire-and-forget), never throws and
-    // never delays or fails the request.
+    // BL-04). Only the submission's conversion_identities association is stored
+    // here (`pendingModeration: true`); `milestone_review_published` is recorded
+    // and dispatched only after a platform administrator approves the review.
     const context = parseConversionContext(body.conversion);
     afterResponse(() =>
       recordMilestone({
@@ -274,6 +317,7 @@ export async function POST(request: NextRequest) {
         milestone: 'review_published',
         journey: 'consumer_review',
         context,
+        pendingModeration: true,
       }),
     );
 

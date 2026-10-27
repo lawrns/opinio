@@ -85,6 +85,8 @@ export default async function EscribirOpinionPage({ params }: PageProps) {
   }
 
   const business = res.rows[0];
+  const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim() || undefined;
+  const captchaRequired = Boolean(process.env.TURNSTILE_SECRET_KEY?.trim() || turnstileSiteKey);
 
   return (
     <div className="min-h-screen bg-[var(--op-canvas)] text-[var(--op-ink-primary)] flex flex-col font-sans selection:bg-[var(--op-verified-ink)] selection:text-[var(--op-sheet)]">
@@ -97,6 +99,8 @@ export default async function EscribirOpinionPage({ params }: PageProps) {
             brandName={business.brand_name}
             legalName={business.legal_name}
             category={business.category}
+            turnstileSiteKey={turnstileSiteKey}
+            captchaRequired={captchaRequired}
           />
         </div>
       </main>

@@ -28,9 +28,11 @@ export type RecordInput = {
   context: ConversionContext;
   occurredAt?: Date;
   source?: 'live' | 'reconciled';
+  /** When true, stores only the submission's conversion_identities row and defers the review_published stage event until admin approval. */
+  pendingModeration?: boolean;
 };
 
-export type RecordResult = { status: 'recorded' | 'duplicate' | 'invalid' | 'error'; delivery?: string };
+export type RecordResult = { status: 'recorded' | 'deferred' | 'duplicate' | 'invalid' | 'error'; delivery?: string };
 
 type IdentityRow = { analytics_id: string; journey_id: string | null; consent_state: string; first_touch: AttributionSnapshot['firstTouch']; last_touch: AttributionSnapshot['lastTouch'] };
 type StageRow = { event_id: string; analytics_id: string | null; stage: string; journey: ConversionJourney; occurred_at: string; consent_state: string; delivery_attempts: number };
@@ -71,7 +73,7 @@ export function defaultDeps(): Deps {
   return { query, send: sendGa4Event, now: () => new Date(), randomUUID: () => globalThis.crypto.randomUUID(), log: (m) => console.warn(m) };
 }
 
-/** Records a milestone once and attempts delivery. Never throws. */
+/** Records a milestone once and attempts delivery (or defers stage recording while pending moderation). Never throws. */
 export async function recordMilestone(input: RecordInput, deps: Deps = defaultDeps()): Promise<RecordResult> {
   try {
     const milestone = pick(CONVERSION_MILESTONES, input.milestone);
@@ -95,6 +97,9 @@ export async function recordMilestone(input: RecordInput, deps: Deps = defaultDe
       [input.entityType, input.entityId, analyticsId, granted ? input.context.journeyId : null, granted ? 'granted' : 'denied',
         touch?.firstTouch ? JSON.stringify(touch.firstTouch) : null, touch?.lastTouch ? JSON.stringify(touch.lastTouch) : null],
     );
+    if (input.pendingModeration) {
+      return { status: 'deferred' };
+    }
     const identity = (await deps.query<IdentityRow>(
       'SELECT analytics_id, journey_id, consent_state, first_touch, last_touch FROM conversion_identities WHERE entity_type = $1 AND entity_id = $2',
       [input.entityType, input.entityId],
@@ -116,6 +121,36 @@ export async function recordMilestone(input: RecordInput, deps: Deps = defaultDe
   } catch (error) {
     deps.log(`[conversion] milestone not recorded: error=${error instanceof Error ? error.name : 'error'}`);
     return { status: 'error' };
+  }
+}
+
+/** Publishes the deferred review_published milestone after a pending review is approved by an administrator. */
+export async function publishReviewMilestone(reviewId: number | string, deps: Deps = defaultDeps()): Promise<RecordResult> {
+  return recordMilestone(
+    {
+      entityType: 'review',
+      entityId: String(reviewId),
+      milestone: 'review_published',
+      journey: 'consumer_review',
+      context: { journeyId: null, consent: 'denied', attribution: null },
+    },
+    deps,
+  );
+}
+
+/** Clears stored conversion identity attribution when a pending review is rejected by an administrator. */
+export async function discardReviewIdentity(reviewId: number | string, deps: Pick<Deps, 'query' | 'log'> = defaultDeps()): Promise<void> {
+  const entityId = String(reviewId);
+  if (!/^[0-9]{1,18}$/.test(entityId)) return;
+  try {
+    await deps.query(
+      `UPDATE conversion_identities
+          SET consent_state = 'denied', journey_id = NULL, first_touch = NULL, last_touch = NULL
+        WHERE entity_type = 'review' AND entity_id = $1`,
+      [entityId],
+    );
+  } catch (error) {
+    deps.log(`[conversion] review identity discard failed: error=${error instanceof Error ? error.name : 'error'}`);
   }
 }
 
