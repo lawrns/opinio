@@ -75,7 +75,7 @@ beforeAll(async () => {
 afterAll(async () => {
   await pool?.end();
   await testDb?.stop();
-});
+}, 60_000);
 
 beforeEach(async () => {
   await pool.query(

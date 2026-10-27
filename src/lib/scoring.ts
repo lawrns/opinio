@@ -50,13 +50,16 @@ export function calculateOpinioScore(
   let sumSquaredWeights = 0;
 
   for (const review of reviews) {
+    if (!Number.isFinite(review.rating)) continue;
     // x_i = 25 * (rating - 1) -> 1 star = 0, 5 stars = 100
     const clampedRating = Math.max(1, Math.min(5, review.rating));
     const xi = 25 * (clampedRating - 1);
     const vi = VERIFICATION_WEIGHTS[review.verificationLevel] ?? 0.35;
-    // Recency decay d_i = max(0.25, 2^(-age/365))
-    const di = Math.max(0.25, Math.pow(2, -review.ageDays / 365));
-    const qi = Math.max(0.70, Math.min(1.15, review.integrityFactor ?? 1.0));
+    // Recency decay d_i = max(0.25, 2^(-age/365)), with age clamped >= 0 so clock skew cannot inflate weight > 1
+    const safeAgeDays = Number.isFinite(review.ageDays) ? Math.max(0, review.ageDays) : 0;
+    const di = Math.min(1, Math.max(0.25, Math.pow(2, -safeAgeDays / 365)));
+    const rawIntegrity = review.integrityFactor ?? 1.0;
+    const qi = Number.isFinite(rawIntegrity) ? Math.max(0.70, Math.min(1.15, rawIntegrity)) : 1.0;
 
     const wi = vi * di * qi;
 
