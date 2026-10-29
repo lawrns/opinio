@@ -46,3 +46,29 @@ export function displayableScore(
   const value = Number(score);
   return Number.isFinite(value) && meetsEvidenceThreshold(verifiedCount) ? value : null;
 }
+
+export type PublicScoreComponents = {
+  opinioScore: number | null;
+  experienceScore: number | null;
+  resolutionScore: number | null;
+};
+
+/**
+ * When the overall score is withheld, component scores are withheld too.
+ * Fewer than five cases makes experienceScore equal the composite, so leaving
+ * it numeric would publish the score the public aliases already null out.
+ */
+export function redactWithheldScoreComponents<T extends PublicScoreComponents>(
+  passport: T,
+  publicScore: number | null,
+): T {
+  if (publicScore !== null) {
+    return { ...passport, opinioScore: publicScore };
+  }
+  return {
+    ...passport,
+    opinioScore: null,
+    experienceScore: null,
+    resolutionScore: null,
+  };
+}
