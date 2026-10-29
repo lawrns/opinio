@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
-import { countVerifiedReviews, displayableScore } from '@/lib/evidence-threshold';
+import { countVerifiedReviews, displayableScore, redactWithheldScoreComponents } from '@/lib/evidence-threshold';
 import {
   calculateOpinioScore,
   ReviewCalculationItem,
@@ -291,7 +291,7 @@ export async function GET(
       official_records: recordsRes.rows,
       reviews: reviewsWithResponses,
       cases: casesWithMessages,
-      live_metrics: { ...calculatedPassport, opinioScore: publicScore },
+      live_metrics: redactWithheldScoreComponents(calculatedPassport, publicScore),
     });
   } catch (error) {
     console.error('[api/v1/businesses/[slug]] Error:', error);

@@ -10,7 +10,7 @@
  * reviews table (status = 'published').
  */
 import { pool } from '../src/lib/db';
-import { coverageByStatus, OWNER_LINKAGE_PREREQUISITE } from '../src/lib/conversion/coverage';
+import { coverageByStatus, OWNER_LINKAGE_PREREQUISITE, reconciliationCoverage } from '../src/lib/conversion/coverage';
 
 async function main() {
   const days = Math.min(Math.max(Number(process.argv[2]) || 90, 1), 365);
@@ -29,11 +29,16 @@ async function main() {
     const delivery = await client.query(`SELECT delivery_state, source, COUNT(*)::int AS n FROM conversion_stage_events GROUP BY 1, 2 ORDER BY 1, 2`);
     const reconcile = await client.query(
       `SELECT (SELECT COUNT(*) FROM reviews WHERE status = 'published' AND created_at >= NOW() - ($1 || ' days')::interval)::int AS published_reviews,
-              (SELECT COUNT(*) FROM conversion_stage_events WHERE stage = 'milestone_review_published' AND occurred_at >= NOW() - ($1 || ' days')::interval)::int AS ledger_rows`,
+              (SELECT COUNT(*) FROM conversion_stage_events WHERE stage = 'milestone_review_published' AND occurred_at >= NOW() - ($1 || ' days')::interval)::int AS ledger_rows,
+              LEAST(
+                (SELECT MIN(activated_at) FROM conversion_watermarks WHERE stage = 'milestone_review_published'),
+                (SELECT MIN(LEAST(occurred_at, created_at)) FROM conversion_stage_events WHERE source = 'live')
+              )::text AS watermark_since`,
       [days],
     );
+    const row = reconcile.rows[0] ?? {};
     const ga4 = { measurementIdConfigured: Boolean(process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID), serverSendConfigured: Boolean(process.env.GA4_API_SECRET) };
-    console.log(JSON.stringify({ days, timezone: 'America/Mexico_City', ga4, weekly: weekly.rows, delivery: delivery.rows, reconcile: reconcile.rows[0], ...coverageByStatus(), prerequisite: OWNER_LINKAGE_PREREQUISITE }, null, 2));
+    console.log(JSON.stringify({ days, timezone: 'America/Mexico_City', ga4, weekly: weekly.rows, delivery: delivery.rows, reconcile: { ...row, coverage: reconciliationCoverage(row.watermark_since) }, ...coverageByStatus(), prerequisite: OWNER_LINKAGE_PREREQUISITE }, null, 2));
   } finally {
     client.release();
     await pool.end();
@@ -41,3 +46,4 @@ async function main() {
 }
 
 void main();
+
