@@ -13,12 +13,12 @@ Opinio México (opinio.mx) está **en línea**. Los perfiles públicos de comerc
 | --- | --- |
 | https://opinio.mx | Portada y buscador de comercios por nombre o RFC |
 | https://opinio.mx/directorio | Índice paginado de los comercios con perfil público |
-| https://opinio.mx/b/{slug} | Perfil del comercio: datos registrados, opiniones publicadas por compradores, casos y fuentes de cada dato |
+| https://opinio.mx/b/{slug} | Perfil del comercio: datos registrados, opiniones publicadas por compradores, casos, preguntas frecuentes del comprador y fuentes de cada dato (con JSON-LD `Organization`, `WebPage`, `FAQPage`, `BreadcrumbList` y `Review`) |
 | https://opinio.mx/verificar | Búsqueda de comercios |
 | https://opinio.mx/escribir-opinion/{slug} | Formulario público para que un comprador publique su opinión |
 | https://opinio.mx/caso/nuevo | Formulario para registrar un caso de compra con un comercio |
 | https://opinio.mx/caso/{id} | Seguimiento público de un caso: estado, fechas, motivo y solución solicitada |
-| https://opinio.mx/blog | Guías sobre opiniones, reputación y resolución de problemas |
+| https://opinio.mx/blog | Guías sobre opiniones, reputación y resolución de problemas (`como-saber-si-tienda-en-linea-es-confiable-mexico`, `alternativas-trustpilot-mexico-plataformas-resenas`, `como-pedir-resenas-por-whatsapp-mexico`, `como-responder-resenas-negativas-sin-perder-clientes`, `demostrar-confiabilidad-negocio-mas-alla-estrellas`) |
 | https://opinio.mx/resenas-y-reputacion | Respuestas sobre reseñas y reputación de comercios en México |
 
 ## 3. Panel de comercios e invitaciones

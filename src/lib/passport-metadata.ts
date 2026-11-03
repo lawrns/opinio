@@ -51,9 +51,12 @@ export function passportMetadata(facts: PassportRecordFacts): PassportMetadata {
     const scopeClause = `ámbito registrado: ${recordedScope}`;
     distinction = distinction ? `${distinction} · ${scopeClause}` : scopeClause;
   }
-  const title = `¿Es confiable ${facts.brand_name}? ${distinction || 'Pasaporte de Confianza'} | Opinio México`;
+  const suffix = distinction
+    ? `Opiniones, quejas y análisis verificados (${distinction})`
+    : 'Opiniones, quejas y análisis verificados';
+  const title = `¿Es confiable ${facts.brand_name}? — ${suffix} | Opinio México`;
 
-  let description = `Pasaporte de confianza de ${facts.brand_name}${legalName ? ` (razón social: ${legalName})` : ''}.`;
+  let description = `¿Es confiable ${facts.brand_name}? Opiniones, quejas y análisis verificados en su pasaporte de confianza${legalName ? ` (razón social: ${legalName})` : ''}.`;
   if (category) {
     description += ` Categoría: ${category}.`;
   }
