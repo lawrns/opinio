@@ -63,3 +63,20 @@ describe('no invented geographic claim', () => {
     expect(`${title} ${description}`.split(operating_area).join('')).not.toMatch(/cobertura|domicilio/i);
   });
 });
+
+describe('CTR and search-intent metadata hooks', () => {
+  it('includes ¿Es confiable and Opiniones, quejas y análisis verificados in title and description', () => {
+    const { title, description } = passportMetadata({
+      brand_name: 'Innovasport',
+      legal_name: 'Innovasport, S.A. de C.V.',
+      category: 'Belleza, moda y calzado',
+      operating_area: 'Nacional (México)',
+    });
+
+    expect(title).toContain('¿Es confiable Innovasport? — Opiniones, quejas y análisis verificados');
+    expect(description).toContain('¿Es confiable Innovasport? Opiniones, quejas y análisis verificados');
+    expect(description).toContain('Consulta su identidad, registros públicos y opiniones en Opinio México.');
+  });
+});
+
+

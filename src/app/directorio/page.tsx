@@ -44,7 +44,7 @@ function baseUrl(): string {
 // the same strings.
 const DIRECTORY_IDENTITY = 'Directorio de tiendas en línea y comercios de México';
 const DIRECTORY_TITLE = `${DIRECTORY_IDENTITY} | Opinio México`;
-const DIRECTORY_DESCRIPTION = 'Consulta el directorio de tiendas en línea y comercios de México y accede a sus pasaportes con información registrada, fuentes y opiniones disponibles.';
+const DIRECTORY_DESCRIPTION = 'Consulta el directorio de tiendas en línea y comercios de México: revisa si una marca es confiable, opiniones de compradores, quejas y datos registrados.';
 const directoryPageIdentity = (page: number) => `${DIRECTORY_IDENTITY} — página ${page} | Opinio México`;
 
 function directoryCanonicalUrl(rawPage: string | string[] | undefined): string {
@@ -63,6 +63,14 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   return {
     title,
     description: DIRECTORY_DESCRIPTION,
+    keywords: [
+      'directorio de empresas mexico',
+      'tiendas en linea confiables mexico',
+      'opiniones de comercios mexico',
+      'verificar tienda en linea mexico',
+      'quejas de tiendas en linea',
+      'opinio mexico',
+    ],
     alternates: {
       canonical,
     },
@@ -111,11 +119,22 @@ export default async function DirectorioPage({ searchParams }: PageProps) {
         url: pageUrl,
         name: page > 1 ? directoryPageIdentity(page) : DIRECTORY_TITLE,
         description: DIRECTORY_DESCRIPTION,
+        inLanguage: 'es-MX',
         isPartOf: {
           '@type': 'WebSite',
           '@id': `${baseUrl()}#website`,
           name: 'Opinio México',
           url: baseUrl(),
+        },
+        mainEntity: {
+          '@type': 'ItemList',
+          numberOfItems: businesses.length,
+          itemListElement: businesses.map((b, idx) => ({
+            '@type': 'ListItem',
+            position: firstResult + idx,
+            name: b.brand_name,
+            url: `${baseUrl()}/b/${encodeURIComponent(b.slug)}`,
+          })),
         },
       },
       {

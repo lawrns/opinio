@@ -6,6 +6,7 @@ import {
   Globe,
   ShieldCheck,
   ArrowUpRight,
+  Question,
 } from '@phosphor-icons/react/dist/ssr';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
@@ -15,6 +16,9 @@ import { StarRating, ratingSentimentLabel } from '@/components/StarRating';
 import { PassportActionButtons } from '@/components/passport/PassportActionButtons';
 import { query } from '@/lib/db';
 import { passportMetadata } from '@/lib/passport-metadata';
+import { buildBuyerFaq } from '@/lib/passport-buyer-faq';
+import { factStatus, verificationLevelLabel, type IdentityEvidenceRow } from '@/lib/passport-evidence';
+import { publicCaseColumnsSql } from '@/lib/case-access';
 import { toPublicReview } from '@/lib/public-reviews';
 
 interface BusinessDbRow {
@@ -46,6 +50,21 @@ interface BusinessDbRow {
   effective_reviews_count: number;
   created_at: string;
   updated_at: string;
+}
+
+interface CaseDbRow {
+  id: number;
+  case_number: string;
+  issue_category: string;
+  customer_requested_remedy: string;
+  status: string;
+  is_consumer_confirmed: boolean;
+  remedy_offered: string | null;
+  resolution_summary: string | null;
+  median_first_response_minutes: number;
+  total_resolution_hours: number | null;
+  created_at: string;
+  resolved_at: string | null;
 }
 
 interface PageProps {
@@ -81,9 +100,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       title,
       description,
       keywords: [
+        `${b.brand_name} es confiable`,
         `es confiable ${b.brand_name}`,
         `opiniones ${b.brand_name}`,
+        `quejas ${b.brand_name}`,
+        `quejas ${b.brand_name} profeco`,
         `es seguro comprar en ${b.brand_name}`,
+        `rfc ${b.brand_name}`,
         `opinio mexico`,
         b.brand_name,
       ],
@@ -141,40 +164,52 @@ export default async function BusinessPassportPage({ params }: PageProps) {
 
   const business = bRes.rows[0];
 
-  // 2. Fetch Published Reviews
-  const revRes = await query<ReviewItem>(
-    `SELECT
-      r.id, r.rating, r.title, r.body, r.author_name,
-      r.verification_level, r.score_weight, r.product_name, r.created_at,
-      COALESCE(ac.author_review_count, 1)::int as author_review_count,
-      rr.responder_name, rr.response_text, rr.created_at as response_created_at
-     FROM reviews r
-     LEFT JOIN LATERAL (
-       SELECT COUNT(*)::int AS author_review_count
-       FROM reviews r2
-       WHERE (
-         (r.author_masked_contact IS NOT NULL AND r2.author_masked_contact = r.author_masked_contact)
-         OR (r.author_masked_contact IS NULL AND r2.author_name = r.author_name)
-       )
-       AND r2.status = 'published'
-     ) ac ON true
-     LEFT JOIN LATERAL (
-       SELECT responder_name, response_text, created_at
-       FROM review_responses
-       WHERE review_id = r.id
-       ORDER BY created_at DESC, id DESC
-       LIMIT 1
-     ) rr ON true
-     WHERE r.business_id = $1 AND r.status = 'published'
-     ORDER BY r.created_at DESC, r.id DESC`,
-    [business.id]
-  );
+  // 2. Fetch Published Reviews, Identities & Resolution Cases for truthful buyer FAQ
+  const [idRes, revRes, caseRes] = await Promise.all([
+    query<IdentityEvidenceRow>(
+      `SELECT type, identifier, status, source FROM identities WHERE business_id = $1 ORDER BY id ASC`,
+      [business.id]
+    ),
+    query<ReviewItem>(
+      `SELECT
+        r.id, r.rating, r.title, r.body, r.author_name,
+        r.verification_level, r.score_weight, r.product_name, r.created_at,
+        COALESCE(ac.author_review_count, 1)::int as author_review_count,
+        rr.responder_name, rr.response_text, rr.created_at as response_created_at
+       FROM reviews r
+       LEFT JOIN LATERAL (
+         SELECT COUNT(*)::int AS author_review_count
+         FROM reviews r2
+         WHERE (
+           (r.author_masked_contact IS NOT NULL AND r2.author_masked_contact = r.author_masked_contact)
+           OR (r.author_masked_contact IS NULL AND r2.author_name = r.author_name)
+         )
+         AND r2.status = 'published'
+       ) ac ON true
+       LEFT JOIN LATERAL (
+         SELECT responder_name, response_text, created_at
+         FROM review_responses
+         WHERE review_id = r.id
+         ORDER BY created_at DESC, id DESC
+         LIMIT 1
+       ) rr ON true
+       WHERE r.business_id = $1 AND r.status = 'published'
+       ORDER BY r.created_at DESC, r.id DESC`,
+      [business.id]
+    ),
+    query<CaseDbRow>(
+      `SELECT ${publicCaseColumnsSql()} FROM resolution_cases WHERE business_id = $1 ORDER BY created_at DESC`,
+      [business.id]
+    ),
+  ]);
 
   // Defense in depth: the query selects no contact column; strip it anyway.
   const reviews = revRes.rows.map(toPublicReview);
+  const cases = caseRes.rows;
   const averageRating = reviews.length
     ? reviews.reduce((sum, review) => sum + Number(review.rating), 0) / reviews.length
     : null;
+  const rfcEvidence = factStatus({ type: 'rfc', value: business.rfc }, idRes.rows);
 
   // Star breakdown computed strictly from published reviews
   const starCounts: Record<number, number> = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
@@ -187,6 +222,20 @@ export default async function BusinessPassportPage({ params }: PageProps) {
   const baseUrl = envPageUrl && !envPageUrl.includes('fertilitylistings') ? envPageUrl : 'https://opinio.mx';
   const canonicalUrl = `${baseUrl}/b/${business.slug}`;
   const logoAbsoluteUrl = business.logo_url ? `${baseUrl}${business.logo_url}` : undefined;
+  const { title: pageMetaTitle, description: pageMetaDescription } = passportMetadata(business);
+
+  // Single source for visible buyer Q&A and FAQPage JSON-LD (SEO-GEO-001 / JEV-001).
+  const buyerFaq = buildBuyerFaq({
+    brandName: business.brand_name,
+    legalName: business.legal_name,
+    rfc: business.rfc,
+    rfcLabel: rfcEvidence.label,
+    domain: business.domain,
+    verificationLabel: verificationLevelLabel(business.verified_level),
+    reviewsCount: reviews.length,
+    averageRating,
+    casesCount: cases.length,
+  });
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -202,7 +251,9 @@ export default async function BusinessPassportPage({ params }: PageProps) {
             : `https://${business.domain}`
           : canonicalUrl,
         logo: logoAbsoluteUrl,
-        description: `Opiniones de compradores sobre ${business.brand_name} en Opinio México; categoría: ${business.category}.`,
+        taxID: business.rfc || undefined,
+        telephone: business.phone && /\d/.test(business.phone) ? business.phone : undefined,
+        description: `Opiniones de compradores, quejas y datos registrados sobre ${business.brand_name} en Opinio México; categoría: ${business.category}.`,
         ...(averageRating !== null && reviews.length > 0
           ? {
               aggregateRating: {
@@ -240,8 +291,8 @@ export default async function BusinessPassportPage({ params }: PageProps) {
         '@type': 'WebPage',
         '@id': canonicalUrl,
         url: canonicalUrl,
-        name: `Opiniones sobre ${business.brand_name} | Opinio México`,
-        description: `Consulta las opiniones publicadas por compradores sobre ${business.brand_name} en Opinio México.`,
+        name: pageMetaTitle,
+        description: pageMetaDescription,
         inLanguage: 'es-MX',
         isPartOf: {
           '@type': 'WebSite',
@@ -251,6 +302,10 @@ export default async function BusinessPassportPage({ params }: PageProps) {
         },
         about: {
           '@id': `${canonicalUrl}#organization`,
+        },
+        speakable: {
+          '@type': 'SpeakableSpecification',
+          cssSelector: ['#preguntas-comprador', '#opiniones'],
         },
       },
       {
@@ -276,6 +331,18 @@ export default async function BusinessPassportPage({ params }: PageProps) {
             item: canonicalUrl,
           },
         ],
+      },
+      {
+        '@type': 'FAQPage',
+        '@id': `${canonicalUrl}#faq`,
+        mainEntity: buyerFaq.map((item) => ({
+          '@type': 'Question',
+          name: item.question,
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: item.answer,
+          },
+        })),
       },
     ],
   };
@@ -463,6 +530,37 @@ export default async function BusinessPassportPage({ params }: PageProps) {
             </div>
 
             <PassportReviewsList reviews={reviews} brandName={business.brand_name} />
+          </section>
+
+          {/* ========================================================================= */}
+          {/* 3. BUYER FAQ SECTION (MIRRORS FAQPage JSON-LD, SEO-GEO-001 / JEV-001)     */}
+          {/* ========================================================================= */}
+          <section className="mt-14 scroll-mt-28 space-y-6" id="preguntas-comprador">
+            <div className="flex items-center gap-3 border-b border-op-border pb-4">
+              <span className="flex size-11 items-center justify-center rounded-xl border border-op-border bg-white text-op-green-dark">
+                <Question className="size-6" weight="duotone" aria-hidden="true" />
+              </span>
+              <div>
+                <span className="font-mono text-xs font-bold uppercase tracking-wider text-op-green-dark">
+                  Preguntas del comprador
+                </span>
+                <h2 className="text-2xl font-extrabold tracking-tight text-op-ink">
+                  ¿Es confiable {business.brand_name}? Dudas frecuentes
+                </h2>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              {buyerFaq.map((item) => (
+                <article
+                  key={item.question}
+                  className="space-y-2 rounded-2xl border border-op-border bg-white p-5 shadow-flat"
+                >
+                  <h3 className="text-base font-bold text-op-ink">{item.question}</h3>
+                  <p className="text-sm leading-relaxed text-op-secondary">{item.answer}</p>
+                </article>
+              ))}
+            </div>
           </section>
         </div>
       </main>
