@@ -1180,7 +1180,7 @@ const portfolioBusinesses: PortfolioBusiness[] = [
     phone: '+52 614 399 1100',
     whatsapp: '+52 614 399 1100',
     domain: 'gogym.mx',
-    logo_url: '/logos/gogym.svg',
+    logo_url: '/logos/gogym.png',
     operating_area: 'Nacional (México)',
     claimed: true,
     verified_level: 'transparent_coverage',
