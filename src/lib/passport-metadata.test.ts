@@ -35,6 +35,10 @@ describe('same-brand merchant records', () => {
 
     expect(loose(firstMetadata.title)).not.toBe(loose(secondMetadata.title));
     expect(loose(firstMetadata.description)).not.toBe(loose(secondMetadata.description));
+    expect(firstMetadata.title.length).toBeLessThanOrEqual(60);
+    expect(secondMetadata.title.length).toBeLessThanOrEqual(60);
+    expect(firstMetadata.title).toContain(`¿Es confiable ${first.brand_name}?`);
+    expect(secondMetadata.title).toContain(`¿Es confiable ${second.brand_name}?`);
   });
 });
 
@@ -65,7 +69,7 @@ describe('no invented geographic claim', () => {
 });
 
 describe('CTR and search-intent metadata hooks', () => {
-  it('includes ¿Es confiable and Opiniones, quejas y análisis verificados in title and description', () => {
+  it('keeps the query in a short title and the legal identity in the description', () => {
     const { title, description } = passportMetadata({
       brand_name: 'Innovasport',
       legal_name: 'Innovasport, S.A. de C.V.',
@@ -73,8 +77,11 @@ describe('CTR and search-intent metadata hooks', () => {
       operating_area: 'Nacional (México)',
     });
 
-    expect(title).toContain('¿Es confiable Innovasport? — Opiniones, quejas y análisis verificados');
+    expect(title).toBe('¿Es confiable Innovasport? Belleza | Opinio');
+    expect(title.length).toBeLessThanOrEqual(60);
     expect(description).toContain('¿Es confiable Innovasport? Opiniones, quejas y análisis verificados');
+    expect(description).toContain('razón social: Innovasport, S.A. de C.V.');
+    expect(description).toContain('Ámbito registrado: Nacional (México)');
     expect(description).toContain('Consulta su identidad, registros públicos y opiniones en Opinio México.');
   });
 });
