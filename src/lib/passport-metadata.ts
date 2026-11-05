@@ -37,24 +37,53 @@ function recordedScopeValue(operatingArea?: string | null): string | null {
   return !value || SCOPE_PLACEHOLDER.test(value) ? null : value;
 }
 
+/** Google rewrites titles past this. The question plus a short distinguisher fits; the legal name does not. */
+const TITLE_MAX = 60;
+const TITLE_TAIL = ' | Opinio';
+
 /**
- * Title and meta description for one passport: purpose, the record's published
- * identity (razón social or catalogue category) and its recorded scope.
+ * A short category label for the title. Stops at a comma or at "y" so the
+ * snippet does not end mid-phrase ("Marketplaces y"). Caps a long first word.
+ */
+function shortCategory(category: string): string {
+  const head = category.split(/[,;/]/)[0]?.trim() ?? '';
+  const words = head.split(/\s+/).filter(Boolean);
+  let out = '';
+  for (const word of words) {
+    if (word.toLowerCase() === 'y') break;
+    const next = out ? `${out} ${word}` : word;
+    if (next.length > 22) break;
+    out = next;
+  }
+  const label = out || words[0] || '';
+  return label.length <= 22 ? label : label.slice(0, 22);
+}
+
+/**
+ * Title and meta description for one passport.
+ *
+ * The title carries the query ("¿Es confiable {marca}?") and, when the record
+ * has one, a short category so two passports of the same brand stay distinct
+ * in the SERP. The razón social and the recorded scope stay in the description:
+ * they are what made titles 160–270 characters and got rewritten.
  */
 export function passportMetadata(facts: PassportRecordFacts): PassportMetadata {
   const legalName = (facts.legal_name ?? '').trim();
   const category = (facts.category ?? '').trim();
   const recordedScope = recordedScopeValue(facts.operating_area);
 
-  let distinction = legalName || category;
-  if (recordedScope) {
-    const scopeClause = `ámbito registrado: ${recordedScope}`;
-    distinction = distinction ? `${distinction} · ${scopeClause}` : scopeClause;
+  const question = `¿Es confiable ${facts.brand_name.trim()}?`;
+  const distinguisher = category ? shortCategory(category) : '';
+  const middle = distinguisher || 'Opiniones';
+  let title = `${question} ${middle}${TITLE_TAIL}`;
+  if (title.length > TITLE_MAX) {
+    const room = TITLE_MAX - question.length - 1 - TITLE_TAIL.length;
+    title = room >= 8
+      ? `${question} ${middle.slice(0, room).replace(/[\s·]+$/, '')}${TITLE_TAIL}`
+      : question.length + TITLE_TAIL.length <= TITLE_MAX
+        ? `${question}${TITLE_TAIL}`
+        : question.slice(0, TITLE_MAX);
   }
-  const suffix = distinction
-    ? `Opiniones, quejas y análisis verificados (${distinction})`
-    : 'Opiniones, quejas y análisis verificados';
-  const title = `¿Es confiable ${facts.brand_name}? — ${suffix} | Opinio México`;
 
   let description = `¿Es confiable ${facts.brand_name}? Opiniones, quejas y análisis verificados en su pasaporte de confianza${legalName ? ` (razón social: ${legalName})` : ''}.`;
   if (category) {
