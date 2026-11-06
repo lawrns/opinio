@@ -17,6 +17,7 @@ export interface BuyerFaqInput {
   /** verificationLevelLabel(business.verified_level). */
   verificationLabel: string;
   reviewsCount: number;
+  automatedReviewsCount?: number;
   averageRating: number | null;
   casesCount: number;
 }
@@ -38,14 +39,23 @@ export function buildBuyerFaq(input: BuyerFaqInput): BuyerFaqItem[] {
     domain,
     verificationLabel,
     reviewsCount,
+    automatedReviewsCount = 0,
     averageRating,
     casesCount,
   } = input;
 
+  const reviewSummary = automatedReviewsCount > 0
+    ? reviewsCount > 0
+      ? `Tiene ${reviewsCount} opiniones de clientes con promedio de ${averageRating?.toFixed(1)}/5. El contenido automatizado publicado está marcado y no entra en esta cuenta.`
+      : 'Todavía no tiene opiniones de clientes. El contenido automatizado publicado está marcado y no entra en esta cuenta.'
+    : reviewsCount > 0
+      ? `Tiene ${reviewsCount} opiniones publicadas con promedio de ${averageRating?.toFixed(1)}/5.`
+      : 'Todavía no tiene opiniones publicadas.';
+
   return [
     {
       question: `¿Es confiable comprar en ${brandName} en México?`,
-      answer: `${brandName} cuenta con un perfil público en Opinio México. Estado del RFC: ${rfc ? `${rfc} (${rfcLabel})` : 'sin RFC publicado'}. Nivel de verificación registrado: ${verificationLabel}. ${reviewsCount > 0 ? `Tiene ${reviewsCount} opiniones publicadas con promedio de ${averageRating?.toFixed(1)}/5.` : 'Todavía no tiene opiniones publicadas.'} ${casesCount > 0 ? `Opinio tiene registrados ${casesCount} ${plural(casesCount, 'caso', 'casos')} de atención de compradores.` : 'Opinio no tiene casos de atención registrados.'}`,
+      answer: `${brandName} cuenta con un perfil público en Opinio México. Estado del RFC: ${rfc ? `${rfc} (${rfcLabel})` : 'sin RFC publicado'}. Nivel de verificación registrado: ${verificationLabel}. ${reviewSummary} ${casesCount > 0 ? `Opinio tiene registrados ${casesCount} ${plural(casesCount, 'caso', 'casos')} de atención de compradores.` : 'Opinio no tiene casos de atención registrados.'}`,
     },
     {
       question: `¿Tiene quejas ${brandName} ante la PROFECO?`,

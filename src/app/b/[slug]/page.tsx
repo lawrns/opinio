@@ -19,7 +19,7 @@ import { passportMetadata } from '@/lib/passport-metadata';
 import { buildBuyerFaq } from '@/lib/passport-buyer-faq';
 import { factStatus, verificationLevelLabel, type IdentityEvidenceRow } from '@/lib/passport-evidence';
 import { publicCaseColumnsSql } from '@/lib/case-access';
-import { toPublicReview } from '@/lib/public-reviews';
+import { isAutomatedReview, isCustomerReview, toPublicReview } from '@/lib/public-reviews';
 
 interface BusinessDbRow {
   id: number;
@@ -173,8 +173,8 @@ export default async function BusinessPassportPage({ params }: PageProps) {
     query<ReviewItem>(
       `SELECT
         r.id, r.rating, r.title, r.body, r.author_name,
-        r.verification_level, r.score_weight, r.product_name, r.created_at,
-        COALESCE(ac.author_review_count, 1)::int as author_review_count,
+        r.verification_level, r.content_origin, r.score_weight, r.product_name, r.created_at,
+        CASE WHEN r.content_origin = 'automated' THEN NULL ELSE COALESCE(ac.author_review_count, 1) END::int AS author_review_count,
         rr.responder_name, rr.response_text, rr.created_at as response_created_at
        FROM reviews r
        LEFT JOIN LATERAL (
@@ -185,6 +185,7 @@ export default async function BusinessPassportPage({ params }: PageProps) {
            OR (r.author_masked_contact IS NULL AND r2.author_name = r.author_name)
          )
          AND r2.status = 'published'
+         AND r2.content_origin IS DISTINCT FROM 'automated'
        ) ac ON true
        LEFT JOIN LATERAL (
          SELECT responder_name, response_text, created_at
@@ -205,15 +206,16 @@ export default async function BusinessPassportPage({ params }: PageProps) {
 
   // Defense in depth: the query selects no contact column; strip it anyway.
   const reviews = revRes.rows.map(toPublicReview);
+  const customerReviews = reviews.filter(isCustomerReview);
   const cases = caseRes.rows;
-  const averageRating = reviews.length
-    ? reviews.reduce((sum, review) => sum + Number(review.rating), 0) / reviews.length
+  const averageRating = customerReviews.length
+    ? customerReviews.reduce((sum, review) => sum + Number(review.rating), 0) / customerReviews.length
     : null;
   const rfcEvidence = factStatus({ type: 'rfc', value: business.rfc }, idRes.rows);
 
-  // Star breakdown computed strictly from published reviews
+  // Customer rating uses published non-automated reviews. Null origin stays historical.
   const starCounts: Record<number, number> = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
-  for (const r of reviews) {
+  for (const r of customerReviews) {
     const bucket = Math.min(5, Math.max(1, Math.round(Number(r.rating) || 0)));
     starCounts[bucket] = (starCounts[bucket] || 0) + 1;
   }
@@ -232,7 +234,8 @@ export default async function BusinessPassportPage({ params }: PageProps) {
     rfcLabel: rfcEvidence.label,
     domain: business.domain,
     verificationLabel: verificationLevelLabel(business.verified_level),
-    reviewsCount: reviews.length,
+    reviewsCount: customerReviews.length,
+    automatedReviewsCount: reviews.length - customerReviews.length,
     averageRating,
     casesCount: cases.length,
   });
@@ -253,19 +256,19 @@ export default async function BusinessPassportPage({ params }: PageProps) {
         logo: logoAbsoluteUrl,
         taxID: business.rfc || undefined,
         telephone: business.phone && /\d/.test(business.phone) ? business.phone : undefined,
-        description: `Opiniones de compradores, quejas y datos registrados sobre ${business.brand_name} en Opinio México; categoría: ${business.category}.`,
-        ...(averageRating !== null && reviews.length > 0
+        description: `Opiniones publicadas, quejas y datos registrados sobre ${business.brand_name} en Opinio México; categoría: ${business.category}.`,
+        ...(averageRating !== null && customerReviews.length > 0
           ? {
               aggregateRating: {
                 '@type': 'AggregateRating',
                 ratingValue: averageRating.toFixed(1),
-                reviewCount: reviews.length,
+                reviewCount: customerReviews.length,
                 bestRating: '5',
                 worstRating: '1',
               },
-              review: reviews.slice(0, 10).map((r) => ({
+              review: customerReviews.slice(0, 10).map((r) => ({
                 '@type': 'Review',
-                ...(r.author_name && r.author_name.trim()
+                ...(r.author_name && r.author_name.trim() && !isAutomatedReview(r)
                   ? {
                       author: {
                         '@type': 'Person',
@@ -425,9 +428,11 @@ export default async function BusinessPassportPage({ params }: PageProps) {
                           {averageRating.toFixed(1)} de 5
                         </span>
                         <span className="font-semibold text-op-green-dark underline decoration-[#008b5d] underline-offset-4">
-                          {reviews.length.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')} {reviews.length === 1 ? 'opinión' : 'opiniones'}
+                          {customerReviews.length.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')} {customerReviews.length === 1 ? 'opinión' : 'opiniones'}
                         </span>
                       </>
+                    ) : reviews.length > 0 ? (
+                      <span className="text-op-secondary">Sin calificación de clientes</span>
                     ) : (
                       <span className="text-op-secondary">Este negocio todavía no tiene opiniones</span>
                     )}
@@ -467,7 +472,7 @@ export default async function BusinessPassportPage({ params }: PageProps) {
                       </span>
                     )}
                     <p className="mt-1 font-mono text-xs text-op-muted">
-                      {reviews.length.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')} {reviews.length === 1 ? 'opinión' : 'opiniones'}
+                      {customerReviews.length.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')} {customerReviews.length === 1 ? 'opinión' : 'opiniones'}
                     </p>
                   </div>
                 </div>
@@ -475,7 +480,7 @@ export default async function BusinessPassportPage({ params }: PageProps) {
                 <div className="space-y-2.5">
                   {[5, 4, 3, 2, 1].map((stars) => {
                     const count = starCounts[stars] || 0;
-                    const percent = reviews.length > 0 ? Math.round((count / reviews.length) * 100) : 0;
+                    const percent = customerReviews.length > 0 ? Math.round((count / customerReviews.length) * 100) : 0;
                     return (
                       <div key={stars} className="flex items-center gap-3 text-xs">
                         <span className="w-16 shrink-0 font-semibold text-op-ink">
@@ -500,7 +505,7 @@ export default async function BusinessPassportPage({ params }: PageProps) {
         </header>
 
         {/* ========================================================================= */}
-        {/* 2. CUSTOMER REVIEWS SECTION                                               */}
+        {/* 2. PUBLISHED REVIEWS                                                      */}
         {/* ========================================================================= */}
         <div className="mx-auto max-w-7xl px-4 pt-12 sm:px-6 lg:px-8">
           <section className="scroll-mt-28 space-y-6" id="opiniones">
@@ -511,10 +516,10 @@ export default async function BusinessPassportPage({ params }: PageProps) {
                 </span>
                 <div>
                   <span className="font-mono text-xs font-bold uppercase tracking-wider text-op-green-dark">
-                    Experiencias reales
+                    Contenido publicado
                   </span>
                   <h2 className="text-2xl font-extrabold tracking-tight text-op-ink">
-                    Opiniones de compradores ({reviews.length})
+                    Opiniones publicadas ({reviews.length})
                   </h2>
                 </div>
               </div>

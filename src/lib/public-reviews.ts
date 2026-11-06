@@ -5,7 +5,20 @@
 
 export const PUBLIC_REVIEW_STATUS = 'published';
 
-/** SQL column list for public review reads. Kept explicit: no `SELECT *`. */
+/** Generated publication. Null and every other origin stay customer or historical. */
+export const AUTOMATED_CONTENT_ORIGIN = 'automated';
+
+export type ReviewContentOrigin = 'automated' | 'customer_submitted' | 'imported';
+
+export function isAutomatedReview(review: { content_origin?: string | null }): boolean {
+  return review.content_origin === AUTOMATED_CONTENT_ORIGIN;
+}
+
+/** Existing rows with null content_origin remain customer/historical. */
+export function isCustomerReview(review: { content_origin?: string | null }): boolean {
+  return !isAutomatedReview(review);
+}
+
 export const PUBLIC_REVIEW_COLUMNS = [
   'id',
   'business_id',
@@ -14,6 +27,7 @@ export const PUBLIC_REVIEW_COLUMNS = [
   'body',
   'author_name',
   'verification_level',
+  'content_origin',
   'score_weight',
   'integrity_factor',
   'product_name',

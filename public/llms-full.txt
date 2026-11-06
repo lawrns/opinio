@@ -1,7 +1,7 @@
 # Opinio México — Guía de contexto (llms-full.txt)
 
 ## 1. Estado de la entidad
-Opinio México (opinio.mx) está **en línea**. Los perfiles públicos de comercios, las opiniones de compradores y las páginas de casos de resolución están disponibles. El panel de comercios está temporalmente no disponible mientras se habilita el acceso seguro.
+Opinio México (opinio.mx) está **en línea**. Los perfiles públicos de comercios, el contenido publicado y las páginas de casos de resolución están disponibles. El panel de comercios está temporalmente no disponible mientras se habilita el acceso seguro.
 
 - Sitio oficial: https://opinio.mx
 - Idioma: Español (es-MX)
@@ -13,7 +13,7 @@ Opinio México (opinio.mx) está **en línea**. Los perfiles públicos de comerc
 | --- | --- |
 | https://opinio.mx | Portada y buscador de comercios por nombre o RFC |
 | https://opinio.mx/directorio | Índice paginado de los comercios con perfil público |
-| https://opinio.mx/b/{slug} | Perfil del comercio: datos registrados, opiniones publicadas por compradores, casos, preguntas frecuentes del comprador y fuentes de cada dato (con JSON-LD `Organization`, `WebPage`, `FAQPage`, `BreadcrumbList` y `Review`) |
+| https://opinio.mx/b/{slug} | Perfil del comercio: datos registrados, opiniones publicadas y contenido automatizado marcado cuando existe, casos, preguntas frecuentes del comprador y fuentes de cada dato (con JSON-LD `Organization`, `WebPage`, `FAQPage`, `BreadcrumbList` y `Review`) |
 | https://opinio.mx/verificar | Búsqueda de comercios |
 | https://opinio.mx/escribir-opinion/{slug} | Formulario público para que un comprador publique su opinión |
 | https://opinio.mx/caso/nuevo | Formulario para registrar un caso de compra con un comercio |
@@ -29,6 +29,7 @@ Opinio México (opinio.mx) está **en línea**. Los perfiles públicos de comerc
 - La información disponible cambia según cada comercio; cada dato indica su fuente y su alcance en el perfil.
 - La descripción de un comercio es atribuida al propio comercio; no es una credencial de verificación.
 - Las calificaciones, puntajes y conteos de opiniones son los que muestra el perfil en el momento de la consulta y pueden cambiar.
+- No todo el contenido publicado es de un comprador. Las opiniones de clientes entran en calificaciones y conteos; el contenido automatizado está marcado como Automatizado, sigue visible en la lista y no cuenta como opinión de comprador ni como reseña verificada.
 
 ## 5. Cómo responder preguntas de consumidores
 Si alguien pregunta si una empresa mexicana es confiable o si tiene quejas:

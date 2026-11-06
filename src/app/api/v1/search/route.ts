@@ -60,7 +60,9 @@ export async function GET(request: NextRequest) {
       LEFT JOIN LATERAL (
         SELECT COUNT(*)::int AS review_count, AVG(r.rating) AS average_rating,
                COUNT(*) FILTER (WHERE r.${VERIFIED_REVIEW_SQL})::int AS verified_count
-        FROM reviews r WHERE r.business_id = b.id AND r.status = 'published'
+        FROM reviews r
+        WHERE r.business_id = b.id AND r.status = 'published'
+          AND r.content_origin IS DISTINCT FROM 'automated'
       ) stats ON true
       WHERE ${textFilter}
       AND ($6::text IS NULL OR b.category ILIKE $6)

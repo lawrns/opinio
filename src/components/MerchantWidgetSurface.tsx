@@ -22,9 +22,14 @@ export function MerchantWidgetSurface({
 
   // Ribbon Micro-Badge (Trustpilot-grade prestige ribbon)
   if (format === 'ribbon') {
-    const rating = Number(business.calculated_rating || 4.8);
-    const reviewCount = Number(business.review_count || 50);
-    const sentiment = rating >= 4.5 ? 'Excelente' : rating >= 4.0 ? 'Muy bueno' : 'Bueno';
+    const rating = typeof business.calculated_rating === 'number' && Number.isFinite(business.calculated_rating)
+      ? business.calculated_rating
+      : null;
+    const verifiedCount = Number(business.verified_reviews_count ?? 0);
+    const sentiment = rating == null ? null : rating >= 4.5 ? 'Excelente' : rating >= 4.0 ? 'Muy bueno' : 'Bueno';
+    const ariaLabel = rating == null
+      ? `Perfil de ${business.brand_name} en Opinio México: Sin calificación de clientes`
+      : `Perfil de ${business.brand_name} en Opinio México: Calificación ${sentiment} ${rating.toFixed(1)} de 5 estrellas`;
 
     return (
       <main id="contenido" tabIndex={-1} className="flex items-center justify-center p-0 m-0 w-full">
@@ -32,7 +37,7 @@ export function MerchantWidgetSurface({
           href={`/b/${business.b_slug}`}
           target="_blank"
           rel="noopener noreferrer"
-          aria-label={`Perfil de ${business.brand_name} en Opinio México: Calificación ${sentiment} ${rating.toFixed(1)} de 5 estrellas`}
+          aria-label={ariaLabel}
           className={cn(
             'group inline-flex items-center gap-2 sm:gap-2.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-150 select-none no-underline',
             isTransparent
@@ -60,24 +65,32 @@ export function MerchantWidgetSurface({
             |
           </span>
 
-          {/* Rating & Sentiment */}
-          <span className="flex items-center gap-1">
+          {/* Rating from customer reviews only. Automated rows are not a verified count. */}
+          {rating == null ? (
             <span className={cn('font-semibold', isDark ? 'text-white' : isTransparent ? 'text-current' : 'text-slate-900')}>
-              {sentiment}
+              Sin calificación de clientes
             </span>
-            <span className={cn('font-mono font-bold', isDark ? 'text-emerald-400' : 'text-emerald-600')}>
-              {rating.toFixed(1)}/5
+          ) : (
+            <span className="flex items-center gap-1">
+              <span className={cn('font-semibold', isDark ? 'text-white' : isTransparent ? 'text-current' : 'text-slate-900')}>
+                {sentiment}
+              </span>
+              <span className={cn('font-mono font-bold', isDark ? 'text-emerald-400' : 'text-emerald-600')}>
+                {rating.toFixed(1)}/5
+              </span>
             </span>
-          </span>
+          )}
 
-          <span className={cn('opacity-30 font-light', isDark ? 'text-slate-400' : 'text-slate-500')} aria-hidden="true">
-            |
-          </span>
-
-          {/* Review Volume / Verification */}
-          <span className={cn('text-[11px] sm:text-xs', isDark ? 'text-slate-300' : isTransparent ? 'opacity-80' : 'text-slate-600')}>
-            {reviewCount}+ reseñas verificadas
-          </span>
+          {verifiedCount > 0 && (
+            <>
+              <span className={cn('opacity-30 font-light', isDark ? 'text-slate-400' : 'text-slate-500')} aria-hidden="true">
+                |
+              </span>
+              <span className={cn('text-[11px] sm:text-xs', isDark ? 'text-slate-300' : isTransparent ? 'opacity-80' : 'text-slate-600')}>
+                {verifiedCount}+ reseñas verificadas
+              </span>
+            </>
+          )}
 
           {/* Subtle external link icon */}
           <ExternalLink

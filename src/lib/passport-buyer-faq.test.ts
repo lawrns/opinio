@@ -86,4 +86,12 @@ describe('buildBuyerFaq', () => {
     expect(two[0].answer).toContain('2 casos de atención de compradores');
     expect(two[1].answer).toContain('Opinio registra 2 casos');
   });
+
+  it('keeps automated content out of buyer counts and explains its label', () => {
+    const faq = buildBuyerFaq({ ...RICH, automatedReviewsCount: 3 });
+
+    expect(faq[0].answer).toContain('2 opiniones de clientes con promedio de 4.5/5');
+    expect(faq[0].answer).toContain('contenido automatizado publicado está marcado y no entra en esta cuenta');
+    expect(faq[0].answer).not.toContain('5 opiniones');
+  });
 });

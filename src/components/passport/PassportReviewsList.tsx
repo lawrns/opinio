@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Check, CornerDownRight, MessageSquareText, Search, SlidersHorizontal, X } from 'lucide-react';
 import { StarRating, ratingSentimentLabel } from '@/components/StarRating';
+import { isAutomatedReview } from '@/lib/public-reviews';
 
 export interface ReviewItem {
   id: number;
@@ -10,7 +11,8 @@ export interface ReviewItem {
   title: string | null;
   body: string;
   author_name: string;
-  author_review_count?: number;
+  author_review_count?: number | null;
+  content_origin?: string | null;
   verification_level: string;
   score_weight: number | string;
   product_name: string | null;
@@ -58,8 +60,12 @@ export function PassportReviewsList({ reviews, brandName }: { reviews: ReviewIte
   const [ratings, setRatings] = useState<number[]>([]);
   const [repliedOnly, setRepliedOnly] = useState(false);
   const [visibleCount, setVisibleCount] = useState(10);
-  const average = reviews.length ? reviews.reduce((sum, review) => sum + Number(review.rating), 0) / reviews.length : null;
-  const replyCount = reviews.filter((review) => Boolean(review.response_text?.trim())).length;
+  const customerReviews = reviews.filter((review) => !isAutomatedReview(review));
+  const automatedCount = reviews.length - customerReviews.length;
+  const average = customerReviews.length
+    ? customerReviews.reduce((sum, review) => sum + Number(review.rating), 0) / customerReviews.length
+    : null;
+  const replyCount = customerReviews.filter((review) => Boolean(review.response_text?.trim())).length;
   const normalizedKeyword = normalize(keyword.trim());
   const filtersApplied = filter !== 'all' || normalizedKeyword.length > 0 || ratings.length > 0 || repliedOnly;
   const filtered = reviews
@@ -95,7 +101,7 @@ export function PassportReviewsList({ reviews, brandName }: { reviews: ReviewIte
         className="rounded-2xl border border-[var(--op-border-hairline)] bg-[var(--op-sheet)] p-5 shadow-flat sm:p-6 lg:sticky lg:top-28"
       >
         <div className="flex items-center justify-between gap-2">
-          <h3 className="text-base font-bold text-op-ink">Lo que opinan sus clientes</h3>
+          <h3 className="text-base font-bold text-op-ink">Opiniones publicadas</h3>
           {average !== null && (
             <span className="rounded-full border border-op-border bg-[#fcfbf3] px-2.5 py-0.5 text-xs font-semibold text-op-ink">
               {ratingSentimentLabel(average)}
@@ -117,18 +123,24 @@ export function PassportReviewsList({ reviews, brandName }: { reviews: ReviewIte
           </div>
         )}
         <p className="mt-3 text-sm font-medium text-[var(--op-ink-secondary)]">
-          {formatInt(reviews.length)} {reviews.length === 1 ? 'opinión publicada' : 'opiniones publicadas'}
+          {customerReviews.length === 0
+            ? reviews.length > 0
+              ? 'Sin calificación de clientes'
+              : 'Este negocio todavía no tiene opiniones'
+            : `${formatInt(customerReviews.length)} ${customerReviews.length === 1 ? 'opinión de clientes' : 'opiniones de clientes'}`}
         </p>
         <p className="mt-2 text-xs leading-relaxed text-[var(--op-ink-muted)]">
-          Promedio de las estrellas de todas las opiniones publicadas. El puntaje Opinio de 0 a 100 también considera evidencia y resolución.
+          {customerReviews.length === 0
+            ? 'No hay opiniones de clientes para promediar. El contenido automatizado, si aparece en la lista, está marcado y no cuenta como calificación.'
+            : `Promedio de las opiniones de clientes. El puntaje Opinio de 0 a 100 también considera evidencia y resolución.${automatedCount > 0 ? ' Las marcadas como automatizadas no cuentan en esta calificación.' : ''}`}
         </p>
         <fieldset className="mt-6 border-t border-[var(--op-border-hairline)] pt-5">
           <legend className="sr-only">Filtrar por número de estrellas</legend>
           <p className="mb-3 text-xs font-medium text-[var(--op-ink-muted)]">Elige una o varias calificaciones</p>
           <div className="space-y-1.5">
             {[5, 4, 3, 2, 1].map((rating) => {
-              const count = reviews.filter((review) => Number(review.rating) === rating).length;
-              const percent = reviews.length ? Math.round((count / reviews.length) * 100) : 0;
+              const count = customerReviews.filter((review) => Number(review.rating) === rating).length;
+              const percent = customerReviews.length ? Math.round((count / customerReviews.length) * 100) : 0;
               const selected = ratings.includes(rating);
               return (
                 <label
@@ -319,7 +331,11 @@ export function PassportReviewsList({ reviews, brandName }: { reviews: ReviewIte
                       <div className="min-w-0">
                         <p className="flex items-center gap-2 break-words text-sm font-bold text-op-ink">
                           <span>{review.author_name}</span>
-                          {review.author_review_count ? (
+                          {isAutomatedReview(review) ? (
+                            <span className="inline-flex items-center rounded-md border border-[var(--op-border-hairline)] bg-[var(--op-shaded)] px-2 py-0.5 text-[11px] font-medium text-[var(--op-ink-secondary)]">
+                              Automatizado
+                            </span>
+                          ) : review.author_review_count ? (
                             <span className="inline-flex items-center rounded-md border border-[var(--op-border-hairline)] bg-[var(--op-shaded)] px-2 py-0.5 text-[11px] font-medium text-[var(--op-ink-secondary)]">
                               {review.author_review_count} {review.author_review_count === 1 ? 'opinión' : 'opiniones'}
                             </span>

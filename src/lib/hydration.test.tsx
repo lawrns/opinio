@@ -102,6 +102,53 @@ describe('SSR & Hydration Determinism', () => {
     expect(html).toContain('31 dic 2025');
   });
 
+  it('labels automated reviews and does not group them as one buyer', () => {
+    const html = renderCleanSSR(
+      <PassportReviewsList
+        brandName="Luuna"
+        reviews={[
+          {
+            id: 201,
+            rating: 4,
+            title: 'Bien',
+            body: 'Llegó a tiempo.',
+            author_name: 'Ana',
+            author_review_count: 2,
+            content_origin: null,
+            verification_level: 'confirmed_store_order',
+            score_weight: 1,
+            product_name: null,
+            created_at: '2026-03-15T18:30:00.000Z',
+          },
+          {
+            id: 202,
+            rating: 5,
+            title: 'Nota',
+            body: 'Texto generado visible.',
+            author_name: 'Contenido automatizado',
+            author_review_count: 9,
+            content_origin: 'automated',
+            verification_level: 'unverified_experience',
+            score_weight: 0.35,
+            product_name: null,
+            created_at: '2026-04-01T18:30:00.000Z',
+          },
+        ]}
+      />,
+    );
+
+    expect(html).toContain('Opiniones publicadas');
+    expect(html).not.toContain('Lo que opinan sus clientes');
+    expect(html.match(/Automatizado/g)).toHaveLength(1);
+    expect(html).toContain('Texto generado visible.');
+    const text = html.replace(/<!--.*?-->/g, '').replace(/<svg[\s\S]*?<\/svg>/g, '');
+    expect(text).toContain('2 opiniones');
+    expect(text).not.toContain('9 opiniones');
+    expect(text).toContain('4.0');
+    expect(text).not.toContain('4.5');
+    expect(text).toContain('Muy bueno');
+  });
+
   it('renders ReviewFormWizard deterministically with SSR-safe Phosphor icons', () => {
     const html = renderCleanSSR(
       <ReviewFormWizard

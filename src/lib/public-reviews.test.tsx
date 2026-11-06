@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { NextRequest } from 'next/server';
 
 // Synthetic sentinels, not real data. The fake database returns reviews in
@@ -10,7 +11,10 @@ const CONTACT = 'sentinel-reviewer@example.invalid';
 const HIDDEN_BODY = 'SENTINEL_HIDDEN_REVIEW';
 
 const db = vi.hoisted(() => {
-  const state = { calls: [] as { text: string; params: unknown[] }[] };
+  const state = {
+    calls: [] as { text: string; params: unknown[] }[],
+    reviews: null as null | Array<Record<string, unknown>>,
+  };
   const review = (id: number, status: string, minutesAgo: number) => ({
     id,
     business_id: 1,
@@ -58,7 +62,7 @@ const db = vi.hoisted(() => {
     if (/FROM widgets w/.test(sql)) {
       return { rows: [{ ...business, b_slug: 'comercio-demo', widget_token: 'wgt_demo', widget_type: 'card', w_theme: 'light', w_config: {}, rev_count: 1, avg_rating: 4 }] };
     }
-    if (/FROM reviews/.test(sql) && /^SELECT/.test(sql)) return { rows: reviews() };
+    if (/FROM reviews/.test(sql) && /^SELECT/.test(sql)) return { rows: state.reviews ?? reviews() };
     if (/FROM businesses WHERE (slug|id)/.test(sql)) return { rows: [business] };
     return { rows: [] };
   }
@@ -78,6 +82,7 @@ import BusinessPassportPage from '@/app/b/[slug]/page';
 import { PassportReviewsList } from '@/components/passport/PassportReviewsList';
 import { MerchantWidgetSurface } from '@/components/MerchantWidgetSurface';
 import { calculateOpinioScore } from '@/lib/scoring';
+import { isCustomerReview, PUBLIC_REVIEW_COLUMNS } from '@/lib/public-reviews';
 
 function findElement(node: unknown, type: unknown): React.ReactElement | null {
   if (!node || typeof node !== 'object') return null;
@@ -105,6 +110,7 @@ function expectNoReviewerData(payload: string) {
 
 beforeEach(() => {
   db.state.calls.length = 0;
+  db.state.reviews = null;
 });
 
 describe('public review reads show only published reviews, without reviewer contact', () => {
@@ -121,6 +127,7 @@ describe('public review reads show only published reviews, without reviewer cont
     expect(select.text).not.toMatch(/SELECT \*/);
     expect(select.text).toMatch(/status = \$2/);
     expect(select.params).toEqual([1, 'published']);
+    expect(select.text).toContain('content_origin');
   });
 
   it('GET /api/v1/businesses/[slug] scores from published reviews only', async () => {
@@ -159,6 +166,9 @@ describe('public review reads show only published reviews, without reviewer cont
 
     const select = db.state.calls.find((c) => /FROM reviews r\s+LEFT JOIN LATERAL/.test(c.text))!;
     expect(select.text).toMatch(/WHERE r\.business_id = \$1 AND r\.status = 'published'/);
+    expect(select.text).toMatch(/r\.content_origin/);
+    expect(select.text).toMatch(/content_origin IS DISTINCT FROM 'automated'/);
+    expect(select.text).toMatch(/CASE WHEN r\.content_origin = 'automated' THEN NULL/);
     expect(select.text.split('FROM reviews r')[0]).not.toMatch(/author_masked_contact/);
   });
 
@@ -174,5 +184,165 @@ describe('public review reads show only published reviews, without reviewer cont
     const body = await res.json();
     expect(body.review.id).toBe(9);
     expectNoReviewerData(JSON.stringify(body.review));
+  });
+});
+
+function publishedReview(overrides: Record<string, unknown>) {
+  return {
+    id: 1,
+    business_id: 1,
+    rating: 5,
+    title: 'Nota',
+    body: 'Texto',
+    author_name: 'Ana',
+    verification_level: 'confirmed_store_order',
+    content_origin: null,
+    score_weight: '0.90',
+    product_name: null,
+    status: 'published',
+    author_review_count: 1,
+    created_at: '2026-03-15T18:30:00.000Z',
+    responder_name: null,
+    response_text: null,
+    response_created_at: null,
+    ...overrides,
+  };
+}
+
+function isReactNode(node: object): node is React.ReactElement<{ children?: unknown; dangerouslySetInnerHTML?: { __html: string } }> {
+  return 'type' in node && 'props' in node;
+}
+
+function serverText(node: unknown): string {
+  if (node == null || typeof node === 'boolean') return '';
+  if (typeof node === 'string' || typeof node === 'number') return String(node);
+  if (Array.isArray(node)) return node.map(serverText).join('');
+  if (typeof node !== 'object' || !isReactNode(node) || typeof node.type === 'function') return '';
+  return `${node.props.dangerouslySetInnerHTML?.__html ?? ''}${serverText(node.props.children)}`;
+}
+
+function jsonLdFromTree(node: unknown): { '@graph': Array<Record<string, unknown>> } {
+  if (!node || typeof node !== 'object') throw new Error('JSON-LD script missing');
+  if (Array.isArray(node)) {
+    for (const child of node) {
+      try {
+        return jsonLdFromTree(child);
+      } catch {
+        // Keep looking through sibling server nodes.
+      }
+    }
+    throw new Error('JSON-LD script missing');
+  }
+  if (!isReactNode(node)) throw new Error('JSON-LD script missing');
+  const html = node.type === 'script' ? node.props.dangerouslySetInnerHTML?.__html : undefined;
+  if (html) return JSON.parse(html.replace(/\\u003c/g, '<')) as { '@graph': Array<Record<string, unknown>> };
+  return jsonLdFromTree(node.props.children);
+}
+
+describe('automated reviews stay visible and out of buyer aggregates', () => {
+  it('treats null origin as customer and only automated as generated', () => {
+    expect(PUBLIC_REVIEW_COLUMNS).toContain('content_origin');
+    expect(isCustomerReview({ content_origin: null })).toBe(true);
+    expect(isCustomerReview({})).toBe(true);
+    expect(isCustomerReview({ content_origin: 'customer_submitted' })).toBe(true);
+    expect(isCustomerReview({ content_origin: 'imported' })).toBe(true);
+    expect(isCustomerReview({ content_origin: 'automated' })).toBe(false);
+  });
+
+  it('excludes automated rows from JSON-LD, FAQ and customer rating, and badges them in the list', async () => {
+    db.state.reviews = [
+      publishedReview({ id: 1, rating: 5, author_name: 'Ana', content_origin: null, body: 'Histórica', author_review_count: 1 }),
+      publishedReview({ id: 2, rating: 4, author_name: 'Bea', content_origin: 'customer_submitted', body: 'Enviada', author_review_count: 1 }),
+      publishedReview({ id: 3, rating: 3, author_name: 'Ciro', content_origin: 'imported', body: 'Importada', author_review_count: 1 }),
+      publishedReview({
+        id: 4,
+        rating: 1,
+        author_name: 'Contenido automatizado',
+        content_origin: 'automated',
+        body: 'GENERATED_ONE',
+        author_review_count: 4,
+        verification_level: 'unverified_experience',
+      }),
+      publishedReview({
+        id: 5,
+        rating: 1,
+        author_name: 'Contenido automatizado',
+        content_origin: 'automated',
+        body: 'GENERATED_TWO',
+        author_review_count: 4,
+        verification_level: 'unverified_experience',
+      }),
+    ];
+
+    const tree = await BusinessPassportPage({ params: Promise.resolve({ slug: 'comercio-demo' }) });
+    const pageText = serverText(tree);
+    const org = jsonLdFromTree(tree)['@graph'].find((node) => node['@type'] === 'Organization') as {
+      aggregateRating: { ratingValue: string; reviewCount: number };
+      review: Array<{ author?: { '@type': string; name: string }; reviewBody: string }>;
+    };
+    const list = findElement(tree, PassportReviewsList) as React.ReactElement<{ reviews: Array<{ content_origin?: string | null; body: string }> }>;
+    const listHtml = renderToStaticMarkup(list);
+
+    expect(org.aggregateRating).toEqual(expect.objectContaining({ ratingValue: '4.0', reviewCount: 3 }));
+    expect(org.review.map((item) => item.author?.name).sort()).toEqual(['Ana', 'Bea', 'Ciro']);
+    expect(org.review.every((item) => item.author?.['@type'] === 'Person')).toBe(true);
+    expect(JSON.stringify(org.review)).not.toContain('Contenido automatizado');
+    expect(JSON.stringify(org.review)).not.toContain('GENERATED_ONE');
+    expect(pageText).toContain('Tiene 3 opiniones de clientes con promedio de 4.0/5.');
+    expect(pageText).not.toContain('promedio de 2.8');
+    expect(pageText).not.toContain('Opiniones de compradores');
+    expect(pageText).not.toContain('Experiencias reales');
+    expect(pageText).toContain('Opiniones publicadas (5)');
+    expect(pageText).toContain('Calificación de clientes');
+    expect(list.props.reviews.map((review) => review.body)).toEqual(expect.arrayContaining(['GENERATED_ONE', 'GENERATED_TWO', 'Histórica']));
+    expect(listHtml).toContain('GENERATED_ONE');
+    expect(listHtml).toContain('GENERATED_TWO');
+    expect(listHtml).not.toContain('Lo que opinan sus clientes');
+    expect(listHtml.match(/Automatizado/g)).toHaveLength(2);
+    expect(listHtml).toContain('4.0');
+    expect(listHtml).not.toContain('2.8');
+    expect(listHtml).toContain('Muy bueno');
+    expect(listHtml).toContain('5 estrellas: 1 opinión, 33%');
+    expect(listHtml).toContain('1 estrella: 0 opiniones, 0%');
+    expect(listHtml).not.toContain('1 estrella: 2 opiniones');
+    expect(listHtml).not.toContain('4 opiniones');
+    expect(listHtml).toContain('1 opinión');
+  });
+
+  it('does not invent a customer rating or a person author when only automated rows exist', async () => {
+    db.state.reviews = [
+      publishedReview({
+        id: 8,
+        rating: 5,
+        author_name: 'Contenido automatizado',
+        content_origin: 'automated',
+        body: 'SOLO_AUTOMATIZADO',
+        author_review_count: 2,
+        verification_level: 'unverified_experience',
+      }),
+    ];
+
+    const tree = await BusinessPassportPage({ params: Promise.resolve({ slug: 'comercio-demo' }) });
+    const pageText = serverText(tree);
+    const jsonLd = jsonLdFromTree(tree);
+    const org = jsonLd['@graph'].find((node) => node['@type'] === 'Organization') as Record<string, unknown>;
+    const list = findElement(tree, PassportReviewsList) as React.ReactElement;
+    const listHtml = renderToStaticMarkup(list);
+
+    expect(org.aggregateRating).toBeUndefined();
+    expect(org.review).toBeUndefined();
+    expect(JSON.stringify(org)).not.toContain('Contenido automatizado');
+    expect(JSON.stringify(jsonLd)).not.toContain('"@type":"Person"');
+    expect(pageText).toContain('Sin calificación de clientes');
+    expect(pageText).not.toContain('Este negocio todavía no tiene opiniones');
+    expect(pageText).toContain('Todavía no tiene opiniones de clientes.');
+    expect(listHtml).toContain('SOLO_AUTOMATIZADO');
+    expect(listHtml.match(/Automatizado/g)).toHaveLength(1);
+    expect(listHtml).toContain('Sin calificación de clientes');
+    expect(listHtml).not.toContain('5.0');
+    expect(listHtml).toContain('5 estrellas: 0 opiniones, 0%');
+    expect(listHtml).not.toContain('5 estrellas: 1 opinión, 100%');
+    expect(listHtml).not.toContain('2 opiniones');
+    expect(listHtml).not.toContain('Este negocio todavía no tiene opiniones');
   });
 });

@@ -51,7 +51,7 @@ function browser(consent: string | null) {
 function fakePg(
   options: {
     sendOutcomes?: Array<'sent' | 'failed' | 'unconfigured'>;
-    reviews?: Array<{ id: number; created_at: string; status: string }>;
+    reviews?: Array<{ id: number; created_at: string; status: string; content_origin?: string | null }>;
     watermark?: string | null;
     failNextStageInserts?: number;
     onQuery?: (sql: string, params: unknown[]) => Promise<void> | void;
@@ -290,7 +290,8 @@ function fakePg(
       return { rows: [{ since: candidates[0] ?? null }] };
     }
     if (sql.startsWith('SELECT r.id, r.created_at FROM reviews r')) {
-      return { rows: (options.reviews ?? []).filter((r) => r.status === 'published' && r.created_at >= String(params[0]) && !stages.has(`review:${r.id}:milestone_review_published`)) };
+      const excludesAutomated = /content_origin IS DISTINCT FROM 'automated'/.test(sql);
+      return { rows: (options.reviews ?? []).filter((r) => r.status === 'published' && r.created_at >= String(params[0]) && !stages.has(`review:${r.id}:milestone_review_published`) && !(excludesAutomated && r.content_origin === 'automated')) };
     }
     if (sql.startsWith('SELECT e.event_id')) {
       return { rows: [...stages.values()].filter((s) => ['pending', 'failed'].includes(String(s.delivery_state))).map((s) => { const i = identities.get(`${s.entity_type}:${s.entity_id}`); return { ...s, journey_id: i?.journey_id, first_touch: i?.first_touch, last_touch: i?.last_touch, identity_consent: i?.consent_state }; }) };
@@ -424,6 +425,26 @@ describe('ledger: review_published after commit', () => {
     expect(recovered.analytics_id).toBeNull();
     expect(f.stages.has('review:21:milestone_review_published')).toBe(false);
     expect((await maintainLedger(f.deps)).recovered).toBe(0);
+  });
+
+  it('does not reconcile automated reviews as consumer_review milestones, and still recovers null-origin rows', async () => {
+    const f = fakePg({
+      watermark: '2026-10-01T11:00:00.000Z',
+      reviews: [
+        { id: 70, created_at: '2026-10-01T12:00:00.000Z', status: 'published', content_origin: 'automated' },
+        { id: 71, created_at: '2026-10-01T12:00:00.000Z', status: 'published', content_origin: null },
+        { id: 72, created_at: '2026-10-01T12:00:00.000Z', status: 'published', content_origin: 'customer_submitted' },
+        { id: 73, created_at: '2026-10-01T12:00:00.000Z', status: 'published', content_origin: 'imported' },
+        { id: 74, created_at: '2026-10-01T12:00:00.000Z', status: 'removed', content_origin: null },
+      ],
+    });
+    const m = await maintainLedger(f.deps);
+    expect(m.recovered).toBe(3);
+    expect(f.stages.has('review:70:milestone_review_published')).toBe(false);
+    expect(f.stages.has('review:74:milestone_review_published')).toBe(false);
+    expect(f.stages.get('review:71:milestone_review_published')).toMatchObject({ source: 'reconciled', consent_state: 'denied', analytics_id: null });
+    expect(f.stages.get('review:72:milestone_review_published')!.source).toBe('reconciled');
+    expect(f.stages.get('review:73:milestone_review_published')!.source).toBe('reconciled');
   });
 
   it('exposes unknown coverage when unanchored, and recovers lost initial live milestones from explicit watermark or failed first write (OPN-CONVERSION-BOOTSTRAP-RECOVERY)', async () => {

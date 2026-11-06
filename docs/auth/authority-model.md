@@ -12,6 +12,8 @@ Issues [#28](https://github.com/lawrns/opinio/issues/28), [#29](https://github.c
 | `0004_staff_and_transfer.sql` | staff invitation revocation (`revoked_by_user_id`), one pending invitation per business and address, `business_memberships.staff_invitation_id` |
 | `0005_buyer_case_access.sql` | `resolution_cases.access_email` and `submission_key` (unique per business), transport outcome on `case_access_tokens` |
 | `0006_case_recovery.sql` | `case_recovery_requests` (one open request per case; an approval records basis, reference and the issued token) |
+| `0007_conversion_watermarks_and_tombstones.sql` | Conversion activation watermarks and withdrawn-journey tombstones |
+| `0008_review_publication_queue.sql` | Automated-review provenance, unique publication keys, and the persistent sporadic publication queue |
 
 All are additive. They change no existing row and backfill nothing: claimed listings, RFC/CLEE identities and supplied contacts mint no membership. The schema enforces that an owner membership references an approval for that same business and person, that a person has at most one active membership per business, that revoked rows carry a revocation time, and that machine scopes are only `order_events` and `invitations`. Every secret column holds a SHA-256 digest.
 

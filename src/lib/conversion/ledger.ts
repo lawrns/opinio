@@ -303,10 +303,11 @@ export type MaintainResult = {
  * Retry and reconciliation (scripts/conversion-maintenance.ts): releases
  * stale claims, retries pending/failed rows (bounded), and recovers
  * review_published rows whose live write was lost, from the reviews table
- * (published reviews created at or after the persisted activation watermark;
- * no attribution is invented, so recovered rows are not consented and not
- * sent). When neither an activation watermark nor a live row exists yet,
- * coverage is reported as `unknown`.
+ * (published non-automated reviews created at or after the persisted activation
+ * watermark; null content_origin stays historical and is reconciled; automated
+ * rows are not consumer reviews and are not recovered; no attribution is
+ * invented, so recovered rows are not consented and not sent). When neither an
+ * activation watermark nor a live row exists yet, coverage is reported as `unknown`.
  */
 export async function maintainLedger(deps: Deps = defaultDeps()): Promise<MaintainResult> {
   await deps.query(`UPDATE conversion_stage_events SET delivery_state = 'failed' WHERE delivery_state = 'sending' AND last_attempt_at < NOW() - INTERVAL '10 minutes'`);
@@ -329,6 +330,7 @@ export async function maintainLedger(deps: Deps = defaultDeps()): Promise<Mainta
     const missing = await deps.query<{ id: number; created_at: string }>(
       `SELECT r.id, r.created_at FROM reviews r
         WHERE r.status = 'published' AND r.created_at >= $1
+          AND r.content_origin IS DISTINCT FROM 'automated'
           AND NOT EXISTS (SELECT 1 FROM conversion_stage_events e WHERE e.dedupe_key = 'review:' || r.id || ':milestone_review_published')
         ORDER BY r.created_at ASC LIMIT 500`,
       [since],

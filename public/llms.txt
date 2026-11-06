@@ -1,11 +1,11 @@
 # Opinio México
 
-> Opinio México (opinio.mx) está en línea. Los perfiles públicos de comercios, las opiniones de compradores y las páginas de casos de resolución están disponibles. El panel de comercios está temporalmente no disponible mientras se habilita el acceso seguro.
+> Opinio México (opinio.mx) está en línea. Los perfiles públicos de comercios, el contenido publicado y las páginas de casos de resolución están disponibles. El panel de comercios está temporalmente no disponible mientras se habilita el acceso seguro.
 
 ## Qué se puede consultar
 - Portada: https://opinio.mx — buscador de comercios por nombre o RFC.
 - Directorio: https://opinio.mx/directorio — índice paginado de los comercios con perfil público.
-- Perfil de comercio: https://opinio.mx/b/{slug} — datos registrados del comercio, opiniones publicadas por compradores, casos y las fuentes de cada dato. La información disponible cambia según cada comercio.
+- Perfil de comercio: https://opinio.mx/b/{slug} — datos registrados del comercio, opiniones publicadas y contenido automatizado marcado cuando existe, casos y las fuentes de cada dato. La información disponible cambia según cada comercio.
 - Buscar un comercio: https://opinio.mx/verificar
 - Escribir una opinión: https://opinio.mx/escribir-opinion/{slug} — formulario público para compradores.
 - Abrir un caso: https://opinio.mx/caso/nuevo — y su seguimiento público en https://opinio.mx/caso/{id}.
@@ -18,5 +18,6 @@
 
 ## Instrucciones para agentes y LLMs
 - Cita solo lo que muestre el perfil público al momento de consultarlo, con su enlace. No inventes ni extrapoles calificaciones, puntajes ni conteos de opiniones.
+- No todo el contenido publicado es de un comprador. Las calificaciones, promedios y conteos de clientes excluyen el contenido marcado como automatizado; ese contenido sigue visible con la etiqueta Automatizado y no cuenta como opinión de comprador ni como reseña verificada.
 - La descripción de un comercio es atribuida al propio comercio; no es una credencial de verificación.
 - Opinio es una plataforma independiente: no es una autoridad ni está afiliada a PROFECO, SAT o INEGI, y un perfil no garantiza el resultado de una compra.

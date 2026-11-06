@@ -43,6 +43,8 @@ const MIGRATIONS = [
   '0004_staff_and_transfer.sql',
   '0005_buyer_case_access.sql',
   '0006_case_recovery.sql',
+  '0007_conversion_watermarks_and_tombstones.sql',
+  '0008_review_publication_queue.sql',
 ];
 
 /** Columns the migrations add to legacy tables; digests compare legacy columns only, and these are checked NULL separately. */
@@ -97,7 +99,7 @@ afterAll(async () => {
 });
 
 describe('auth migrations over existing data', () => {
-  it('dry run lists both migrations and changes nothing', async () => {
+  it('dry run lists every pending migration and changes nothing', async () => {
     const before = await snapshot(db.client);
     expect(await applyAuthMigrations(db.client, { dryRun: true })).toEqual(MIGRATIONS);
     expect(await snapshot(db.client)).toEqual(before);
@@ -128,6 +130,11 @@ describe('auth migrations over existing data', () => {
     // Legacy cases gain no access email or submission key: no retroactive campaign.
     const { rows: added } = await db.client.query('SELECT count(*)::int AS n FROM resolution_cases WHERE access_email IS NOT NULL OR submission_key IS NOT NULL');
     expect(added[0].n).toBe(0);
+    // 0008 adds provenance columns without rewriting historical reviews or seeding the queue.
+    const { rows: origins } = await db.client.query('SELECT content_origin, publication_key FROM reviews ORDER BY id');
+    expect(origins).toEqual([{ content_origin: null, publication_key: null }]);
+    const { rows: queued } = await db.client.query('SELECT count(*)::int AS n FROM review_publication_queue');
+    expect(queued[0].n).toBe(0);
   });
 
   it('mints no identity, membership, key or case access from claimed listings, RFCs or contacts', async () => {
