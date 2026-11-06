@@ -37,7 +37,7 @@ Install the 38 root ED25519 public key in `/var/lib/opinio-review/.ssh/authorize
 restrict,from="38.242.229.120",command="/usr/local/sbin/opinio-review-gateway"
 ```
 
-Apply the additive migration once on machine 82 using a loopback application-role URL:
+Inspect the pending migration list with a loopback application-role URL:
 
 ```sh
 cd /opt/opinio-review-publisher
@@ -45,13 +45,18 @@ set -a; . /etc/opinio-review-publisher.env; set +a
 /usr/local/bin/bun run scripts/migrate-auth.mjs
 ```
 
-The dry run must list only `0008_review_publication_queue.sql`. Do not apply if another migration is pending without reviewing it separately. Then run:
+The runner must list only `0008_review_publication_queue.sql` before using `--apply`. If it lists older migrations, do not use `--apply`; the production ledger may be incomplete. Apply only 0008 through the database owner in one transaction and insert its ledger row explicitly:
 
 ```sh
-/usr/local/bin/bun run scripts/migrate-auth.mjs --apply
+cd /opt/opinio-review-publisher
+{
+  printf '%s\n' 'BEGIN;' 'CREATE TABLE IF NOT EXISTS auth_schema_migrations (name TEXT PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW());'
+  cat db/migrations/0008_review_publication_queue.sql
+  printf '%s\n' "INSERT INTO auth_schema_migrations (name) VALUES ('0008_review_publication_queue.sql') ON CONFLICT (name) DO NOTHING;" 'COMMIT;'
+} | docker exec -i zvwsllgcasbbyyqrbxsohwps psql -U opinio -d opinio -v ON_ERROR_STOP=1 -f -
 ```
 
-The migration creates `review_publication_queue`, adds nullable provenance/publication columns to `reviews`, creates a partial unique publication-key index, and grants queue SELECT/INSERT/UPDATE to `opinio_app`. It does not update existing reviews, orders, invitations, or timestamps.
+The application role is for enqueue/publication, not DDL. The migration creates `review_publication_queue`, adds nullable provenance/publication columns to `reviews`, creates a partial unique publication-key index, and grants queue SELECT/INSERT/UPDATE to `opinio_app`. Revoke any broader inherited queue privileges. It does not update existing reviews, orders, invitations, or timestamps.
 
 Install `/etc/cron.d/opinio-review-publisher` on machine 82 after dry-run and real-PostgreSQL integration verification:
 
@@ -78,7 +83,7 @@ Create the bounded generation job on machine 38 in paused state:
 /root/.local/bin/hermes cron create '17 4 * * *' 'Read /opt/opinio-review-publisher/ops/review-generation-prompt.md and execute it exactly.' \
   --name opinio-review-generation \
   --skill humanizer \
-  --model deepseek-v4.1-flash \
+  --model gpt-5.6-luna --provider openai-codex \
   --workdir /opt/opinio-review-publisher \
   --deliver local \
   --paused --paused-reason 'Activate after controlled publication verification'
