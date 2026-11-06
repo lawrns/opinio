@@ -22,3 +22,33 @@ describe('MerchantWidgetSurface score gate', () => {
     expect(render(1)).toContain('73.7');
   });
 });
+
+describe('MerchantWidgetSurface ribbon provenance', () => {
+  const ribbon = (business: Record<string, unknown>) =>
+    renderToStaticMarkup(
+      <MerchantWidgetSurface
+        business={{ brand_name: 'Demo', b_slug: 'demo', ...business } as unknown as WidgetWithBusiness}
+        format="ribbon"
+        theme="light"
+      />
+    );
+
+  it('labels only the verified customer count, not an automated-inflated review count', () => {
+    const html = ribbon({ calculated_rating: 4.2, review_count: 40, verified_reviews_count: 2 });
+    expect(html).toContain('4.2/5');
+    expect(html).toContain('2+ reseñas verificadas');
+    expect(html).not.toContain('40+');
+    expect(html).not.toContain('50+');
+  });
+
+  it('does not invent a verified rating when customer reviews are absent', () => {
+    const html = ribbon({ calculated_rating: null, review_count: 12, verified_reviews_count: 0 });
+    expect(html).toContain('Sin calificación de clientes');
+    expect(html).not.toContain('reseñas verificadas');
+    const text = html.replace(/<svg[\s\S]*?<\/svg>/g, '');
+    expect(text).not.toContain('4.8');
+    expect(text).not.toContain('5.0');
+    expect(html).not.toContain('12+');
+    expect(html).not.toContain('50+');
+  });
+});

@@ -97,6 +97,7 @@ export interface Review {
   author_name: string;
   author_masked_contact: string | null;
   verification_level: ReviewVerificationLevel;
+  content_origin?: string | null;
   score_weight: number | string;
   integrity_factor: number | string;
   product_name: string | null;

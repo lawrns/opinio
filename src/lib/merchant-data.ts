@@ -106,6 +106,7 @@ export async function getMerchantReviews(
     author_name: row.author_name,
     author_masked_contact: row.author_masked_contact,
     verification_level: row.verification_level,
+    content_origin: row.content_origin ?? null,
     score_weight: row.score_weight,
     integrity_factor: row.integrity_factor,
     product_name: row.product_name,
@@ -296,7 +297,7 @@ export interface WidgetWithBusiness extends Business {
   widget_type: string;
   theme: string;
   config: Record<string, unknown>;
-  calculated_rating?: number;
+  calculated_rating?: number | null;
   review_count?: number;
   verified_reviews_count?: number;
 }
@@ -316,7 +317,7 @@ export async function getWidgetDataByToken(token: string): Promise<WidgetWithBus
     `SELECT b.*, b.slug as b_slug, w.token as widget_token, w.widget_type, w.theme as w_theme, w.config as w_config,
             COALESCE(r.cnt, 0)::int as rev_count,
             COALESCE(r.verified_cnt, 0)::int as verified_cnt,
-            COALESCE(r.avg_rat, 5.0)::numeric as avg_rating
+            r.avg_rat as avg_rating
      FROM widgets w
      JOIN businesses b ON b.id = w.business_id
      LEFT JOIN (
@@ -324,6 +325,7 @@ export async function getWidgetDataByToken(token: string): Promise<WidgetWithBus
               COUNT(*) FILTER (WHERE ${VERIFIED_REVIEW_SQL}) as verified_cnt
        FROM reviews
        WHERE status = 'published'
+         AND content_origin IS DISTINCT FROM 'automated'
        GROUP BY business_id
      ) r ON r.business_id = b.id
      WHERE w.token = $1 AND w.is_active = true
@@ -340,7 +342,9 @@ export async function getWidgetDataByToken(token: string): Promise<WidgetWithBus
       widget_type: row.widget_type,
       theme: row.w_theme || 'light',
       config: (row.w_config as Record<string, unknown>) || {},
-      calculated_rating: Math.round(Number(row.avg_rating || 5.0) * 10) / 10,
+      calculated_rating: row.avg_rating == null || row.avg_rating === '' || !Number.isFinite(Number(row.avg_rating))
+        ? null
+        : Math.round(Number(row.avg_rating) * 10) / 10,
       review_count: Number(row.rev_count) || 0,
       verified_reviews_count: Number(row.verified_cnt) || 0,
     };

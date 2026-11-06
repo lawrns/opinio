@@ -1,0 +1,25 @@
+#!/bin/sh
+set -eu
+
+case "${SSH_ORIGINAL_COMMAND:-}" in
+  --capacity|capacity)
+    action=capacity
+    ;;
+  ''|enqueue)
+    action=enqueue
+    ;;
+  *)
+    printf '%s\n' 'unsupported_command' >&2
+    exit 64
+    ;;
+esac
+
+set -a
+. /etc/opinio-review-publisher.env
+set +a
+cd /opt/opinio-review-publisher
+
+if [ "$action" = capacity ]; then
+  exec /usr/local/bin/bun run scripts/review-queue-capacity.ts
+fi
+exec /usr/local/bin/bun run scripts/enqueue-generated-review.ts
